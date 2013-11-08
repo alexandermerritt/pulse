@@ -70,9 +70,11 @@ public:
     // Creates stitcher with default parameters
     static PStitcher createDefault(bool try_use_gpu = false);
 
+    Status matchImages();
+    void estimateCameraParams();
+
     // Step 1
     Status estimateTransform(InputArray images);
-    Status estimateTransform(InputArray images, const std::vector<std::vector<Rect> > &rois);
 
     // Step 2
     Status composePanorama(InputArray images, OutputArray pano);
@@ -143,9 +145,6 @@ public:
 private:
     PStitcher() {}
 
-    Status matchImages();
-    void estimateCameraParams();
-
     double registr_resol_;
     double seam_est_resol_;
     double compose_resol_;
@@ -162,7 +161,6 @@ private:
     Ptr<detail::Blender> blender_;
 
     std::vector<cv::Mat> imgs_;
-    std::vector<std::vector<cv::Rect> > rois_;
     std::vector<cv::Size> full_img_sizes_;
     std::vector<detail::ImageFeatures> features_;
     std::vector<detail::MatchesInfo> pairwise_matches_;

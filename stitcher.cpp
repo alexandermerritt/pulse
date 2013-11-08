@@ -102,21 +102,8 @@ PStitcher PStitcher::createDefault(bool try_use_gpu)
 
 PStitcher::Status PStitcher::estimateTransform(InputArray images)
 {
-    return estimateTransform(images, vector<vector<Rect> >());
-}
-
-
-PStitcher::Status PStitcher::estimateTransform(InputArray images, const vector<vector<Rect> > &rois)
-{
     images.getMatVector(imgs_); /* this modifies imgs_ */
-    rois_ = rois;
-
-    Status status;
-
-    if ((status = matchImages()) != OK)
-        return status;
-
-    return OK;
+    return matchImages();
 }
 
 PStitcher::Status PStitcher::composePanorama(InputArray images, OutputArray pano)
@@ -369,21 +356,9 @@ PStitcher::Status PStitcher::matchImages()
         full_img_sizes_[i] = full_img.size();
 
         resize(full_img, img, Size(), work_scale_, work_scale_);
-
-        if (rois_.empty())
-            (*features_finder_)(img, features_[i]);
-        else
-        {
-            vector<Rect> rois(rois_[i].size());
-            for (size_t j = 0; j < rois_[i].size(); ++j)
-            {
-                Point tl(cvRound(rois_[i][j].x * work_scale_), cvRound(rois_[i][j].y * work_scale_));
-                Point br(cvRound(rois_[i][j].br().x * work_scale_), cvRound(rois_[i][j].br().y * work_scale_));
-                rois[j] = Rect(tl, br);
-            }
-            (*features_finder_)(img, features_[i], rois);
-        }
+        (*features_finder_)(img, features_[i]);
         features_[i].img_idx = (int)i;
+
         LOGLN("Features in image #" << i+1 << ": " << features_[i].keypoints.size());
 
         resize(full_img, img, Size(), seam_scale_, seam_scale_);
