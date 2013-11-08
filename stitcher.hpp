@@ -43,26 +43,32 @@
 #ifndef __OPENCV_STITCHING_STITCHER_HPP__
 #define __OPENCV_STITCHING_STITCHER_HPP__
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/stitching/warpers.hpp"
-#include "opencv2/stitching/detail/matchers.hpp"
-#include "opencv2/stitching/detail/motion_estimators.hpp"
-#include "opencv2/stitching/detail/exposure_compensate.hpp"
-#include "opencv2/stitching/detail/seam_finders.hpp"
-#include "opencv2/stitching/detail/blenders.hpp"
-#include "opencv2/stitching/detail/camera.hpp"
+#include <opencv2/core/core.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/stitching/warpers.hpp>
+#include <opencv2/stitching/detail/matchers.hpp>
+#include <opencv2/stitching/detail/motion_estimators.hpp>
+#include <opencv2/stitching/detail/exposure_compensate.hpp>
+#include <opencv2/stitching/detail/seam_finders.hpp>
+#include <opencv2/stitching/detail/blenders.hpp>
+#include <opencv2/stitching/detail/camera.hpp>
 
-namespace cv {
+//#include <opencv.hpp>
+//#include <gpu/gpu.hpp>
+//#include <core/gpumat.hpp>
+//#include <stitching/stitcher.hpp>
 
-class CV_EXPORTS Stitcher
+using namespace std;
+using namespace cv;
+
+class PStitcher
 {
 public:
     enum { ORIG_RESOL = -1 };
     enum Status { OK, ERR_NEED_MORE_IMGS };
 
     // Creates stitcher with default parameters
-    static Stitcher createDefault(bool try_use_gpu = false);
+    static PStitcher createDefault(bool try_use_gpu = false);
 
     double registrationResol() const { return registr_resol_; }
     void setRegistrationResol(double resol_mpx) { registr_resol_ = resol_mpx; }
@@ -135,7 +141,7 @@ public:
     double workScale() const { return work_scale_; }
 
 private:
-    Stitcher() {}
+    PStitcher() {}
 
     Status matchImages();
     void estimateCameraParams();
@@ -168,7 +174,5 @@ private:
     double seam_work_aspect_;
     double warped_image_scale_;
 };
-
-} // namespace cv
 
 #endif // __OPENCV_STITCHING_STITCHER_HPP__

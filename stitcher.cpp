@@ -40,15 +40,16 @@
 //
 //M*/
 
-#include "precomp.hpp"
+//#include "precomp.hpp"
+
+#include "stitcher.hpp"
 
 using namespace std;
+using namespace cv;
 
-namespace cv {
-
-Stitcher Stitcher::createDefault(bool try_use_gpu)
+PStitcher PStitcher::createDefault(bool try_use_gpu)
 {
-    Stitcher stitcher;
+    PStitcher stitcher;
     stitcher.setRegistrationResol(0.6);
     stitcher.setSeamEstimationResol(0.1);
     stitcher.setCompositingResol(ORIG_RESOL);
@@ -88,13 +89,13 @@ Stitcher Stitcher::createDefault(bool try_use_gpu)
 }
 
 
-Stitcher::Status Stitcher::estimateTransform(InputArray images)
+PStitcher::Status PStitcher::estimateTransform(InputArray images)
 {
     return estimateTransform(images, vector<vector<Rect> >());
 }
 
 
-Stitcher::Status Stitcher::estimateTransform(InputArray images, const vector<vector<Rect> > &rois)
+PStitcher::Status PStitcher::estimateTransform(InputArray images, const vector<vector<Rect> > &rois)
 {
     images.getMatVector(imgs_); /* this modifies imgs_ */
     rois_ = rois;
@@ -111,13 +112,13 @@ Stitcher::Status Stitcher::estimateTransform(InputArray images, const vector<vec
 
 
 
-Stitcher::Status Stitcher::composePanorama(OutputArray pano)
+PStitcher::Status PStitcher::composePanorama(OutputArray pano)
 {
     return composePanorama(vector<Mat>(), pano);
 }
 
 
-Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
+PStitcher::Status PStitcher::composePanorama(InputArray images, OutputArray pano)
 {
     LOGLN("Warping images (auxiliary)... ");
 
@@ -316,7 +317,7 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
 }
 
 
-Stitcher::Status Stitcher::stitch(InputArray images, OutputArray pano)
+PStitcher::Status PStitcher::stitch(InputArray images, OutputArray pano)
 {
     Status status = estimateTransform(images);
     if (status != OK)
@@ -325,7 +326,7 @@ Stitcher::Status Stitcher::stitch(InputArray images, OutputArray pano)
 }
 
 
-Stitcher::Status Stitcher::stitch(InputArray images, const vector<vector<Rect> > &rois, OutputArray pano)
+PStitcher::Status PStitcher::stitch(InputArray images, const vector<vector<Rect> > &rois, OutputArray pano)
 {
     Status status = estimateTransform(images, rois);
     if (status != OK)
@@ -334,7 +335,7 @@ Stitcher::Status Stitcher::stitch(InputArray images, const vector<vector<Rect> >
 }
 
 
-Stitcher::Status Stitcher::matchImages()
+PStitcher::Status PStitcher::matchImages()
 {
     if ((int)imgs_.size() < 2)
     {
@@ -444,7 +445,7 @@ Stitcher::Status Stitcher::matchImages()
 }
 
 
-void Stitcher::estimateCameraParams()
+void PStitcher::estimateCameraParams()
 {
     detail::HomographyBasedEstimator estimator;
     estimator(features_, pairwise_matches_, cameras_);
@@ -485,4 +486,3 @@ void Stitcher::estimateCameraParams()
     }
 }
 
-} // namespace cv
