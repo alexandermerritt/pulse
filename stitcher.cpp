@@ -70,25 +70,15 @@ PStitcher PStitcher::createDefault(bool try_use_gpu)
     stitcher.setFeaturesMatcher(new detail::BestOf2NearestMatcher(try_use_gpu));
     stitcher.setBundleAdjuster(new detail::BundleAdjusterRay());
 
-#ifdef HAVE_OPENCV_GPU
     if (try_use_gpu && gpu::getCudaEnabledDeviceCount() > 0)
     {
-#if defined(HAVE_OPENCV_NONFREE)
         stitcher.setFeaturesFinder(new detail::SurfFeaturesFinderGpu());
-#else
-        stitcher.setFeaturesFinder(new detail::OrbFeaturesFinder());
-#endif
         stitcher.setWarper(new SphericalWarperGpu());
         stitcher.setSeamFinder(new detail::GraphCutSeamFinderGpu());
     }
     else
-#endif
     {
-#ifdef HAVE_OPENCV_NONFREE
         stitcher.setFeaturesFinder(new detail::SurfFeaturesFinder());
-#else
-        stitcher.setFeaturesFinder(new detail::OrbFeaturesFinder());
-#endif
         stitcher.setWarper(new SphericalWarper());
         stitcher.setSeamFinder(new detail::GraphCutSeamFinder(detail::GraphCutSeamFinderBase::COST_COLOR));
     }
@@ -100,6 +90,90 @@ PStitcher PStitcher::createDefault(bool try_use_gpu)
 }
 
 
+// 1. find features for each image
+// 2. pair-wise match features for all images
+// 2b. determine which belong to same panorama
+// OUTPUT feature set, list of images part of panorama
+PStitcher::Status PStitcher::matchImages(images_t &images)
+{
+    if ((int)images.size() < 2)
+    {
+        LOGLN("Need more images");
+        return ERR_NEED_MORE_IMGS;
+    }
+
+    Mat full_img, img;
+    features.resize(images.size());
+
+    LOGLN("Finding features...");
+#if ENABLE_LOG
+    int64 t = getTickCount();
+#endif
+
+    double work_scale = 1;
+    if (registr_resol >= 0)
+        work_scale = min(1.0, sqrt(registr_resol * 1e6 / images[0].size().area()));
+    std::cout << ">>    work_scale " << work_scale << std::endl;
+
+    for (size_t i = 0; i < images.size(); ++i)
+    {
+        full_img = images[i];
+
+        resize(full_img, img, Size(), work_scale, work_scale);
+        (*features_finder)(img, features[i]);
+        features[i].img_idx = (int)i;
+
+        LOGLN("Features in image #" << i+1 << ": " << features[i].keypoints.size());
+    }
+
+    // Do it to save memory
+    features_finder->collectGarbage();
+    full_img.release();
+    img.release();
+
+    LOGLN("Finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+
+    LOG("Pairwise matching");
+#if ENABLE_LOG
+    t = getTickCount();
+#endif
+    (*features_matcher)(features, matches, matching_mask);
+    features_matcher->collectGarbage();
+    LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+
+    // Leave only images we are sure are from the same panorama
+    indices = detail::leaveBiggestComponent(features, matches, (float)conf_thresh);
+
+    return OK;
+}
+
+// 3. look at camera data for each image
+void PStitcher::estimateCameraParams()
+{
+    detail::HomographyBasedEstimator estimator;
+    estimator(features, matches, cameras);
+
+    for (size_t i = 0; i < cameras.size(); ++i)
+    {
+        Mat R;
+        cameras[i].R.convertTo(R, CV_32F);
+        cameras[i].R = R;
+        LOGLN("Initial intrinsic parameters #" << indices[i] + 1 << ":\n " << cameras[i].K());
+    }
+
+    bundle_adjuster->setConfThresh(conf_thresh);
+    (*bundle_adjuster)(features, matches, cameras);
+
+    if (do_wave_correct)
+    {
+        vector<Mat> rmats;
+        for (size_t i = 0; i < cameras.size(); ++i)
+            rmats.push_back(cameras[i].R);
+        detail::waveCorrect(rmats, wave_correct_kind);
+        for (size_t i = 0; i < cameras.size(); ++i)
+            cameras[i].R = rmats[i];
+    }
+}
 
 PStitcher::Status PStitcher::composePanorama(images_t &images, cv::Mat & pano)
 {
@@ -296,88 +370,4 @@ PStitcher::Status PStitcher::composePanorama(images_t &images, cv::Mat & pano)
 }
 
 
-// 1. find features for each image
-// 2. pair-wise match features for all images
-// 2b. determine which belong to same panorama
-// OUTPUT feature set, list of images part of panorama
-PStitcher::Status PStitcher::matchImages(images_t &images)
-{
-    if ((int)images.size() < 2)
-    {
-        LOGLN("Need more images");
-        return ERR_NEED_MORE_IMGS;
-    }
-
-    Mat full_img, img;
-    features.resize(images.size());
-
-    LOGLN("Finding features...");
-#if ENABLE_LOG
-    int64 t = getTickCount();
-#endif
-
-    double work_scale = 1;
-    if (registr_resol >= 0)
-        work_scale = min(1.0, sqrt(registr_resol * 1e6 / images[0].size().area()));
-    std::cout << ">>    work_scale " << work_scale << std::endl;
-
-    for (size_t i = 0; i < images.size(); ++i)
-    {
-        full_img = images[i];
-
-        resize(full_img, img, Size(), work_scale, work_scale);
-        (*features_finder)(img, features[i]);
-        features[i].img_idx = (int)i;
-
-        LOGLN("Features in image #" << i+1 << ": " << features[i].keypoints.size());
-    }
-
-    // Do it to save memory
-    features_finder->collectGarbage();
-    full_img.release();
-    img.release();
-
-    LOGLN("Finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
-
-    LOG("Pairwise matching");
-#if ENABLE_LOG
-    t = getTickCount();
-#endif
-    (*features_matcher)(features, matches, matching_mask);
-    features_matcher->collectGarbage();
-    LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
-
-    // Leave only images we are sure are from the same panorama
-    indices = detail::leaveBiggestComponent(features, matches, (float)conf_thresh);
-
-    return OK;
-}
-
-// 3. look at camera data for each image
-void PStitcher::estimateCameraParams()
-{
-    detail::HomographyBasedEstimator estimator;
-    estimator(features, matches, cameras);
-
-    for (size_t i = 0; i < cameras.size(); ++i)
-    {
-        Mat R;
-        cameras[i].R.convertTo(R, CV_32F);
-        cameras[i].R = R;
-        LOGLN("Initial intrinsic parameters #" << indices[i] + 1 << ":\n " << cameras[i].K());
-    }
-
-    bundle_adjuster->setConfThresh(conf_thresh);
-    (*bundle_adjuster)(features, matches, cameras);
-
-    if (do_wave_correct)
-    {
-        vector<Mat> rmats;
-        for (size_t i = 0; i < cameras.size(); ++i)
-            rmats.push_back(cameras[i].R);
-        detail::waveCorrect(rmats, wave_correct_kind);
-        for (size_t i = 0; i < cameras.size(); ++i)
-            cameras[i].R = rmats[i];
-    }
-}
 
