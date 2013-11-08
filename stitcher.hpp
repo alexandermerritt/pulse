@@ -164,7 +164,6 @@ private:
     std::vector<detail::MatchesInfo> pairwise_matches_;
     std::vector<int> indices_;
     std::vector<detail::CameraParams> cameras_;
-    double warped_image_scale_;
 };
 
 #endif // __STITCHER_HPP_INCLUDED__

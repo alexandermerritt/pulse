@@ -202,56 +202,50 @@ PStitcher::Status PStitcher::composePanorama(images_t &images, cv::Mat & pano)
     bool is_blender_prepared = false;
 
     double compose_scale = 1;
-    bool is_compose_scale_set = false;
 
+    // prepare for blender loop --------------------------------------
+    if (compose_resol_ > 0)
+        compose_scale = min(1.0, sqrt(compose_resol_ * 1e6 / images[0].size().area()));
+
+    compose_work_aspect = compose_scale / work_scale;
+    warped_image_scale *= static_cast<float>(compose_work_aspect);
+
+    w = warper_->create((float)warped_image_scale);
+
+    // Update corners and sizes
+    for (size_t i = 0; i < images.size(); ++i)
+    {
+        // Update intrinsics
+        cameras_[i].focal *= compose_work_aspect;
+        cameras_[i].ppx *= compose_work_aspect;
+        cameras_[i].ppy *= compose_work_aspect;
+
+        // Update corner and size
+        cv::Size sz = images[i].size();
+        if (std::abs(compose_scale - 1) > 1e-1)
+        {
+            sz.width = cvRound(images[i].size().width * compose_scale);
+            sz.height = cvRound(images[i].size().height * compose_scale);
+        }
+
+        Mat K;
+        cameras_[i].K().convertTo(K, CV_32F);
+        Rect roi = w->warpRoi(sz, K, cameras_[i].R);
+        corners[i] = roi.tl();
+        sizes[i] = roi.size();
+    }
+
+    // blender loop --------------------------------------
     for (size_t img_idx = 0; img_idx < images.size(); ++img_idx)
     {
         LOGLN("Compositing image #" << indices_[img_idx] + 1);
 
         // Read image and resize it if necessary
-        full_img = images[img_idx];
-        if (!is_compose_scale_set)
-        {
-            if (compose_resol_ > 0)
-                compose_scale = min(1.0, sqrt(compose_resol_ * 1e6 / full_img.size().area()));
-            is_compose_scale_set = true;
+        img = images[img_idx]; // XXX is this dangerous if resize is used later?
 
-            // Compute relative scales
-            //compose_seam_aspect = compose_scale / seam_scale;
-            compose_work_aspect = compose_scale / work_scale;
-
-            // Update warped image scale
-            warped_image_scale *= static_cast<float>(compose_work_aspect);
-            w = warper_->create((float)warped_image_scale);
-
-            // Update corners and sizes
-            for (size_t i = 0; i < images.size(); ++i)
-            {
-                // Update intrinsics
-                cameras_[i].focal *= compose_work_aspect;
-                cameras_[i].ppx *= compose_work_aspect;
-                cameras_[i].ppy *= compose_work_aspect;
-
-                // Update corner and size
-                Size sz = images[i].size();
-                if (std::abs(compose_scale - 1) > 1e-1)
-                {
-                    sz.width = cvRound(images[i].size().width * compose_scale);
-                    sz.height = cvRound(images[i].size().height * compose_scale);
-                }
-
-                Mat K;
-                cameras_[i].K().convertTo(K, CV_32F);
-                Rect roi = w->warpRoi(sz, K, cameras_[i].R);
-                corners[i] = roi.tl();
-                sizes[i] = roi.size();
-            }
-        }
         if (std::abs(compose_scale - 1) > 1e-1)
-            resize(full_img, img, Size(), compose_scale, compose_scale);
-        else
-            img = full_img;
-        full_img.release();
+            cv::resize(images[img_idx], img, Size(), compose_scale, compose_scale);
+
         Size img_size = img.size();
 
         Mat K;
