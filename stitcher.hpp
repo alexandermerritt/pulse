@@ -80,90 +80,89 @@ public:
     // Step 2
     Status composePanorama(std::vector< cv::Mat > & images, cv::Mat & pano);
 
-    std::vector<int> component() const { return indices_; }
-    std::vector<detail::CameraParams> cameras() const { return cameras_; }
+    std::vector<int> component() const { return indices; }
+    cameras_t getCameras() const { return cameras; }
     // Below are various fine-tuning functions
 
-    double registrationResol() const { return registr_resol_; }
-    void setRegistrationResol(double resol_mpx) { registr_resol_ = resol_mpx; }
+    double registrationResol() const { return registr_resol; }
+    void setRegistrationResol(double resol_mpx) { registr_resol = resol_mpx; }
 
-    double seamEstimationResol() const { return seam_est_resol_; }
-    void setSeamEstimationResol(double resol_mpx) { seam_est_resol_ = resol_mpx; }
+    double seamEstimationResol() const { return seam_est_resol; }
+    void setSeamEstimationResol(double resol_mpx) { seam_est_resol = resol_mpx; }
 
-    double compositingResol() const { return compose_resol_; }
-    void setCompositingResol(double resol_mpx) { compose_resol_ = resol_mpx; }
+    double compositingResol() const { return compose_resol; }
+    void setCompositingResol(double resol_mpx) { compose_resol = resol_mpx; }
 
-    double panoConfidenceThresh() const { return conf_thresh_; }
-    void setPanoConfidenceThresh(double conf_thresh) { conf_thresh_ = conf_thresh; }
+    double panoConfidenceThresh() const { return conf_thresh; }
+    void setPanoConfidenceThresh(double conf_thresh_) { conf_thresh = conf_thresh_; }
 
-    bool waveCorrection() const { return do_wave_correct_; }
-    void setWaveCorrection(bool flag) { do_wave_correct_ = flag; }
+    bool waveCorrection() const { return do_wave_correct; }
+    void setWaveCorrection(bool flag) { do_wave_correct = flag; }
 
-    detail::WaveCorrectKind waveCorrectKind() const { return wave_correct_kind_; }
-    void setWaveCorrectKind(detail::WaveCorrectKind kind) { wave_correct_kind_ = kind; }
+    detail::WaveCorrectKind waveCorrectKind() const { return wave_correct_kind; }
+    void setWaveCorrectKind(detail::WaveCorrectKind kind) { wave_correct_kind = kind; }
 
-    Ptr<detail::FeaturesFinder> featuresFinder() { return features_finder_; }
-    const Ptr<detail::FeaturesFinder> featuresFinder() const { return features_finder_; }
-    void setFeaturesFinder(Ptr<detail::FeaturesFinder> features_finder)
-        { features_finder_ = features_finder; }
+    Ptr<detail::FeaturesFinder> featuresFinder() { return features_finder; }
+    const Ptr<detail::FeaturesFinder> featuresFinder() const { return features_finder; }
+    void setFeaturesFinder(Ptr<detail::FeaturesFinder> features_finder_)
+        { features_finder = features_finder_; }
 
-    Ptr<detail::FeaturesMatcher> featuresMatcher() { return features_matcher_; }
-    const Ptr<detail::FeaturesMatcher> featuresMatcher() const { return features_matcher_; }
-    void setFeaturesMatcher(Ptr<detail::FeaturesMatcher> features_matcher)
-        { features_matcher_ = features_matcher; }
+    Ptr<detail::FeaturesMatcher> featuresMatcher() { return features_matcher; }
+    const Ptr<detail::FeaturesMatcher> featuresMatcher() const { return features_matcher; }
+    void setFeaturesMatcher(Ptr<detail::FeaturesMatcher> features_matcher_)
+        { features_matcher = features_matcher_; }
 
-    const cv::Mat& matchingMask() const { return matching_mask_; }
+    const cv::Mat& matchingMask() const { return matching_mask; }
     void setMatchingMask(const cv::Mat &mask)
     {
         CV_Assert(mask.type() == CV_8U && mask.cols == mask.rows);
-        matching_mask_ = mask.clone();
+        matching_mask = mask.clone();
     }
 
-    Ptr<detail::BundleAdjusterBase> bundleAdjuster() { return bundle_adjuster_; }
-    const Ptr<detail::BundleAdjusterBase> bundleAdjuster() const { return bundle_adjuster_; }
-    void setBundleAdjuster(Ptr<detail::BundleAdjusterBase> bundle_adjuster)
-        { bundle_adjuster_ = bundle_adjuster; }
+    Ptr<detail::BundleAdjusterBase> bundleAdjuster() { return bundle_adjuster; }
+    const Ptr<detail::BundleAdjusterBase> bundleAdjuster() const { return bundle_adjuster; }
+    void setBundleAdjuster(Ptr<detail::BundleAdjusterBase> bundle_adjuster_)
+        { bundle_adjuster = bundle_adjuster_; }
 
-    Ptr<WarperCreator> warper() { return warper_; }
-    const Ptr<WarperCreator> warper() const { return warper_; }
-    void setWarper(Ptr<WarperCreator> creator) { warper_ = creator; }
+    Ptr<WarperCreator> getWarper() { return warper; }
+    const Ptr<WarperCreator> getWarper() const { return warper; }
+    void setWarper(Ptr<WarperCreator> creator) { warper = creator; }
 
-    Ptr<detail::ExposureCompensator> exposureCompensator() { return exposure_comp_; }
-    const Ptr<detail::ExposureCompensator> exposureCompensator() const { return exposure_comp_; }
-    void setExposureCompensator(Ptr<detail::ExposureCompensator> exposure_comp)
-        { exposure_comp_ = exposure_comp; }
+    Ptr<detail::ExposureCompensator> exposureCompensator() { return exposure_comp; }
+    const Ptr<detail::ExposureCompensator> exposureCompensator() const { return exposure_comp; }
+    void setExposureCompensator(Ptr<detail::ExposureCompensator> exposure_comp_)
+        { exposure_comp = exposure_comp_; }
 
-    Ptr<detail::SeamFinder> seamFinder() { return seam_finder_; }
-    const Ptr<detail::SeamFinder> seamFinder() const { return seam_finder_; }
-    void setSeamFinder(Ptr<detail::SeamFinder> seam_finder) { seam_finder_ = seam_finder; }
+    Ptr<detail::SeamFinder> seamFinder() { return seam_finder; }
+    const Ptr<detail::SeamFinder> seamFinder() const { return seam_finder; }
+    void setSeamFinder(Ptr<detail::SeamFinder> seam_finder_) { seam_finder = seam_finder_; }
 
-    Ptr<detail::Blender> blender() { return blender_; }
-    const Ptr<detail::Blender> blender() const { return blender_; }
-    void setBlender(Ptr<detail::Blender> b) { blender_ = b; }
+    Ptr<detail::Blender> getBlender() { return blender; }
+    const Ptr<detail::Blender> getBlender() const { return blender; }
+    void setBlender(Ptr<detail::Blender> b) { blender = b; }
 
 private:
     PStitcher() {}
 
-    double registr_resol_;
-    double seam_est_resol_;
-    double compose_resol_;
-    double conf_thresh_;
-    Ptr<detail::FeaturesFinder> features_finder_;
-    Ptr<detail::FeaturesMatcher> features_matcher_;
-    cv::Mat matching_mask_;
-    Ptr<detail::BundleAdjusterBase> bundle_adjuster_;
-    bool do_wave_correct_;
-    detail::WaveCorrectKind wave_correct_kind_;
-    Ptr<WarperCreator> warper_;
-    Ptr<detail::ExposureCompensator> exposure_comp_;
-    Ptr<detail::SeamFinder> seam_finder_;
-    Ptr<detail::Blender> blender_;
+    double registr_resol;
+    double seam_est_resol;
+    double compose_resol;
+    double conf_thresh;
+    Ptr<detail::FeaturesFinder> features_finder;
+    Ptr<detail::FeaturesMatcher> features_matcher;
+    cv::Mat matching_mask;
+    Ptr<detail::BundleAdjusterBase> bundle_adjuster;
+    bool do_wave_correct;
+    detail::WaveCorrectKind wave_correct_kind;
+    Ptr<WarperCreator> warper;
+    Ptr<detail::ExposureCompensator> exposure_comp;
+    Ptr<detail::SeamFinder> seam_finder;
+    Ptr<detail::Blender> blender;
 
-    //std::vector<cv::Mat> imgs_;
-    std::vector<detail::ImageFeatures> features_;
-    std::vector<detail::MatchesInfo> pairwise_matches_;
-    std::vector<int> indices_;
-    std::vector<detail::CameraParams> cameras_;
+    features_t features;
+    matches_t matches;
+    std::vector<int> indices;
+    cameras_t cameras;
 };
 
 #endif // __STITCHER_HPP_INCLUDED__

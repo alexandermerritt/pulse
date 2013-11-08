@@ -109,11 +109,11 @@ PStitcher::Status PStitcher::composePanorama(images_t &images, cv::Mat & pano)
 
     // compute seam scales (and recompute work scale)
     double work_scale = 1;
-    if (registr_resol_ >= 0)
-        work_scale = min(1.0, sqrt(registr_resol_ * 1e6 / images[0].size().area()));
+    if (registr_resol >= 0)
+        work_scale = min(1.0, sqrt(registr_resol * 1e6 / images[0].size().area()));
     std::cout << ">>    work_scale " << work_scale << std::endl;
     double seam_scale =
-        std::min(1.0, sqrt(seam_est_resol_ * 1e6 / images[0].size().area()));
+        std::min(1.0, sqrt(seam_est_resol * 1e6 / images[0].size().area()));
     double seam_work_aspect = seam_scale / work_scale;
     cout << ">>    seam_scale " << seam_scale << endl;
     cout << ">>    seam_work_aspect " << seam_work_aspect << endl;
@@ -145,7 +145,7 @@ PStitcher::Status PStitcher::composePanorama(images_t &images, cv::Mat & pano)
 
     // Find median focal length and use it as final image scale
     vector<double> focals;
-    for (auto &cam : cameras_)
+    for (auto &cam : cameras)
         focals.push_back(cam.focal);
 
     std::sort(focals.begin(), focals.end());
@@ -157,20 +157,20 @@ PStitcher::Status PStitcher::composePanorama(images_t &images, cv::Mat & pano)
         warped_image_scale = static_cast<float>(focals[fsz / 2 - 1] + focals[fsz / 2]) * 0.5f;
 
     // Warp images and their masks
-    Ptr<detail::RotationWarper> w = warper_->create(float(warped_image_scale * seam_work_aspect));
+    Ptr<detail::RotationWarper> w = warper->create(float(warped_image_scale * seam_work_aspect));
     for (size_t i = 0; i < images.size(); ++i)
     {
         Mat_<float> K;
-        cameras_[i].K().convertTo(K, CV_32F);
+        cameras[i].K().convertTo(K, CV_32F);
         K(0,0) *= (float)seam_work_aspect;
         K(0,2) *= (float)seam_work_aspect;
         K(1,1) *= (float)seam_work_aspect;
         K(1,2) *= (float)seam_work_aspect;
 
-        corners[i] = w->warp(seam_est_images[i], K, cameras_[i].R, INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
+        corners[i] = w->warp(seam_est_images[i], K, cameras[i].R, INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
         sizes[i] = images_warped[i].size();
 
-        w->warp(masks[i], K, cameras_[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
+        w->warp(masks[i], K, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
     }
 
     vector<Mat> images_warped_f(images.size());
@@ -180,8 +180,8 @@ PStitcher::Status PStitcher::composePanorama(images_t &images, cv::Mat & pano)
     LOGLN("Warping images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     // Find seams
-    exposure_comp_->feed(corners, images_warped, masks_warped);
-    seam_finder_->find(images_warped_f, corners, masks_warped);
+    exposure_comp->feed(corners, images_warped, masks_warped);
+    seam_finder->find(images_warped_f, corners, masks_warped);
 
     // Release unused memory
     seam_est_images.clear();
@@ -204,21 +204,21 @@ PStitcher::Status PStitcher::composePanorama(images_t &images, cv::Mat & pano)
     double compose_scale = 1;
 
     // prepare for blender loop --------------------------------------
-    if (compose_resol_ > 0)
-        compose_scale = min(1.0, sqrt(compose_resol_ * 1e6 / images[0].size().area()));
+    if (compose_resol > 0)
+        compose_scale = min(1.0, sqrt(compose_resol * 1e6 / images[0].size().area()));
 
     compose_work_aspect = compose_scale / work_scale;
     warped_image_scale *= static_cast<float>(compose_work_aspect);
 
-    w = warper_->create((float)warped_image_scale);
+    w = warper->create((float)warped_image_scale);
 
     // Update corners and sizes
     for (size_t i = 0; i < images.size(); ++i)
     {
         // Update intrinsics
-        cameras_[i].focal *= compose_work_aspect;
-        cameras_[i].ppx *= compose_work_aspect;
-        cameras_[i].ppy *= compose_work_aspect;
+        cameras[i].focal *= compose_work_aspect;
+        cameras[i].ppx *= compose_work_aspect;
+        cameras[i].ppy *= compose_work_aspect;
 
         // Update corner and size
         cv::Size sz = images[i].size();
@@ -229,8 +229,8 @@ PStitcher::Status PStitcher::composePanorama(images_t &images, cv::Mat & pano)
         }
 
         Mat K;
-        cameras_[i].K().convertTo(K, CV_32F);
-        Rect roi = w->warpRoi(sz, K, cameras_[i].R);
+        cameras[i].K().convertTo(K, CV_32F);
+        Rect roi = w->warpRoi(sz, K, cameras[i].R);
         corners[i] = roi.tl();
         sizes[i] = roi.size();
     }
@@ -238,7 +238,7 @@ PStitcher::Status PStitcher::composePanorama(images_t &images, cv::Mat & pano)
     // blender loop --------------------------------------
     for (size_t img_idx = 0; img_idx < images.size(); ++img_idx)
     {
-        LOGLN("Compositing image #" << indices_[img_idx] + 1);
+        LOGLN("Compositing image #" << indices[img_idx] + 1);
 
         // Read image and resize it if necessary
         img = images[img_idx]; // XXX is this dangerous if resize is used later?
@@ -249,18 +249,18 @@ PStitcher::Status PStitcher::composePanorama(images_t &images, cv::Mat & pano)
         Size img_size = img.size();
 
         Mat K;
-        cameras_[img_idx].K().convertTo(K, CV_32F);
+        cameras[img_idx].K().convertTo(K, CV_32F);
 
         // Warp the current image
-        w->warp(img, K, cameras_[img_idx].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
+        w->warp(img, K, cameras[img_idx].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
 
         // Warp the current image mask
         mask.create(img_size, CV_8U);
         mask.setTo(Scalar::all(255));
-        w->warp(mask, K, cameras_[img_idx].R, INTER_NEAREST, BORDER_CONSTANT, mask_warped);
+        w->warp(mask, K, cameras[img_idx].R, INTER_NEAREST, BORDER_CONSTANT, mask_warped);
 
         // Compensate exposure
-        exposure_comp_->apply((int)img_idx, corners[img_idx], img_warped, mask_warped);
+        exposure_comp->apply((int)img_idx, corners[img_idx], img_warped, mask_warped);
 
         img_warped.convertTo(img_warped_s, CV_16S);
         img_warped.release();
@@ -275,16 +275,16 @@ PStitcher::Status PStitcher::composePanorama(images_t &images, cv::Mat & pano)
 
         if (!is_blender_prepared)
         {
-            blender_->prepare(corners, sizes);
+            blender->prepare(corners, sizes);
             is_blender_prepared = true;
         }
 
         // Blend the current image
-        blender_->feed(img_warped_s, mask_warped, corners[img_idx]);
+        blender->feed(img_warped_s, mask_warped, corners[img_idx]);
     }
 
     Mat result, result_mask;
-    blender_->blend(result, result_mask);
+    blender->blend(result, result_mask);
 
     LOGLN("Compositing, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
@@ -309,7 +309,7 @@ PStitcher::Status PStitcher::matchImages(images_t &images)
     }
 
     Mat full_img, img;
-    features_.resize(images.size());
+    features.resize(images.size());
 
     LOGLN("Finding features...");
 #if ENABLE_LOG
@@ -317,8 +317,8 @@ PStitcher::Status PStitcher::matchImages(images_t &images)
 #endif
 
     double work_scale = 1;
-    if (registr_resol_ >= 0)
-        work_scale = min(1.0, sqrt(registr_resol_ * 1e6 / images[0].size().area()));
+    if (registr_resol >= 0)
+        work_scale = min(1.0, sqrt(registr_resol * 1e6 / images[0].size().area()));
     std::cout << ">>    work_scale " << work_scale << std::endl;
 
     for (size_t i = 0; i < images.size(); ++i)
@@ -326,14 +326,14 @@ PStitcher::Status PStitcher::matchImages(images_t &images)
         full_img = images[i];
 
         resize(full_img, img, Size(), work_scale, work_scale);
-        (*features_finder_)(img, features_[i]);
-        features_[i].img_idx = (int)i;
+        (*features_finder)(img, features[i]);
+        features[i].img_idx = (int)i;
 
-        LOGLN("Features in image #" << i+1 << ": " << features_[i].keypoints.size());
+        LOGLN("Features in image #" << i+1 << ": " << features[i].keypoints.size());
     }
 
     // Do it to save memory
-    features_finder_->collectGarbage();
+    features_finder->collectGarbage();
     full_img.release();
     img.release();
 
@@ -343,12 +343,12 @@ PStitcher::Status PStitcher::matchImages(images_t &images)
 #if ENABLE_LOG
     t = getTickCount();
 #endif
-    (*features_matcher_)(features_, pairwise_matches_, matching_mask_);
-    features_matcher_->collectGarbage();
+    (*features_matcher)(features, matches, matching_mask);
+    features_matcher->collectGarbage();
     LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     // Leave only images we are sure are from the same panorama
-    indices_ = detail::leaveBiggestComponent(features_, pairwise_matches_, (float)conf_thresh_);
+    indices = detail::leaveBiggestComponent(features, matches, (float)conf_thresh);
 
     return OK;
 }
@@ -357,27 +357,27 @@ PStitcher::Status PStitcher::matchImages(images_t &images)
 void PStitcher::estimateCameraParams()
 {
     detail::HomographyBasedEstimator estimator;
-    estimator(features_, pairwise_matches_, cameras_);
+    estimator(features, matches, cameras);
 
-    for (size_t i = 0; i < cameras_.size(); ++i)
+    for (size_t i = 0; i < cameras.size(); ++i)
     {
         Mat R;
-        cameras_[i].R.convertTo(R, CV_32F);
-        cameras_[i].R = R;
-        LOGLN("Initial intrinsic parameters #" << indices_[i] + 1 << ":\n " << cameras_[i].K());
+        cameras[i].R.convertTo(R, CV_32F);
+        cameras[i].R = R;
+        LOGLN("Initial intrinsic parameters #" << indices[i] + 1 << ":\n " << cameras[i].K());
     }
 
-    bundle_adjuster_->setConfThresh(conf_thresh_);
-    (*bundle_adjuster_)(features_, pairwise_matches_, cameras_);
+    bundle_adjuster->setConfThresh(conf_thresh);
+    (*bundle_adjuster)(features, matches, cameras);
 
-    if (do_wave_correct_)
+    if (do_wave_correct)
     {
         vector<Mat> rmats;
-        for (size_t i = 0; i < cameras_.size(); ++i)
-            rmats.push_back(cameras_[i].R);
-        detail::waveCorrect(rmats, wave_correct_kind_);
-        for (size_t i = 0; i < cameras_.size(); ++i)
-            cameras_[i].R = rmats[i];
+        for (size_t i = 0; i < cameras.size(); ++i)
+            rmats.push_back(cameras[i].R);
+        detail::waveCorrect(rmats, wave_correct_kind);
+        for (size_t i = 0; i < cameras.size(); ++i)
+            cameras[i].R = rmats[i];
     }
 }
 
