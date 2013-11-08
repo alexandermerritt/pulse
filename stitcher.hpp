@@ -72,16 +72,21 @@ public:
     // Creates stitcher with default parameters
     static PStitcher createDefault(bool try_use_gpu = false);
 
-    void estimateCameraParams();
 
     // Step 1
-    Status matchImages(images_t &images);
+    Status matchImages(images_t &images_in,
+            features_t &features_out, matches_t &matches_out, indices_t &indices_out);
 
     // Step 2
-    Status composePanorama(std::vector< cv::Mat > & images, cv::Mat & pano);
+    void estimateCameraParams(features_t &features_in, matches_t &matches_in,
+            cameras_t &cameras_out);
 
-    std::vector<int> component() const { return indices; }
-    cameras_t getCameras() const { return cameras; }
+    // Step 3
+    Status composePanorama(images_t &images, cameras_t &cameras, cv::Mat &pano);
+
+    //std::vector<int> component() const { return indices; }
+    //cameras_t getCameras() const { return cameras; }
+
     // Below are various fine-tuning functions
 
     double registrationResol() const { return registr_resol; }
@@ -158,11 +163,6 @@ private:
     Ptr<detail::ExposureCompensator> exposure_comp;
     Ptr<detail::SeamFinder> seam_finder;
     Ptr<detail::Blender> blender;
-
-    features_t features;
-    matches_t matches;
-    std::vector<int> indices;
-    cameras_t cameras;
 };
 
 #endif // __STITCHER_HPP_INCLUDED__

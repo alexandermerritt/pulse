@@ -25,5 +25,7 @@ typedef std::vector< cv::detail::MatchesInfo > matches_t;
 typedef std::vector< cv::detail::CameraParams > cameras_t;
 typedef cv::detail::WaveCorrectKind wave_t;
 
+typedef std::vector< int > indices_t;
+
 typedef std::set< std::pair< int, int > > MatchesSet;
 

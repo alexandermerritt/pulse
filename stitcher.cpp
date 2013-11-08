@@ -94,7 +94,8 @@ PStitcher PStitcher::createDefault(bool try_use_gpu)
 // 2. pair-wise match features for all images
 // 2b. determine which belong to same panorama
 // OUTPUT feature set, list of images part of panorama
-PStitcher::Status PStitcher::matchImages(images_t &images)
+PStitcher::Status PStitcher::matchImages(images_t &images,
+        features_t &features, matches_t &matches, indices_t &indices)
 {
     if ((int)images.size() < 2)
     {
@@ -103,6 +104,11 @@ PStitcher::Status PStitcher::matchImages(images_t &images)
     }
 
     Mat full_img, img;
+
+    features.clear();
+    matches.clear();
+    indices.clear();
+
     features.resize(images.size());
 
     LOGLN("Finding features...");
@@ -121,7 +127,7 @@ PStitcher::Status PStitcher::matchImages(images_t &images)
 
         resize(full_img, img, Size(), work_scale, work_scale);
         (*features_finder)(img, features[i]);
-        features[i].img_idx = (int)i;
+        //features[i].img_idx = (int)i; // XXX what is this for?
 
         LOGLN("Features in image #" << i+1 << ": " << features[i].keypoints.size());
     }
@@ -148,7 +154,8 @@ PStitcher::Status PStitcher::matchImages(images_t &images)
 }
 
 // 3. look at camera data for each image
-void PStitcher::estimateCameraParams()
+void PStitcher::estimateCameraParams(features_t &features,
+        matches_t &matches, cameras_t &cameras)
 {
     detail::HomographyBasedEstimator estimator;
     estimator(features, matches, cameras);
@@ -175,7 +182,7 @@ void PStitcher::estimateCameraParams()
     }
 }
 
-PStitcher::Status PStitcher::composePanorama(images_t &images, cv::Mat & pano)
+PStitcher::Status PStitcher::composePanorama(images_t &images, cameras_t &cameras, cv::Mat & pano)
 {
     LOGLN("Warping images (auxiliary)... ");
     cv::Mat img, full_img;
@@ -197,8 +204,6 @@ PStitcher::Status PStitcher::composePanorama(images_t &images, cv::Mat & pano)
         seam_est_images.push_back(img.clone());
     }
     img.release();
-
-    estimateCameraParams();
 
 #if ENABLE_LOG
     int64 t = getTickCount();
