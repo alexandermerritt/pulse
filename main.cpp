@@ -30,7 +30,7 @@ int main(void)
     if (load_images(images, dirlist))
         return -1;
 
-    ps.estimateTransform(images);
+    ps.matchImages(images);
     ps.composePanorama(images, pano);
     cv::imwrite("pano.jpg", pano);
 

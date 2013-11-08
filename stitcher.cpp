@@ -100,63 +100,46 @@ PStitcher PStitcher::createDefault(bool try_use_gpu)
 }
 
 
-PStitcher::Status PStitcher::estimateTransform(InputArray images)
-{
-    images.getMatVector(imgs_); /* this modifies imgs_ */
-    return matchImages();
-}
 
-PStitcher::Status PStitcher::composePanorama(InputArray images, OutputArray pano)
+PStitcher::Status PStitcher::composePanorama(images_t &images, cv::Mat & pano)
 {
     LOGLN("Warping images (auxiliary)... ");
+    cv::Mat img, full_img;
+    images_t seam_est_images;
 
-    vector<Mat> imgs;
-    images.getMatVector(imgs);
-    if (!imgs.empty())
-    {
-        CV_Assert(imgs.size() == imgs_.size());
+    // compute seam scales (and recompute work scale)
+    double work_scale = 1;
+    if (registr_resol_ >= 0)
+        work_scale = min(1.0, sqrt(registr_resol_ * 1e6 / images[0].size().area()));
+    std::cout << ">>    work_scale " << work_scale << std::endl;
+    double seam_scale =
+        std::min(1.0, sqrt(seam_est_resol_ * 1e6 / images[0].size().area()));
+    double seam_work_aspect = seam_scale / work_scale;
+    cout << ">>    seam_scale " << seam_scale << endl;
+    cout << ">>    seam_work_aspect " << seam_work_aspect << endl;
 
-        Mat img;
-        seam_est_imgs_.resize(imgs.size());
-
-        for (size_t i = 0; i < imgs.size(); ++i)
-        {
-            imgs_[i] = imgs[i];
-            resize(imgs[i], img, Size(), seam_scale_, seam_scale_);
-            seam_est_imgs_[i] = img.clone();
-        }
-
-        vector<Mat> seam_est_imgs_subset;
-        vector<Mat> imgs_subset;
-
-        for (size_t i = 0; i < indices_.size(); ++i)
-        {
-            imgs_subset.push_back(imgs_[indices_[i]]);
-            seam_est_imgs_subset.push_back(seam_est_imgs_[indices_[i]]);
-        }
-
-        seam_est_imgs_ = seam_est_imgs_subset;
-        imgs_ = imgs_subset;
+    for (auto &image : images) {
+        cv::resize(image, img, cv::Size(), seam_scale, seam_scale);
+        seam_est_images.push_back(img.clone());
     }
+    img.release();
 
     estimateCameraParams();
-
-    Mat &pano_ = pano.getMatRef();
 
 #if ENABLE_LOG
     int64 t = getTickCount();
 #endif
 
-    vector<Point> corners(imgs_.size());
-    vector<Mat> masks_warped(imgs_.size());
-    vector<Mat> images_warped(imgs_.size());
-    vector<Size> sizes(imgs_.size());
-    vector<Mat> masks(imgs_.size());
+    vector<Point> corners(images.size());
+    vector<Mat> masks_warped(images.size());
+    vector<Mat> images_warped(images.size());
+    vector<Size> sizes(images.size());
+    vector<Mat> masks(images.size());
 
     // Prepare image masks
-    for (size_t i = 0; i < imgs_.size(); ++i)
+    for (size_t i = 0; i < images.size(); ++i)
     {
-        masks[i].create(seam_est_imgs_[i].size(), CV_8U);
+        masks[i].create(seam_est_images[i].size(), CV_8U);
         masks[i].setTo(Scalar::all(255));
     }
 
@@ -167,30 +150,31 @@ PStitcher::Status PStitcher::composePanorama(InputArray images, OutputArray pano
 
     std::sort(focals.begin(), focals.end());
     size_t fsz = focals.size();
+    double warped_image_scale;
     if (fsz % 2 == 1)
-        warped_image_scale_ = static_cast<float>(focals[fsz / 2]);
+        warped_image_scale = static_cast<float>(focals[fsz / 2]);
     else
-        warped_image_scale_ = static_cast<float>(focals[fsz / 2 - 1] + focals[fsz / 2]) * 0.5f;
+        warped_image_scale = static_cast<float>(focals[fsz / 2 - 1] + focals[fsz / 2]) * 0.5f;
 
     // Warp images and their masks
-    Ptr<detail::RotationWarper> w = warper_->create(float(warped_image_scale_ * seam_work_aspect_));
-    for (size_t i = 0; i < imgs_.size(); ++i)
+    Ptr<detail::RotationWarper> w = warper_->create(float(warped_image_scale * seam_work_aspect));
+    for (size_t i = 0; i < images.size(); ++i)
     {
         Mat_<float> K;
         cameras_[i].K().convertTo(K, CV_32F);
-        K(0,0) *= (float)seam_work_aspect_;
-        K(0,2) *= (float)seam_work_aspect_;
-        K(1,1) *= (float)seam_work_aspect_;
-        K(1,2) *= (float)seam_work_aspect_;
+        K(0,0) *= (float)seam_work_aspect;
+        K(0,2) *= (float)seam_work_aspect;
+        K(1,1) *= (float)seam_work_aspect;
+        K(1,2) *= (float)seam_work_aspect;
 
-        corners[i] = w->warp(seam_est_imgs_[i], K, cameras_[i].R, INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
+        corners[i] = w->warp(seam_est_images[i], K, cameras_[i].R, INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
         sizes[i] = images_warped[i].size();
 
         w->warp(masks[i], K, cameras_[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
     }
 
-    vector<Mat> images_warped_f(imgs_.size());
-    for (size_t i = 0; i < imgs_.size(); ++i)
+    vector<Mat> images_warped_f(images.size());
+    for (size_t i = 0; i < images.size(); ++i)
         images_warped[i].convertTo(images_warped_f[i], CV_32F);
 
     LOGLN("Warping images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
@@ -200,7 +184,7 @@ PStitcher::Status PStitcher::composePanorama(InputArray images, OutputArray pano
     seam_finder_->find(images_warped_f, corners, masks_warped);
 
     // Release unused memory
-    seam_est_imgs_.clear();
+    seam_est_images.clear();
     images_warped.clear();
     images_warped_f.clear();
     masks.clear();
@@ -220,13 +204,12 @@ PStitcher::Status PStitcher::composePanorama(InputArray images, OutputArray pano
     double compose_scale = 1;
     bool is_compose_scale_set = false;
 
-    Mat full_img, img;
-    for (size_t img_idx = 0; img_idx < imgs_.size(); ++img_idx)
+    for (size_t img_idx = 0; img_idx < images.size(); ++img_idx)
     {
         LOGLN("Compositing image #" << indices_[img_idx] + 1);
 
         // Read image and resize it if necessary
-        full_img = imgs_[img_idx];
+        full_img = images[img_idx];
         if (!is_compose_scale_set)
         {
             if (compose_resol_ > 0)
@@ -234,15 +217,15 @@ PStitcher::Status PStitcher::composePanorama(InputArray images, OutputArray pano
             is_compose_scale_set = true;
 
             // Compute relative scales
-            //compose_seam_aspect = compose_scale / seam_scale_;
-            compose_work_aspect = compose_scale / work_scale_;
+            //compose_seam_aspect = compose_scale / seam_scale;
+            compose_work_aspect = compose_scale / work_scale;
 
             // Update warped image scale
-            warped_image_scale_ *= static_cast<float>(compose_work_aspect);
-            w = warper_->create((float)warped_image_scale_);
+            warped_image_scale *= static_cast<float>(compose_work_aspect);
+            w = warper_->create((float)warped_image_scale);
 
             // Update corners and sizes
-            for (size_t i = 0; i < imgs_.size(); ++i)
+            for (size_t i = 0; i < images.size(); ++i)
             {
                 // Update intrinsics
                 cameras_[i].focal *= compose_work_aspect;
@@ -250,11 +233,11 @@ PStitcher::Status PStitcher::composePanorama(InputArray images, OutputArray pano
                 cameras_[i].ppy *= compose_work_aspect;
 
                 // Update corner and size
-                Size sz = full_img_sizes_[i];
+                Size sz = images[i].size();
                 if (std::abs(compose_scale - 1) > 1e-1)
                 {
-                    sz.width = cvRound(full_img_sizes_[i].width * compose_scale);
-                    sz.height = cvRound(full_img_sizes_[i].height * compose_scale);
+                    sz.width = cvRound(images[i].size().width * compose_scale);
+                    sz.height = cvRound(images[i].size().height * compose_scale);
                 }
 
                 Mat K;
@@ -313,7 +296,7 @@ PStitcher::Status PStitcher::composePanorama(InputArray images, OutputArray pano
 
     // Preliminary result is in CV_16SC3 format, but all values are in [0,255] range,
     // so convert it to avoid user confusing
-    result.convertTo(pano_, CV_8U);
+    result.convertTo(pano, CV_8U);
 
     return OK;
 }
@@ -322,47 +305,37 @@ PStitcher::Status PStitcher::composePanorama(InputArray images, OutputArray pano
 // 1. find features for each image
 // 2. pair-wise match features for all images
 // 2b. determine which belong to same panorama
-PStitcher::Status PStitcher::matchImages()
+// OUTPUT feature set, list of images part of panorama
+PStitcher::Status PStitcher::matchImages(images_t &images)
 {
-    if ((int)imgs_.size() < 2)
+    if ((int)images.size() < 2)
     {
         LOGLN("Need more images");
         return ERR_NEED_MORE_IMGS;
     }
 
     Mat full_img, img;
-    features_.resize(imgs_.size());
-    seam_est_imgs_.resize(imgs_.size());
-    full_img_sizes_.resize(imgs_.size());
+    features_.resize(images.size());
 
     LOGLN("Finding features...");
 #if ENABLE_LOG
     int64 t = getTickCount();
 #endif
 
-    work_scale_ = 1;
+    double work_scale = 1;
     if (registr_resol_ >= 0)
-        work_scale_ = min(1.0, sqrt(registr_resol_ * 1e6 / imgs_[0].size().area()));
-    std::cout << ">>    work_scale " << work_scale_ << std::endl;
+        work_scale = min(1.0, sqrt(registr_resol_ * 1e6 / images[0].size().area()));
+    std::cout << ">>    work_scale " << work_scale << std::endl;
 
-    seam_scale_ = min(1.0, sqrt(seam_est_resol_ * 1e6 / imgs_[0].size().area()));
-    seam_work_aspect_ = seam_scale_ / work_scale_;
-    cout << ">>    seam_scale " << seam_scale_ << endl;
-    cout << ">>    seam_work_aspect " << seam_work_aspect_ << endl;
-
-    for (size_t i = 0; i < imgs_.size(); ++i)
+    for (size_t i = 0; i < images.size(); ++i)
     {
-        full_img = imgs_[i];
-        full_img_sizes_[i] = full_img.size();
+        full_img = images[i];
 
-        resize(full_img, img, Size(), work_scale_, work_scale_);
+        resize(full_img, img, Size(), work_scale, work_scale);
         (*features_finder_)(img, features_[i]);
         features_[i].img_idx = (int)i;
 
         LOGLN("Features in image #" << i+1 << ": " << features_[i].keypoints.size());
-
-        resize(full_img, img, Size(), seam_scale_, seam_scale_);
-        seam_est_imgs_[i] = img.clone();
     }
 
     // Do it to save memory
@@ -382,24 +355,6 @@ PStitcher::Status PStitcher::matchImages()
 
     // Leave only images we are sure are from the same panorama
     indices_ = detail::leaveBiggestComponent(features_, pairwise_matches_, (float)conf_thresh_);
-    vector<Mat> seam_est_imgs_subset;
-    vector<Mat> imgs_subset;
-    vector<Size> full_img_sizes_subset;
-    for (size_t i = 0; i < indices_.size(); ++i)
-    {
-        imgs_subset.push_back(imgs_[indices_[i]]);
-        seam_est_imgs_subset.push_back(seam_est_imgs_[indices_[i]]);
-        full_img_sizes_subset.push_back(full_img_sizes_[indices_[i]]);
-    }
-    seam_est_imgs_ = seam_est_imgs_subset;
-    imgs_ = imgs_subset;
-    full_img_sizes_ = full_img_sizes_subset;
-
-    if ((int)imgs_.size() < 2)
-    {
-        LOGLN("Need more images");
-        return ERR_NEED_MORE_IMGS;
-    }
 
     return OK;
 }

@@ -58,6 +58,8 @@
 //#include <core/gpumat.hpp>
 //#include <stitching/stitcher.hpp>
 
+#include "types.hpp"
+
 using namespace std;
 using namespace cv;
 
@@ -70,14 +72,13 @@ public:
     // Creates stitcher with default parameters
     static PStitcher createDefault(bool try_use_gpu = false);
 
-    Status matchImages();
     void estimateCameraParams();
 
     // Step 1
-    Status estimateTransform(InputArray images);
+    Status matchImages(images_t &images);
 
     // Step 2
-    Status composePanorama(InputArray images, OutputArray pano);
+    Status composePanorama(std::vector< cv::Mat > & images, cv::Mat & pano);
 
     std::vector<int> component() const { return indices_; }
     std::vector<detail::CameraParams> cameras() const { return cameras_; }
@@ -140,8 +141,6 @@ public:
     const Ptr<detail::Blender> blender() const { return blender_; }
     void setBlender(Ptr<detail::Blender> b) { blender_ = b; }
 
-    double workScale() const { return work_scale_; }
-
 private:
     PStitcher() {}
 
@@ -160,16 +159,11 @@ private:
     Ptr<detail::SeamFinder> seam_finder_;
     Ptr<detail::Blender> blender_;
 
-    std::vector<cv::Mat> imgs_;
-    std::vector<cv::Size> full_img_sizes_;
+    //std::vector<cv::Mat> imgs_;
     std::vector<detail::ImageFeatures> features_;
     std::vector<detail::MatchesInfo> pairwise_matches_;
-    std::vector<cv::Mat> seam_est_imgs_;
     std::vector<int> indices_;
     std::vector<detail::CameraParams> cameras_;
-    double work_scale_;
-    double seam_scale_;
-    double seam_work_aspect_;
     double warped_image_scale_;
 };
 
