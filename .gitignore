@@ -1,0 +1,6 @@
+output/
+input/
+*.swo
+*.swp
+*.o
+.sconsign.dblite

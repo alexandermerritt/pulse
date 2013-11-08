@@ -42,6 +42,17 @@
 
 //#include "precomp.hpp"
 
+#include <opencv2/core/core.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/stitching/warpers.hpp>
+#include <opencv2/stitching/detail/matchers.hpp>
+#include <opencv2/stitching/detail/motion_estimators.hpp>
+#include <opencv2/stitching/detail/exposure_compensate.hpp>
+#include <opencv2/stitching/detail/seam_finders.hpp>
+#include <opencv2/stitching/detail/blenders.hpp>
+#include <opencv2/stitching/detail/camera.hpp>
+
+#include <iostream>
 #include "stitcher.hpp"
 
 using namespace std;
@@ -105,18 +116,8 @@ PStitcher::Status PStitcher::estimateTransform(InputArray images, const vector<v
     if ((status = matchImages()) != OK)
         return status;
 
-    estimateCameraParams();
-
     return OK;
 }
-
-
-
-PStitcher::Status PStitcher::composePanorama(OutputArray pano)
-{
-    return composePanorama(vector<Mat>(), pano);
-}
-
 
 PStitcher::Status PStitcher::composePanorama(InputArray images, OutputArray pano)
 {
@@ -151,6 +152,8 @@ PStitcher::Status PStitcher::composePanorama(InputArray images, OutputArray pano
         imgs_ = imgs_subset;
     }
 
+    estimateCameraParams();
+
     Mat &pano_ = pano.getMatRef();
 
 #if ENABLE_LOG
@@ -169,6 +172,18 @@ PStitcher::Status PStitcher::composePanorama(InputArray images, OutputArray pano
         masks[i].create(seam_est_imgs_[i].size(), CV_8U);
         masks[i].setTo(Scalar::all(255));
     }
+
+    // Find median focal length and use it as final image scale
+    vector<double> focals;
+    for (auto &cam : cameras_)
+        focals.push_back(cam.focal);
+
+    std::sort(focals.begin(), focals.end());
+    size_t fsz = focals.size();
+    if (fsz % 2 == 1)
+        warped_image_scale_ = static_cast<float>(focals[fsz / 2]);
+    else
+        warped_image_scale_ = static_cast<float>(focals[fsz / 2 - 1] + focals[fsz / 2]) * 0.5f;
 
     // Warp images and their masks
     Ptr<detail::RotationWarper> w = warper_->create(float(warped_image_scale_ * seam_work_aspect_));
@@ -317,24 +332,9 @@ PStitcher::Status PStitcher::composePanorama(InputArray images, OutputArray pano
 }
 
 
-PStitcher::Status PStitcher::stitch(InputArray images, OutputArray pano)
-{
-    Status status = estimateTransform(images);
-    if (status != OK)
-        return status;
-    return composePanorama(pano);
-}
-
-
-PStitcher::Status PStitcher::stitch(InputArray images, const vector<vector<Rect> > &rois, OutputArray pano)
-{
-    Status status = estimateTransform(images, rois);
-    if (status != OK)
-        return status;
-    return composePanorama(pano);
-}
-
-
+// 1. find features for each image
+// 2. pair-wise match features for all images
+// 2b. determine which belong to same panorama
 PStitcher::Status PStitcher::matchImages()
 {
     if ((int)imgs_.size() < 2)
@@ -343,11 +343,6 @@ PStitcher::Status PStitcher::matchImages()
         return ERR_NEED_MORE_IMGS;
     }
 
-    work_scale_ = 1;
-    seam_work_aspect_ = 1;
-    seam_scale_ = 1;
-    bool is_work_scale_set = false;
-    bool is_seam_scale_set = false;
     Mat full_img, img;
     features_.resize(imgs_.size());
     seam_est_imgs_.resize(imgs_.size());
@@ -358,32 +353,22 @@ PStitcher::Status PStitcher::matchImages()
     int64 t = getTickCount();
 #endif
 
+    work_scale_ = 1;
+    if (registr_resol_ >= 0)
+        work_scale_ = min(1.0, sqrt(registr_resol_ * 1e6 / imgs_[0].size().area()));
+    std::cout << ">>    work_scale " << work_scale_ << std::endl;
+
+    seam_scale_ = min(1.0, sqrt(seam_est_resol_ * 1e6 / imgs_[0].size().area()));
+    seam_work_aspect_ = seam_scale_ / work_scale_;
+    cout << ">>    seam_scale " << seam_scale_ << endl;
+    cout << ">>    seam_work_aspect " << seam_work_aspect_ << endl;
+
     for (size_t i = 0; i < imgs_.size(); ++i)
     {
         full_img = imgs_[i];
         full_img_sizes_[i] = full_img.size();
 
-        if (registr_resol_ < 0)
-        {
-            img = full_img;
-            work_scale_ = 1;
-            is_work_scale_set = true;
-        }
-        else
-        {
-            if (!is_work_scale_set)
-            {
-                work_scale_ = min(1.0, sqrt(registr_resol_ * 1e6 / full_img.size().area()));
-                is_work_scale_set = true;
-            }
-            resize(full_img, img, Size(), work_scale_, work_scale_);
-        }
-        if (!is_seam_scale_set)
-        {
-            seam_scale_ = min(1.0, sqrt(seam_est_resol_ * 1e6 / full_img.size().area()));
-            seam_work_aspect_ = seam_scale_ / work_scale_;
-            is_seam_scale_set = true;
-        }
+        resize(full_img, img, Size(), work_scale_, work_scale_);
 
         if (rois_.empty())
             (*features_finder_)(img, features_[i]);
@@ -444,7 +429,7 @@ PStitcher::Status PStitcher::matchImages()
     return OK;
 }
 
-
+// 3. look at camera data for each image
 void PStitcher::estimateCameraParams()
 {
     detail::HomographyBasedEstimator estimator;
@@ -460,20 +445,6 @@ void PStitcher::estimateCameraParams()
 
     bundle_adjuster_->setConfThresh(conf_thresh_);
     (*bundle_adjuster_)(features_, pairwise_matches_, cameras_);
-
-    // Find median focal length and use it as final image scale
-    vector<double> focals;
-    for (size_t i = 0; i < cameras_.size(); ++i)
-    {
-        LOGLN("Camera #" << indices_[i] + 1 << ":\n" << cameras_[i].K());
-        focals.push_back(cameras_[i].focal);
-    }
-
-    std::sort(focals.begin(), focals.end());
-    if (focals.size() % 2 == 1)
-        warped_image_scale_ = static_cast<float>(focals[focals.size() / 2]);
-    else
-        warped_image_scale_ = static_cast<float>(focals[focals.size() / 2 - 1] + focals[focals.size() / 2]) * 0.5f;
 
     if (do_wave_correct_)
     {
