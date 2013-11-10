@@ -89,29 +89,17 @@ PStitcher PStitcher::createDefault(bool try_use_gpu)
     return stitcher;
 }
 
-
-// 1. find features for each image
-// 2. pair-wise match features for all images
-// 2b. determine which belong to same panorama
-// OUTPUT feature set, list of images part of panorama
-PStitcher::Status PStitcher::matchImages(images_t &images,
-        features_t &features, matches_t &matches, indices_t &indices)
+int PStitcher::findFeatures(const images_t &images, features_t &features)
 {
     if ((int)images.size() < 2)
-    {
-        LOGLN("Need more images");
-        return ERR_NEED_MORE_IMGS;
-    }
+        return -1;
 
     Mat full_img, img;
 
     features.clear();
-    matches.clear();
-    indices.clear();
-
     features.resize(images.size());
 
-    LOGLN("Finding features...");
+    std::cout << ">> feature detection" << std::endl;
 #if ENABLE_LOG
     int64 t = getTickCount();
 #endif
@@ -119,7 +107,8 @@ PStitcher::Status PStitcher::matchImages(images_t &images,
     double work_scale = 1;
     if (registr_resol >= 0)
         work_scale = min(1.0, sqrt(registr_resol * 1e6 / images[0].size().area()));
-    std::cout << ">>    work_scale " << work_scale << std::endl;
+    assert(work_scale != 1);
+    //std::cout << ">>    work_scale " << work_scale << std::endl;
 
     for (size_t i = 0; i < images.size(); ++i)
     {
@@ -129,7 +118,7 @@ PStitcher::Status PStitcher::matchImages(images_t &images,
         (*features_finder)(img, features[i]);
         //features[i].img_idx = (int)i; // XXX what is this for?
 
-        LOGLN("Features in image #" << i+1 << ": " << features[i].keypoints.size());
+        std::cout << "    " << features[i].keypoints.size() << std::endl;
     }
 
     // Do it to save memory
@@ -139,18 +128,36 @@ PStitcher::Status PStitcher::matchImages(images_t &images,
 
     LOGLN("Finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
-    LOG("Pairwise matching");
-#if ENABLE_LOG
-    t = getTickCount();
-#endif
-    (*features_matcher)(features, matches, matching_mask);
-    features_matcher->collectGarbage();
-    LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+    return 0;
+}
 
+int PStitcher::matchFeatures(const features_t &features, matches_t &matches)
+{
+    std::cout << ">> pairwise matching" << std::endl;
+
+#if ENABLE_LOG
+    int64 t = getTickCount();
+#endif
+
+    matches.clear();
+    (*features_matcher)(features, matches, matching_mask);
+    (*features_matcher).collectGarbage();
+
+    LOGLN("Pairwise matching, time: " << ((getTickCount() - t)
+                / getTickFrequency()) << " sec");
+
+    return 0;
+}
+
+// Reduce features,matches to those images which are related.
+// Caller must then extract images from original vector specified by indices
+// before giving to panorama composer.
+void PStitcher::findRelated(features_t &features, matches_t &matches,
+        indices_t &indices)
+{
+    indices.clear();
     // Leave only images we are sure are from the same panorama
     indices = detail::leaveBiggestComponent(features, matches, (float)conf_thresh);
-
-    return OK;
 }
 
 // 3. look at camera data for each image
@@ -158,21 +165,33 @@ void PStitcher::estimateCameraParams(features_t &features,
         matches_t &matches, cameras_t &cameras)
 {
     detail::HomographyBasedEstimator estimator;
+
+    std::cout << ">> camera adjustment estimation" << std::endl;
+
+    cameras.clear();
+
+    std::cout << "    estimator" << std::endl;
     estimator(features, matches, cameras);
 
+    std::cout << "    conversion ";
     for (size_t i = 0; i < cameras.size(); ++i)
     {
         Mat R;
         cameras[i].R.convertTo(R, CV_32F);
         cameras[i].R = R;
+        std::cout << ".";
+        std::cout.flush();
         LOGLN("Initial intrinsic parameters #" << indices[i] + 1 << ":\n " << cameras[i].K());
     }
+    std::cout << std::endl;
 
+    std::cout << "    bundle adjustment" << std::endl;
     bundle_adjuster->setConfThresh(conf_thresh);
     (*bundle_adjuster)(features, matches, cameras);
 
     if (do_wave_correct)
     {
+        std::cout << "    wave correction" << std::endl;
         vector<Mat> rmats;
         for (size_t i = 0; i < cameras.size(); ++i)
             rmats.push_back(cameras[i].R);
@@ -184,20 +203,25 @@ void PStitcher::estimateCameraParams(features_t &features,
 
 PStitcher::Status PStitcher::composePanorama(images_t &images, cameras_t &cameras, cv::Mat & pano)
 {
-    LOGLN("Warping images (auxiliary)... ");
     cv::Mat img, full_img;
     images_t seam_est_images;
+
+    std::cout << ">> composing panorama" << std::endl;
 
     // compute seam scales (and recompute work scale)
     double work_scale = 1;
     if (registr_resol >= 0)
         work_scale = min(1.0, sqrt(registr_resol * 1e6 / images[0].size().area()));
-    std::cout << ">>    work_scale " << work_scale << std::endl;
+    assert(work_scale != 1);
+    //std::cout << ">>    work_scale " << work_scale << std::endl;
+
     double seam_scale =
         std::min(1.0, sqrt(seam_est_resol * 1e6 / images[0].size().area()));
     double seam_work_aspect = seam_scale / work_scale;
-    cout << ">>    seam_scale " << seam_scale << endl;
-    cout << ">>    seam_work_aspect " << seam_work_aspect << endl;
+    assert(seam_scale != 1);
+    assert(seam_work_aspect != 1);
+    //cout << "      seam_scale " << seam_scale << endl;
+    //cout << "      seam_work_aspect " << seam_work_aspect << endl;
 
     for (auto &image : images) {
         cv::resize(image, img, cv::Size(), seam_scale, seam_scale);
@@ -236,6 +260,7 @@ PStitcher::Status PStitcher::composePanorama(images_t &images, cameras_t &camera
         warped_image_scale = static_cast<float>(focals[fsz / 2 - 1] + focals[fsz / 2]) * 0.5f;
 
     // Warp images and their masks
+    std::cout << "    warping images" << std::endl;
     Ptr<detail::RotationWarper> w = warper->create(float(warped_image_scale * seam_work_aspect));
     for (size_t i = 0; i < images.size(); ++i)
     {
@@ -268,7 +293,7 @@ PStitcher::Status PStitcher::composePanorama(images_t &images, cameras_t &camera
     images_warped_f.clear();
     masks.clear();
 
-    LOGLN("Compositing...");
+    std::cout << "    compositing" << std::endl;
 #if ENABLE_LOG
     t = getTickCount();
 #endif
@@ -315,9 +340,11 @@ PStitcher::Status PStitcher::composePanorama(images_t &images, cameras_t &camera
     }
 
     // blender loop --------------------------------------
+    std::cout << "      ";
     for (size_t img_idx = 0; img_idx < images.size(); ++img_idx)
     {
-        LOGLN("Compositing image #" << indices[img_idx] + 1);
+        std::cout << " " << img_idx;
+        std::cout.flush();
 
         // Read image and resize it if necessary
         img = images[img_idx]; // XXX is this dangerous if resize is used later?
@@ -361,6 +388,7 @@ PStitcher::Status PStitcher::composePanorama(images_t &images, cameras_t &camera
         // Blend the current image
         blender->feed(img_warped_s, mask_warped, corners[img_idx]);
     }
+    std::cout << std::endl;
 
     Mat result, result_mask;
     blender->blend(result, result_mask);

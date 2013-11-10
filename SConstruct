@@ -7,8 +7,8 @@ cxx = os.environ.get('CXX', 'g++-4.7')
 
 cuda_root = os.environ.get('CUDA_ROOT', '/usr/local/cuda')
 
-ccflags = ['-Wall', '-Wextra', '-Werror'] #, '-fcolor-diagnostics']
-ccflags.extend(['-Wno-unused-function', '-Wno-unused-parameter'])
+ccflags = ['-Wall', '-Wextra', '-Werror']
+ccflags.extend(['-Wno-unused-function', '-Wno-unused-parameter', '-Wno-unused-variable'])
 ccflags.extend(['-std=c++11']) #, '-fopenmp'])
 cpath = ['/usr/local/include']
 libpath = []
@@ -18,6 +18,9 @@ if ARGUMENTS.get('debug', 0):
     ccflags.extend(['-ggdb', '-O0'])
 else:
     ccflags.append('-O3')
+
+if cxx == 'clang++':
+    ccflags.append('-fcolor-diagnostics')
 
 env = Environment(CC = cc, CXX = cxx)
 env.Append(CCFLAGS = ccflags)

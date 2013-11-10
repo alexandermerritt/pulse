@@ -72,20 +72,16 @@ public:
     // Creates stitcher with default parameters
     static PStitcher createDefault(bool try_use_gpu = false);
 
+    int findFeatures(const images_t &images, features_t &features);
 
-    // Step 1
-    Status matchImages(images_t &images_in,
-            features_t &features_out, matches_t &matches_out, indices_t &indices_out);
+    int matchFeatures(const features_t &features, matches_t &matches);
 
-    // Step 2
+    void findRelated(features_t &features, matches_t &matches, indices_t &indices);
+
     void estimateCameraParams(features_t &features_in, matches_t &matches_in,
             cameras_t &cameras_out);
 
-    // Step 3
     Status composePanorama(images_t &images, cameras_t &cameras, cv::Mat &pano);
-
-    //std::vector<int> component() const { return indices; }
-    //cameras_t getCameras() const { return cameras; }
 
     // Below are various fine-tuning functions
 
@@ -155,7 +151,7 @@ private:
     double conf_thresh;
     Ptr<detail::FeaturesFinder> features_finder;
     Ptr<detail::FeaturesMatcher> features_matcher;
-    cv::Mat matching_mask;
+    cv::Mat matching_mask; // TODO remove this
     Ptr<detail::BundleAdjusterBase> bundle_adjuster;
     bool do_wave_correct;
     detail::WaveCorrectKind wave_correct_kind;
