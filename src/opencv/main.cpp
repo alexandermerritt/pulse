@@ -69,7 +69,7 @@ int main(void)
     if (load_images(images, dirlist))
         return -1;
 
-    ps.findFeatures(images, features, false, images.size());
+    ps.findFeatures(images, features, false, 8);
 
     while (images.size() > 1) {
         std::cout << ">> PANORAMA " << pano_num << std::endl;
@@ -77,7 +77,7 @@ int main(void)
         pano_images.clear();
         feats = features;
 
-        ps.matchFeatures(feats, matches);
+        ps.matchFeatures(feats, matches, false, 8);
         //printMatches(matches);
 
         ps.findRelated(feats, matches, indices);

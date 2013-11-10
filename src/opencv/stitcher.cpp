@@ -51,9 +51,11 @@
 #include <opencv2/stitching/detail/seam_finders.hpp>
 #include <opencv2/stitching/detail/blenders.hpp>
 #include <opencv2/stitching/detail/camera.hpp>
+#include <opencv2/calib3d/calib3d.hpp> // for CV_RANSAC
 
 #include <iostream>
 #include "stitcher.hpp"
+#include "matchers.hpp"
 
 using namespace std;
 using namespace cv;
@@ -67,17 +69,16 @@ PStitcher PStitcher::createDefault(bool try_use_gpu)
     stitcher.setPanoConfidenceThresh(1);
     stitcher.setWaveCorrection(true);
     stitcher.setWaveCorrectKind(detail::WAVE_CORRECT_HORIZ);
-    stitcher.setFeaturesMatcher(new detail::BestOf2NearestMatcher(try_use_gpu));
     stitcher.setBundleAdjuster(new detail::BundleAdjusterRay());
 
-    if (try_use_gpu && gpu::getCudaEnabledDeviceCount() > 0)
+    if (try_use_gpu && cv::gpu::getCudaEnabledDeviceCount() > 0)
     {
-        stitcher.setWarper(new SphericalWarperGpu());
+        stitcher.setWarper(new cv::SphericalWarperGpu());
         stitcher.setSeamFinder(new detail::GraphCutSeamFinderGpu());
     }
     else
     {
-        stitcher.setWarper(new SphericalWarper());
+        stitcher.setWarper(new cv::SphericalWarper());
         stitcher.setSeamFinder(new detail::GraphCutSeamFinder(detail::GraphCutSeamFinderBase::COST_COLOR));
     }
 
@@ -143,17 +144,178 @@ int PStitcher::findFeatures(const images_t &images, features_t &features,
     return 0;
 }
 
-int PStitcher::matchFeatures(const features_t &features, matches_t &matches)
+// formerly BestOf2NearestMatcher::match(feature1, feature2, matches_info)
+void PStitcher::doMatch(cv::Ptr< cv::detail::FeaturesMatcher > &matcher,
+        const ImageFeatures &features1, const ImageFeatures &features2,
+        MatchesInfo &matches_info, int thresh1, int thresh2)
 {
+    (*matcher)(features1, features2, matches_info);
+
+    // Check if it makes sense to find homography
+    if (matches_info.matches.size() < static_cast<size_t>(thresh1))
+        return;
+
+    // Construct point-point correspondences for homography estimation
+    Mat src_points(1, static_cast<int>(matches_info.matches.size()), CV_32FC2);
+    Mat dst_points(1, static_cast<int>(matches_info.matches.size()), CV_32FC2);
+    for (size_t i = 0; i < matches_info.matches.size(); ++i)
+    {
+        const DMatch& m = matches_info.matches[i];
+
+        Point2f p = features1.keypoints[m.queryIdx].pt;
+        p.x -= features1.img_size.width * 0.5f;
+        p.y -= features1.img_size.height * 0.5f;
+        src_points.at<Point2f>(0, static_cast<int>(i)) = p;
+
+        p = features2.keypoints[m.trainIdx].pt;
+        p.x -= features2.img_size.width * 0.5f;
+        p.y -= features2.img_size.height * 0.5f;
+        dst_points.at<Point2f>(0, static_cast<int>(i)) = p;
+    }
+
+    // Find pair-wise motion
+    matches_info.H = findHomography(src_points, dst_points, matches_info.inliers_mask, CV_RANSAC);
+    if (std::abs(determinant(matches_info.H)) < numeric_limits<double>::epsilon())
+        return;
+
+    // Find number of inliers
+    matches_info.num_inliers = 0;
+    for (size_t i = 0; i < matches_info.inliers_mask.size(); ++i)
+        if (matches_info.inliers_mask[i])
+            matches_info.num_inliers++;
+
+    // These coeffs are from paper M. Brown and D. Lowe. "Automatic Panoramic Image Stitching
+    // using Invariant Features"
+    matches_info.confidence = matches_info.num_inliers / (8 + 0.3 * matches_info.matches.size());
+
+    // Set zero confidence to remove matches between too close images, as they don't provide
+    // additional information anyway. The threshold was set experimentally.
+    matches_info.confidence = matches_info.confidence > 3. ? 0. : matches_info.confidence;
+
+    // Check if we should try to refine motion
+    if (matches_info.num_inliers < thresh2)
+        return;
+
+    // Construct point-point correspondences for inliers only
+    src_points.create(1, matches_info.num_inliers, CV_32FC2);
+    dst_points.create(1, matches_info.num_inliers, CV_32FC2);
+    int inlier_idx = 0;
+    for (size_t i = 0; i < matches_info.matches.size(); ++i)
+    {
+        if (!matches_info.inliers_mask[i])
+            continue;
+
+        const DMatch& m = matches_info.matches[i];
+
+        Point2f p = features1.keypoints[m.queryIdx].pt;
+        p.x -= features1.img_size.width * 0.5f;
+        p.y -= features1.img_size.height * 0.5f;
+        src_points.at<Point2f>(0, inlier_idx) = p;
+
+        p = features2.keypoints[m.trainIdx].pt;
+        p.x -= features2.img_size.width * 0.5f;
+        p.y -= features2.img_size.height * 0.5f;
+        dst_points.at<Point2f>(0, inlier_idx) = p;
+
+        inlier_idx++;
+    }
+
+    // Rerun motion estimation on inliers only
+    matches_info.H = findHomography(src_points, dst_points, CV_RANSAC);
+}
+
+void PStitcher::bestOf2NearestMatcher(const features_t &features,
+        matches_t &matches, bool try_gpu, int num_threads, float match_conf)
+{
+    // --------------------------- BestOf2NearestMatcher construtor
+    cv::Ptr< cv::detail::FeaturesMatcher > matcher;
+
+    // ------------------------ PFeaturesMatcher::operator(features, matches)
+    const int num_images = static_cast<int>(features.size());
+
+    // removed specifying a mask as input to this
+    Mat_<uchar> mask_ = Mat::ones(num_images, num_images, CV_8U);
+
+    vector<pair<int,int> > near_pairs;
+    for (int i = 0; i < num_images - 1; ++i)
+        for (int j = i + 1; j < num_images; ++j)
+            if (features[i].keypoints.size() > 0 && features[j].keypoints.size() > 0 && mask_(i, j))
+                near_pairs.push_back(make_pair(i, j));
+
+    std::cout << "    " << near_pairs.size() << " comparisons needed " << std::endl;
+
+    matches.resize(num_images * num_images);
+
+    // fix up use of gpu, and number of threads used
+    try_gpu = (try_gpu ? gpu::getCudaEnabledDeviceCount() > 0 : false);
+    if (try_gpu)
+        num_threads = 1;
+    //if (!matcher->isThreadSafe())
+        //num_threads = 1;
+    num_threads = std::min(features.size(), (unsigned long)num_threads); // FIXME
+    if (try_gpu)
+        std::cout << "    using gpu" << std::endl;
+    else
+        std::cout << "    using " << num_threads << " threads" << std::endl;
+
+    // ---------------------------------------- MatchPairsBody
+    // Replaced MatchPairsBody class with its operator() directly
+    std::cout << "    ";
+#pragma omp parallel \
+    private(matcher) \
+    num_threads(num_threads)
+    {
+        if (try_gpu) matcher = new GpuMatcher(match_conf);
+        else         matcher = new CpuMatcher(match_conf);
+#pragma omp for
+        for (size_t i = 0; i < near_pairs.size(); ++i)
+        {
+            int from = near_pairs[i].first;
+            int to = near_pairs[i].second;
+            int pair_idx = from*num_images + to;
+
+            std::cout << ".";
+            std::cout.flush();
+
+            // Calls match() on subclass, which is probably
+            // PBestOf2NearestMatcher::match().
+            doMatch(matcher, features[from], features[to], matches[pair_idx]);
+
+            matches[pair_idx].src_img_idx = from;
+            matches[pair_idx].dst_img_idx = to;
+
+            size_t dual_pair_idx = to*num_images + from;
+
+            matches[dual_pair_idx] = matches[pair_idx];
+            matches[dual_pair_idx].src_img_idx = to;
+            matches[dual_pair_idx].dst_img_idx = from;
+
+            if (!matches[pair_idx].H.empty())
+                matches[dual_pair_idx].H = matches[pair_idx].H.inv();
+
+            for (size_t j = 0; j < matches[dual_pair_idx].matches.size(); ++j)
+                std::swap(matches[dual_pair_idx].matches[j].queryIdx,
+                        matches[dual_pair_idx].matches[j].trainIdx);
+        }
+    }
+    std::cout << std::endl;
+}
+
+int PStitcher::matchFeatures(const features_t &features, matches_t &matches,
+        bool try_gpu, int num_threads)
+{
+    //Ptr< PFeaturesMatcher > matcher;
+
     std::cout << ">> pairwise matching" << std::endl;
 
 #if ENABLE_LOG
     int64 t = getTickCount();
 #endif
 
+    //matcher = new PBestOf2NearestMatcher(try_gpu, num_threads);
+
     matches.clear();
-    (*features_matcher)(features, matches, matching_mask);
-    (*features_matcher).collectGarbage();
+    bestOf2NearestMatcher(features, matches, try_gpu, num_threads);
 
     LOGLN("Pairwise matching, time: " << ((getTickCount() - t)
                 / getTickFrequency()) << " sec");

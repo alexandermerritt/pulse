@@ -75,7 +75,8 @@ public:
     int findFeatures(const images_t &images, features_t &features,
             bool try_gpu = false, int num_threads = 1);
 
-    int matchFeatures(const features_t &features, matches_t &matches);
+    int matchFeatures(const features_t &features, matches_t &matches,
+            bool try_gpu = false, int num_threads = 1);
 
     void findRelated(features_t &features, matches_t &matches, indices_t &indices);
 
@@ -103,11 +104,6 @@ public:
 
     detail::WaveCorrectKind waveCorrectKind() const { return wave_correct_kind; }
     void setWaveCorrectKind(detail::WaveCorrectKind kind) { wave_correct_kind = kind; }
-
-    Ptr<detail::FeaturesMatcher> featuresMatcher() { return features_matcher; }
-    const Ptr<detail::FeaturesMatcher> featuresMatcher() const { return features_matcher; }
-    void setFeaturesMatcher(Ptr<detail::FeaturesMatcher> features_matcher_)
-        { features_matcher = features_matcher_; }
 
     const cv::Mat& matchingMask() const { return matching_mask; }
     void setMatchingMask(const cv::Mat &mask)
@@ -141,11 +137,21 @@ public:
 private:
     PStitcher() {}
 
+    void doMatch(cv::Ptr< cv::detail::FeaturesMatcher > &matcher,
+            const cv::detail::ImageFeatures &features1,
+            const cv::detail::ImageFeatures &features2,
+            cv::detail::MatchesInfo &matches_info,
+            int thresh1 = 6, int thresh2 = 6);
+
+    void bestOf2NearestMatcher(const features_t &features,
+            matches_t &matches,
+            bool try_gpu = false, int num_threads = 1,
+            float match_conf = 0.3f);
+
     double registr_resol;
     double seam_est_resol;
     double compose_resol;
     double conf_thresh;
-    Ptr<detail::FeaturesMatcher> features_matcher;
     cv::Mat matching_mask; // TODO remove this
     Ptr<detail::BundleAdjusterBase> bundle_adjuster;
     bool do_wave_correct;
