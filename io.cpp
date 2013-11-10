@@ -67,8 +67,7 @@ static int read_images(vector<cv::Mat> &imgs, string &dirpath)
                 continue;
             }
             imgs.push_back(m);
-            cout << ".";
-            cout.flush();
+            cout << "    " << filename << endl;
         }
         closedir(dir);
     } else {
