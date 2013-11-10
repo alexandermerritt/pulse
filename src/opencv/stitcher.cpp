@@ -72,13 +72,11 @@ PStitcher PStitcher::createDefault(bool try_use_gpu)
 
     if (try_use_gpu && gpu::getCudaEnabledDeviceCount() > 0)
     {
-        stitcher.setFeaturesFinder(new detail::SurfFeaturesFinderGpu());
         stitcher.setWarper(new SphericalWarperGpu());
         stitcher.setSeamFinder(new detail::GraphCutSeamFinderGpu());
     }
     else
     {
-        stitcher.setFeaturesFinder(new detail::SurfFeaturesFinder());
         stitcher.setWarper(new SphericalWarper());
         stitcher.setSeamFinder(new detail::GraphCutSeamFinder(detail::GraphCutSeamFinderBase::COST_COLOR));
     }
@@ -89,12 +87,13 @@ PStitcher PStitcher::createDefault(bool try_use_gpu)
     return stitcher;
 }
 
-int PStitcher::findFeatures(const images_t &images, features_t &features)
+int PStitcher::findFeatures(const images_t &images, features_t &features,
+        bool try_gpu, int num_threads)
 {
+    Ptr<detail::FeaturesFinder> finder;
+
     if ((int)images.size() < 2)
         return -1;
-
-    Mat full_img, img;
 
     features.clear();
     features.resize(images.size());
@@ -110,21 +109,34 @@ int PStitcher::findFeatures(const images_t &images, features_t &features)
     assert(work_scale != 1);
     //std::cout << ">>    work_scale " << work_scale << std::endl;
 
-    for (size_t i = 0; i < images.size(); ++i)
+    // fix up use of gpu, and number of threads used
+    try_gpu = (try_gpu ? gpu::getCudaEnabledDeviceCount() > 0 : false);
+    if (try_gpu)
+        num_threads = 1;
+    num_threads = std::min(images.size(), (unsigned long)num_threads);
+    if (try_gpu)
+        std::cout << "    using gpu" << std::endl;
+    else
+        std::cout << "    using " << num_threads << " threads" << std::endl;
+
+#pragma omp parallel \
+    private(finder) \
+    num_threads(num_threads)
     {
-        full_img = images[i];
+        if (try_gpu) finder = new detail::SurfFeaturesFinderGpu();
+        else         finder = new detail::SurfFeaturesFinder();
 
-        resize(full_img, img, Size(), work_scale, work_scale);
-        (*features_finder)(img, features[i]);
-        //features[i].img_idx = (int)i; // XXX what is this for?
+#pragma omp for
+        for (size_t i = 0; i < images.size(); ++i) {
+            Mat img;
+            resize(images[i], img, Size(), work_scale, work_scale);
+            (*finder)(img, features[i]);
+            //features[i].img_idx = (int)i; // XXX what is this for?
+            std::cout << "    " << features[i].keypoints.size() << std::endl;
+        }
 
-        std::cout << "    " << features[i].keypoints.size() << std::endl;
+        finder->collectGarbage();
     }
-
-    // Do it to save memory
-    features_finder->collectGarbage();
-    full_img.release();
-    img.release();
 
     LOGLN("Finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 

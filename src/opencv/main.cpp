@@ -49,7 +49,7 @@ static void printFeatures(features_t &features)
 
 int main(void)
 {
-    PStitcher ps = PStitcher::createDefault(true);
+    PStitcher ps = PStitcher::createDefault(false);
     ps.setPanoConfidenceThresh(2.0f);
     std::string dirlist("dirlist");
 
@@ -69,7 +69,7 @@ int main(void)
     if (load_images(images, dirlist))
         return -1;
 
-    ps.findFeatures(images, features);
+    ps.findFeatures(images, features, false, images.size());
 
     while (images.size() > 1) {
         std::cout << ">> PANORAMA " << pano_num << std::endl;

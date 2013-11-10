@@ -72,7 +72,8 @@ public:
     // Creates stitcher with default parameters
     static PStitcher createDefault(bool try_use_gpu = false);
 
-    int findFeatures(const images_t &images, features_t &features);
+    int findFeatures(const images_t &images, features_t &features,
+            bool try_gpu = false, int num_threads = 1);
 
     int matchFeatures(const features_t &features, matches_t &matches);
 
@@ -102,11 +103,6 @@ public:
 
     detail::WaveCorrectKind waveCorrectKind() const { return wave_correct_kind; }
     void setWaveCorrectKind(detail::WaveCorrectKind kind) { wave_correct_kind = kind; }
-
-    Ptr<detail::FeaturesFinder> featuresFinder() { return features_finder; }
-    const Ptr<detail::FeaturesFinder> featuresFinder() const { return features_finder; }
-    void setFeaturesFinder(Ptr<detail::FeaturesFinder> features_finder_)
-        { features_finder = features_finder_; }
 
     Ptr<detail::FeaturesMatcher> featuresMatcher() { return features_matcher; }
     const Ptr<detail::FeaturesMatcher> featuresMatcher() const { return features_matcher; }
@@ -149,7 +145,6 @@ private:
     double seam_est_resol;
     double compose_resol;
     double conf_thresh;
-    Ptr<detail::FeaturesFinder> features_finder;
     Ptr<detail::FeaturesMatcher> features_matcher;
     cv::Mat matching_mask; // TODO remove this
     Ptr<detail::BundleAdjusterBase> bundle_adjuster;
