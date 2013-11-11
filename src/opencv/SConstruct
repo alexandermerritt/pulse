@@ -24,6 +24,9 @@ if ARGUMENTS.get('debug', 0):
 else:
     ccflags.append('-O3')
 
+if ARGUMENTS.get('omp', 0):
+    ccflags.append('-fopenmp')
+
 env = Environment(CC = cc, CXX = cxx)
 env.Append(CCFLAGS = ccflags)
 env.Append(CPPPATH = cpath)
