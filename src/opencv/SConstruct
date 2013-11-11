@@ -8,10 +8,15 @@ cxx = os.environ.get('CXX', 'g++-4.7')
 cuda_root = os.environ.get('CUDA_ROOT', '/usr/local/cuda')
 
 ccflags = ['-Wall', '-Wextra', '-Werror']
-ccflags.extend(['-Wno-unused-function', '-Wno-unused-parameter', '-Wno-unused-variable'])
-ccflags.extend(['-std=c++11', '-fopenmp'])
+ccflags.append('-Wno-unused-function')
+ccflags.append('-Wno-unused-parameter')
+ccflags.append('-Wno-unused-variable')
+ccflags.append('-std=c++11')
+
 cpath = ['/usr/local/include']
+
 libpath = []
+
 libs = ['opencv_core', 'opencv_gpu', 'opencv_stitching', 'gomp']
 
 if ARGUMENTS.get('debug', 0):
@@ -25,7 +30,7 @@ env.Append(CPPPATH = cpath)
 env.Append(LIBPATH = libpath)
 env.Append(LIBS = libs)
 
-sources = ['io.cpp', 'stitcher.cpp', 'main.cpp']
+sources = ['io.cpp', 'stitcher.cpp', 'matchers.cpp', 'motion_estimators.cpp']
 
-env.Program('stitcher', sources)
+env.Program('stitcher', ['main.cpp', sources])
 

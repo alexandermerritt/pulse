@@ -56,6 +56,7 @@
 #include <iostream>
 #include "stitcher.hpp"
 #include "matchers.hpp"
+#include "motion_estimators.hpp"
 
 using namespace std;
 using namespace cv;
@@ -69,7 +70,6 @@ PStitcher PStitcher::createDefault(bool try_use_gpu)
     stitcher.setPanoConfidenceThresh(1);
     stitcher.setWaveCorrection(true);
     stitcher.setWaveCorrectKind(detail::WAVE_CORRECT_HORIZ);
-    stitcher.setBundleAdjuster(new detail::BundleAdjusterRay());
 
     if (try_use_gpu && cv::gpu::getCudaEnabledDeviceCount() > 0)
     {
@@ -334,10 +334,13 @@ void PStitcher::findRelated(features_t &features, matches_t &matches,
     indices = detail::leaveBiggestComponent(features, matches, (float)conf_thresh);
 }
 
-// 3. look at camera data for each image
+// serial CPU-only code
 void PStitcher::estimateCameraParams(features_t &features,
         matches_t &matches, cameras_t &cameras)
 {
+    cv::Ptr< cv::detail::BundleAdjusterBase > adjuster;
+    //cv::Ptr< PBundleAdjusterBase > adjuster;
+
     detail::HomographyBasedEstimator estimator;
 
     std::cout << ">> camera adjustment estimation" << std::endl;
@@ -360,8 +363,12 @@ void PStitcher::estimateCameraParams(features_t &features,
     std::cout << std::endl;
 
     std::cout << "    bundle adjustment" << std::endl;
-    bundle_adjuster->setConfThresh(conf_thresh);
-    (*bundle_adjuster)(features, matches, cameras);
+    adjuster = new cv::detail::BundleAdjusterRay();
+    //adjuster = new cv::detail::BundleAdjusterReproj();
+    //adjuster = new PBundleAdjusterRay();
+    //adjuster = new PBundleAdjusterReproj();
+    (*adjuster).setConfThresh(conf_thresh);
+    (*adjuster)(features, matches, cameras); // XXX
 
     if (do_wave_correct)
     {
@@ -375,6 +382,7 @@ void PStitcher::estimateCameraParams(features_t &features,
     }
 }
 
+// can use the GPGPU
 PStitcher::Status PStitcher::composePanorama(images_t &images, cameras_t &cameras, cv::Mat & pano)
 {
     cv::Mat img, full_img;

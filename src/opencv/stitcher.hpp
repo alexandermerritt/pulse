@@ -112,11 +112,6 @@ public:
         matching_mask = mask.clone();
     }
 
-    Ptr<detail::BundleAdjusterBase> bundleAdjuster() { return bundle_adjuster; }
-    const Ptr<detail::BundleAdjusterBase> bundleAdjuster() const { return bundle_adjuster; }
-    void setBundleAdjuster(Ptr<detail::BundleAdjusterBase> bundle_adjuster_)
-        { bundle_adjuster = bundle_adjuster_; }
-
     Ptr<WarperCreator> getWarper() { return warper; }
     const Ptr<WarperCreator> getWarper() const { return warper; }
     void setWarper(Ptr<WarperCreator> creator) { warper = creator; }
@@ -153,7 +148,6 @@ private:
     double compose_resol;
     double conf_thresh;
     cv::Mat matching_mask; // TODO remove this
-    Ptr<detail::BundleAdjusterBase> bundle_adjuster;
     bool do_wave_correct;
     detail::WaveCorrectKind wave_correct_kind;
     Ptr<WarperCreator> warper;
