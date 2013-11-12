@@ -50,7 +50,6 @@ static void printFeatures(features_t &features)
 int main(void)
 {
     PStitcher ps = PStitcher::createDefault(false);
-    ps.setPanoConfidenceThresh(2.0f);
     std::string dirlist("dirlist");
 
     images_t images;
@@ -65,6 +64,7 @@ int main(void)
     cv::Mat pano;
     int pano_num = 0, offset;
     stringstream pano_name("");
+    float confidence;
 
     if (load_images(images, dirlist))
         return -1;
@@ -74,17 +74,23 @@ int main(void)
     while (images.size() > 1) {
         std::cout << ">> PANORAMA " << pano_num << std::endl;
 
-        pano_images.clear();
+        ps.matchFeatures(features, matches, false, 8);
+
+        // find enough related images
+        confidence = 2.0f;
         feats = features;
+        ps.findRelated(feats, matches, indices, confidence);
+        if (feats.size() < 2) {
+            std::cerr << "!! 1 image in panorama,"
+                << " try decreasing confidence" << std::endl;
+            return -1;
+        }
 
-        ps.matchFeatures(feats, matches, false, 8);
-        //printMatches(matches);
-
-        ps.findRelated(feats, matches, indices);
         std::cout << ">> " << feats.size() << " images in panorama" << std::endl;
-        ps.estimateCameraParams(feats, matches, cams);
+        ps.estimateCameraParams(feats, matches, cams, confidence);
 
         // reduce work based on images found in current panorama
+        pano_images.clear();
         std::sort(indices.begin(), indices.end()); // XXX okay to do?
         offset = 0;
         for (auto _idx : indices) {

@@ -67,7 +67,6 @@ PStitcher PStitcher::createDefault(bool try_use_gpu)
     stitcher.setRegistrationResol(0.6);
     stitcher.setSeamEstimationResol(0.1);
     stitcher.setCompositingResol(ORIG_RESOL);
-    stitcher.setPanoConfidenceThresh(1);
     stitcher.setWaveCorrection(true);
     stitcher.setWaveCorrectKind(detail::WAVE_CORRECT_HORIZ);
 
@@ -327,7 +326,7 @@ int PStitcher::matchFeatures(const features_t &features, matches_t &matches,
 // Caller must then extract images from original vector specified by indices
 // before giving to panorama composer.
 void PStitcher::findRelated(features_t &features, matches_t &matches,
-        indices_t &indices)
+        indices_t &indices, float conf_thresh)
 {
     indices.clear();
     // Leave only images we are sure are from the same panorama
@@ -336,7 +335,7 @@ void PStitcher::findRelated(features_t &features, matches_t &matches,
 
 // serial CPU-only code
 void PStitcher::estimateCameraParams(features_t &features,
-        matches_t &matches, cameras_t &cameras)
+        matches_t &matches, cameras_t &cameras, float conf_thresh)
 {
     cv::Ptr< cv::detail::BundleAdjusterBase > adjuster;
     //cv::Ptr< PBundleAdjusterBase > adjuster;

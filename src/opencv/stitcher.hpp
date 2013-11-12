@@ -78,10 +78,11 @@ public:
     int matchFeatures(const features_t &features, matches_t &matches,
             bool try_gpu = false, int num_threads = 1);
 
-    void findRelated(features_t &features, matches_t &matches, indices_t &indices);
+    void findRelated(features_t &features, matches_t &matches,
+            indices_t &indices, float conf_thresh = 1.0f);
 
     void estimateCameraParams(features_t &features_in, matches_t &matches_in,
-            cameras_t &cameras_out);
+            cameras_t &cameras_out, float conf_thresh = 1.0f);
 
     Status composePanorama(images_t &images, cameras_t &cameras, cv::Mat &pano);
 
@@ -95,9 +96,6 @@ public:
 
     double compositingResol() const { return compose_resol; }
     void setCompositingResol(double resol_mpx) { compose_resol = resol_mpx; }
-
-    double panoConfidenceThresh() const { return conf_thresh; }
-    void setPanoConfidenceThresh(double conf_thresh_) { conf_thresh = conf_thresh_; }
 
     bool waveCorrection() const { return do_wave_correct; }
     void setWaveCorrection(bool flag) { do_wave_correct = flag; }
@@ -146,7 +144,6 @@ private:
     double registr_resol;
     double seam_est_resol;
     double compose_resol;
-    double conf_thresh;
     cv::Mat matching_mask; // TODO remove this
     bool do_wave_correct;
     detail::WaveCorrectKind wave_correct_kind;
