@@ -126,14 +126,16 @@ int write_features(string &dirpath,
     return 0;
 }
 
-int write_images(string &dirpath, vector< cv::Mat > &imgs)
+int write_images(string &dirpath,
+        const vector< cv::Mat > &imgs, string prefix)
 {
     stringstream s;
     if (imgs.size() < 1)
         return -1;
     /* TODO check dirpath */
     for (size_t i = 0; i < imgs.size(); i++) {
-        s << dirpath << "/pano-" << i << ".jpg";
+        s.str(std::string()); // reset it
+        s << dirpath << "/" << prefix << i << ".jpg";
         if (!imwrite(s.str(), imgs[i]))
             return -1;
     }
