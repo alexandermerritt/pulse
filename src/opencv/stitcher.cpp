@@ -58,6 +58,8 @@
 #include "matchers.hpp"
 #include "motion_estimators.hpp"
 
+#include <timer.h>
+
 using namespace std;
 using namespace cv;
 
@@ -70,19 +72,7 @@ PStitcher PStitcher::createDefault(bool try_use_gpu)
     stitcher.setWaveCorrection(true);
     stitcher.setWaveCorrectKind(detail::WAVE_CORRECT_HORIZ);
 
-    if (try_use_gpu && cv::gpu::getCudaEnabledDeviceCount() > 0)
-    {
-        stitcher.setWarper(new cv::SphericalWarperGpu());
-        stitcher.setSeamFinder(new detail::GraphCutSeamFinderGpu());
-    }
-    else
-    {
-        stitcher.setWarper(new cv::SphericalWarper());
-        stitcher.setSeamFinder(new detail::GraphCutSeamFinder(detail::GraphCutSeamFinderBase::COST_COLOR));
-    }
-
-    stitcher.setExposureCompensator(new detail::BlocksGainCompensator());
-    stitcher.setBlender(new detail::MultiBandBlender(try_use_gpu));
+    //if (try_use_gpu && cv::gpu::getCudaEnabledDeviceCount() > 0)
 
     return stitcher;
 }
@@ -107,7 +97,6 @@ int PStitcher::findFeatures(const images_t &images, features_t &features,
     if (registr_resol >= 0)
         work_scale = min(1.0, sqrt(registr_resol * 1e6 / images[0].size().area()));
     assert(work_scale != 1);
-    //std::cout << ">>    work_scale " << work_scale << std::endl;
 
     // fix up use of gpu, and number of threads used
     try_gpu = (try_gpu ? gpu::getCudaEnabledDeviceCount() > 0 : false);
@@ -339,6 +328,7 @@ void PStitcher::estimateCameraParams(features_t &features,
 {
     cv::Ptr< cv::detail::BundleAdjusterBase > adjuster;
     //cv::Ptr< PBundleAdjusterBase > adjuster;
+    struct timer t;
 
     detail::HomographyBasedEstimator estimator;
 
@@ -361,13 +351,20 @@ void PStitcher::estimateCameraParams(features_t &features,
     }
     std::cout << std::endl;
 
-    std::cout << "    bundle adjustment" << std::endl;
+    unsigned long usec;
+    timer_init(CLOCK_REALTIME, &t);
+    std::cout << "    bundle adjustment (thresh "
+        << conf_thresh << ")" << std::endl;
+    std::cout.flush();
     adjuster = new cv::detail::BundleAdjusterRay();
     //adjuster = new cv::detail::BundleAdjusterReproj();
     //adjuster = new PBundleAdjusterRay();
     //adjuster = new PBundleAdjusterReproj();
     (*adjuster).setConfThresh(conf_thresh);
+    timer_start(&t);
     (*adjuster)(features, matches, cameras); // XXX
+    usec = timer_end(&t, MICROSECONDS);
+    std::cout << "    bundle took " << usec / 1000000.0f << " sec" << std::endl;
 
     if (do_wave_correct)
     {
@@ -381,13 +378,44 @@ void PStitcher::estimateCameraParams(features_t &features,
     }
 }
 
-// can use the GPGPU
-PStitcher::Status PStitcher::composePanorama(images_t &images, cameras_t &cameras, cv::Mat & pano)
+int PStitcher::composePanorama(images_t &images, cameras_t &cameras,
+        cv::Mat & pano, bool try_gpu, int num_threads)
 {
+    cv::Ptr< cv::detail::ExposureCompensator > exposure_comp;
+    cv::Ptr< cv::detail::SeamFinder > seam_finder;
+    cv::Ptr< cv::detail::Blender > blender;
+    cv::Ptr< cv::WarperCreator > warper;
+    cv::Ptr< cv::detail::RotationWarper > w;
     cv::Mat img, full_img;
     images_t seam_est_images;
 
+    unsigned long usec;
+    struct timer t;
+    timer_init(CLOCK_REALTIME, &t);
+
     std::cout << ">> composing panorama" << std::endl;
+
+    // fix up use of gpu, and number of threads used
+    try_gpu = (try_gpu ? gpu::getCudaEnabledDeviceCount() > 0 : false);
+    if (try_gpu)
+        num_threads = 1;
+    num_threads = std::min(images.size(), (unsigned long)num_threads);
+    if (try_gpu)
+        std::cout << "    using gpu" << std::endl;
+    else
+        std::cout << "    using " << num_threads << " threads" << std::endl;
+
+    if (try_gpu)    warper = new cv::SphericalWarperGpu();
+    else            warper = new cv::SphericalWarper();
+
+    if (try_gpu)    seam_finder = new cv::detail::GraphCutSeamFinderGpu();
+    else            seam_finder = new cv::detail::GraphCutSeamFinder(
+                                    cv::detail::GraphCutSeamFinder::COST_COLOR);
+
+    blender = new detail::MultiBandBlender(try_gpu);
+
+    // no GPGPU counterpart
+    exposure_comp = new detail::BlocksGainCompensator();
 
     // compute seam scales (and recompute work scale)
     double work_scale = 1;
@@ -442,7 +470,8 @@ PStitcher::Status PStitcher::composePanorama(images_t &images, cameras_t &camera
 
     // Warp images and their masks
     std::cout << "    warping images" << std::endl;
-    Ptr<detail::RotationWarper> w = warper->create(float(warped_image_scale * seam_work_aspect));
+    timer_start(&t);
+    w = warper->create(float(warped_image_scale * seam_work_aspect));
     for (size_t i = 0; i < images.size(); ++i)
     {
         Mat_<float> K;
@@ -462,6 +491,8 @@ PStitcher::Status PStitcher::composePanorama(images_t &images, cameras_t &camera
     for (size_t i = 0; i < images.size(); ++i)
         images_warped[i].convertTo(images_warped_f[i], CV_32F);
 
+    usec = timer_end(&t, MICROSECONDS);
+    std::cout << "    warping took " << usec / 1000000.0f << " sec" << std::endl;
     LOGLN("Warping images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     // Find seams

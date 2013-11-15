@@ -84,7 +84,8 @@ public:
     void estimateCameraParams(features_t &features_in, matches_t &matches_in,
             cameras_t &cameras_out, float conf_thresh = 1.0f);
 
-    Status composePanorama(images_t &images, cameras_t &cameras, cv::Mat &pano);
+    int composePanorama(images_t &images, cameras_t &cameras, cv::Mat &pano,
+            bool try_gpu = false, int num_threads = 1);
 
     // Below are various fine-tuning functions
 
@@ -110,23 +111,6 @@ public:
         matching_mask = mask.clone();
     }
 
-    Ptr<WarperCreator> getWarper() { return warper; }
-    const Ptr<WarperCreator> getWarper() const { return warper; }
-    void setWarper(Ptr<WarperCreator> creator) { warper = creator; }
-
-    Ptr<detail::ExposureCompensator> exposureCompensator() { return exposure_comp; }
-    const Ptr<detail::ExposureCompensator> exposureCompensator() const { return exposure_comp; }
-    void setExposureCompensator(Ptr<detail::ExposureCompensator> exposure_comp_)
-        { exposure_comp = exposure_comp_; }
-
-    Ptr<detail::SeamFinder> seamFinder() { return seam_finder; }
-    const Ptr<detail::SeamFinder> seamFinder() const { return seam_finder; }
-    void setSeamFinder(Ptr<detail::SeamFinder> seam_finder_) { seam_finder = seam_finder_; }
-
-    Ptr<detail::Blender> getBlender() { return blender; }
-    const Ptr<detail::Blender> getBlender() const { return blender; }
-    void setBlender(Ptr<detail::Blender> b) { blender = b; }
-
 private:
     PStitcher() {}
 
@@ -147,10 +131,6 @@ private:
     cv::Mat matching_mask; // TODO remove this
     bool do_wave_correct;
     detail::WaveCorrectKind wave_correct_kind;
-    Ptr<WarperCreator> warper;
-    Ptr<detail::ExposureCompensator> exposure_comp;
-    Ptr<detail::SeamFinder> seam_finder;
-    Ptr<detail::Blender> blender;
 };
 
 #endif // __STITCHER_HPP_INCLUDED__
