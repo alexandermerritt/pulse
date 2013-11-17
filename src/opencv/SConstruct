@@ -27,7 +27,10 @@ else:
 if ARGUMENTS.get('omp', 0):
     ccflags.append('-fopenmp')
 
-cpath = ['/usr/local/include']
+if cc == 'clang' or cxx == 'clang++':
+    ccflags.append('-fcolor-diagnostics')
+
+cpath = ['/usr/local/include', '../include']
 
 libpath = []
 
