@@ -47,7 +47,8 @@ enum exit_reason
     // stitching errors
     EXIT_UNMATCHED,
     EXIT_COMPOSITION,
-    EXIT_INVALID_WORKSTATE
+    EXIT_INVALID_WORKSTATE,
+    EXIT_IMAGE_LOADING
 };
 
 struct work_item
@@ -138,8 +139,6 @@ static void gpu_thread_cleanup(void *arg)
         err << "bad arguments";
     } else if (self->reason == EXIT_ENOMEM) {
         err << "no memory";
-    } else if (self->reason == EXIT_UNMATCHED) {
-        err << "could not relate images into a panorama";
     } else if (self->reason == EXIT_COMPOSITION) {
         err << "could not compose panorama";
     } else if (self->reason == EXIT_INVALID_WORKSTATE) {
@@ -155,6 +154,88 @@ static void gpu_thread_cleanup(void *arg)
     self->alive = false;
 }
 
+// Searches for features on each image, matches all, then sorts into separate
+// panoramas, inserting each as a new work unit into the global queue.  Called
+// only by gpu_thread.  Any non-zero exit status causes the calling thread to
+// exit.
+static enum exit_reason sort_images(struct work_item *work)
+{
+    PStitcher ps = PStitcher::createDefault(false);
+    matches_t matches;
+    features_t features;
+    indices_t indices;
+
+    if (!work || work->state != PANO_LOADED)
+        return EXIT_EINVAL;
+
+    //ps.findFeatures(work->images, features, true, 1);
+    ps.findFeatures(work->images, features, false, 24);
+    while (work->images.size() > 1) {
+        // use new b/c struct contains classes
+        struct work_item *next = new struct work_item;
+        if (!next)
+            return EXIT_ENOMEM;
+        //ps.matchFeatures(features, matches, true, 1);
+        ps.matchFeatures(features, matches, false, 24);
+
+        next->features = features;
+        next->matches = matches;
+        ps.findRelated(next->features, next->matches,
+                indices, work->confidence);
+        if (next->features.size() < 2) {
+            if (work->confidence > 0.5f) {
+                work->confidence -= 0.25f;
+                continue;
+            } else {
+                fprintf(stderr, ">> dropping %lu unmatched images\n",
+                        work->images.size());
+                //return EXIT_UNMATCHED; // XXX hmm..
+                break;
+            }
+        }
+
+        std::sort(indices.begin(), indices.end());
+        int offset = 0;
+        for (auto _idx : indices) {
+            int idx = _idx - offset++;
+            next->images.push_back(work->images[idx]);
+            work->images.erase(work->images.begin() + idx);
+            features.erase(features.begin() + idx);
+        }
+        next->state = PANO_MATCHED;
+        next->confidence = work->confidence;
+
+        lock_queue();
+        work_queue.push_back(next);
+        unlock_queue();
+    }
+    return EXIT_NORMAL;
+}
+
+// Takes a set of images, features, matching info etc and composites the final
+// panorama. Called only by gpu_thread.
+static enum exit_reason make_pano(struct work_item *work)
+{
+    PStitcher ps = PStitcher::createDefault(false);
+    int err = 0;
+
+    if (!work || work->state != PANO_MATCHED)
+        return EXIT_EINVAL;
+
+    fprintf(stderr, ">> %lu images in pano\n", work->features.size());
+
+    // this runs only on the CPU for now, single thread
+    ps.estimateCameraParams(work->features, work->matches,
+            work->cameras, work->confidence);
+
+    err = ps.composePanorama(work->images, work->cameras,
+            work->pano, true, 1);
+    if (err)
+        return EXIT_COMPOSITION;
+
+    return EXIT_NORMAL;
+}
+
 static void * gpu_thread(void *arg)
 {
     struct thread *self = (struct thread*)arg;
@@ -162,9 +243,7 @@ static void * gpu_thread(void *arg)
     PStitcher ps = PStitcher::createDefault(false);
     stringstream pano_name;
     int err = 0, oldstate /* not used */;
-
-    self->reason = EXIT_NORMAL;
-    self->alive  = true;
+    enum exit_reason reason;
 
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
     pthread_cleanup_push(gpu_thread_cleanup, self);
@@ -173,6 +252,9 @@ static void * gpu_thread(void *arg)
         self->reason = EXIT_EINVAL;
         pthread_exit(NULL);
     }
+
+    self->reason = EXIT_NORMAL;
+    self->alive  = true;
 
     cv::gpu::setDevice(self->gpu);
 
@@ -190,68 +272,26 @@ static void * gpu_thread(void *arg)
         // TODO set pano_num
 
         if (work->state == PANO_LOADED) {
-            matches_t matches;
-            features_t features;
-            indices_t indices;
-
-            ps.findFeatures(work->images, features, true, 1);
-            while (work->images.size() > 1) {
-                struct work_item *next;
-
-                // use new b/c struct contains classes
-                next = new struct work_item;
-                if (!next) {
-                    self->reason = EXIT_ENOMEM;
-                    pthread_exit(NULL);
-                }
-
-                ps.matchFeatures(features, matches, true, 1);
-
-                next->features = features;
-                next->matches = matches;
-                ps.findRelated(next->features, next->matches,
-                        indices, work->confidence);
-                if (next->features.size() < 2) {
-                    if (work->confidence > 0.5f) {
-                        work->confidence -= 0.25f;
-                        continue;
-                    } else {
-                        self->reason = EXIT_UNMATCHED;
-                        pthread_exit(NULL);
-                    }
-                }
-
-                std::sort(indices.begin(), indices.end());
-                int offset = 0;
-                for (auto _idx : indices) {
-                    int idx = _idx - offset++;
-                    next->images.push_back(work->images[idx]);
-                    work->images.erase(work->images.begin() + idx);
-                    features.erase(features.begin() + idx);
-                }
-                next->state = PANO_MATCHED;
-                next->confidence = work->confidence;
-
-                lock_queue();
-                work_queue.push_back(next);
-                unlock_queue();
+            reason = sort_images(work);
+            if (reason) {
+                self->reason = reason;
+                pthread_exit(NULL);
             }
             delete work;
             work = NULL;
-        } else if (work->state == PANO_MATCHED) {
-            ps.estimateCameraParams(work->features, work->matches,
-                    work->cameras, work->confidence);
-            err = ps.composePanorama(work->images, work->cameras,
-                    work->pano, true, 1);
-            if (err) {
-                self->reason = EXIT_COMPOSITION;
+        }
+        else if (work->state == PANO_MATCHED) {
+            reason = make_pano(work);
+            if (reason) {
+                self->reason = reason;
                 pthread_exit(NULL);
             }
             // TODO write pano to disk
             // TODO reset GPU device
             delete work;
             work = NULL;
-        } else {
+        }
+        else {
             self->reason = EXIT_INVALID_WORKSTATE;
             pthread_exit(NULL);
         }
@@ -273,6 +313,50 @@ static void * gpu_thread(void *arg)
     pthread_exit(NULL);
 }
 
+static enum exit_reason add_images(std::string &dirlist,
+        size_t num, size_t offset)
+{
+    struct work_item *work;
+    size_t count;
+    int err;
+    
+    work = new struct work_item;
+    if (!work)
+        return EXIT_ENOMEM;
+
+    err = load_images(work->images, dirlist);
+    if (err)
+        return EXIT_IMAGE_LOADING;
+
+    count = work->images.size();
+
+    if (num > 0) {
+        if (offset >= count)
+            return EXIT_EINVAL;
+        else if (num > (count - offset))
+            return EXIT_EINVAL;
+    } else if (num == 0) {
+        if (offset > count)
+            return EXIT_EINVAL;
+        num = count - offset;
+    }
+
+    if (num < count) {
+        auto from = work->images.begin() + offset;
+        images_t imgs(from, from + num);
+        work->images = imgs;
+    }
+
+    work->state = PANO_LOADED;
+    work->confidence = 1.0f;
+
+    lock_queue();
+    work_queue.push_back(work);
+    unlock_queue();
+
+    return EXIT_NORMAL;
+}
+
 //===----------------------------------------------------------------------===//
 // Entry
 //===----------------------------------------------------------------------===//
@@ -280,7 +364,7 @@ static void * gpu_thread(void *arg)
 int main(void)
 {
     std::string dirlist("dirlist");
-    struct work_item *work;
+    enum exit_reason reason;
     int err;
 
     num_gpus = cv::gpu::getCudaEnabledDeviceCount();
@@ -290,6 +374,8 @@ int main(void)
             << "OpenCV not compiled with CUDA" << std::endl;
         return -1;
     }
+
+    printf(">> %d GPGPUs for use\n", num_gpus);
 
     pthread_mutex_init(&queue_lock, NULL); // do before spawning threads
 
@@ -310,27 +396,19 @@ int main(void)
         }
     }
 
-    // Initialize some work
-    work = new struct work_item;
-    if (!work) {
-        std::cerr << "!! error: no memory" << std::endl;
+    reason = add_images(dirlist, 0, 0);
+    if (reason) {
+        printf("!! error adding images\n");
         return -1;
     }
 
-    err = load_images(work->images, dirlist);
-    if (err) {
-        std::cerr << "!! error loading images" << std::endl;
-        return -1;
+#if 0
+    while (1) {
+        sleep(1);
+        fprintf(stderr, ">> work_queue %lu\n", work_queue.size());
     }
+#endif
 
-    work->state = PANO_LOADED;
-    work->confidence = 1.0f;
-
-    lock_queue();
-    work_queue.push_back(work);
-    unlock_queue();
-
-    // Wait
     for (int t = 0; t < num_gpus; t++) {
         err = pthread_join(threads[t].tid, NULL);
         if (err) {
