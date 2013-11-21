@@ -27,4 +27,12 @@ int write_images(std::string &dirpath,
         const std::vector< cv::Mat > &imgs,
         std::string prefix = std::string(""));
 
+static inline int write_images(const char *dirpath,
+        const std::vector< cv::Mat > &imgs,
+        std::string prefix = std::string(""))
+{
+    std::string s(dirpath);
+    return write_images(s, imgs, prefix);
+}
+
 #endif /* _IO_HPP_INCLUDED_ */
