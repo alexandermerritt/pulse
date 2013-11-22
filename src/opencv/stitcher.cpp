@@ -96,7 +96,6 @@ int PStitcher::findFeatures(const images_t &images, features_t &features,
     double work_scale = 1;
     if (registr_resol >= 0)
         work_scale = min(1.0, sqrt(registr_resol * 1e6 / images[0].size().area()));
-    assert(work_scale != 1);
 
     // fix up use of gpu, and number of threads used
     try_gpu = (try_gpu ? gpu::getCudaEnabledDeviceCount() > 0 : false);
