@@ -15,8 +15,6 @@ cuda_root = os.environ.get('CUDA_ROOT', '/usr/local/cuda')
 
 ccflags = ['-Wall', '-Wextra', '-Werror']
 ccflags.append('-Wno-unused-function')
-ccflags.append('-Wno-unused-parameter')
-ccflags.append('-Wno-unused-variable')
 ccflags.append('-std=c++11')
 
 if ARGUMENTS.get('debug', 0):

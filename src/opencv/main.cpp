@@ -101,6 +101,7 @@ static inline void unlock_queue(void)
     pthread_mutex_unlock(&queue_lock);
 }
 
+#if 0
 static void printMatches(const matches_t &matches)
 {
     int i = 0;
@@ -126,6 +127,7 @@ static void printFeatures(features_t &features)
     }
     std::cout << "---- matches end ----" << std::endl;
 }
+#endif
 
 static void gpu_thread_cleanup(void *arg)
 {
@@ -160,7 +162,7 @@ static void gpu_thread_cleanup(void *arg)
 // exit.
 static enum exit_reason sort_images(struct work_item *work)
 {
-    PStitcher ps = PStitcher::createDefault(false);
+    PStitcher ps = PStitcher::createDefault();
     matches_t matches;
     features_t features;
     indices_t indices;
@@ -217,7 +219,7 @@ static enum exit_reason sort_images(struct work_item *work)
 // panorama. Called only by gpu_thread.
 static enum exit_reason make_pano(struct work_item *work)
 {
-    PStitcher ps = PStitcher::createDefault(false);
+    PStitcher ps = PStitcher::createDefault();
     int err = 0;
 
     if (!work || work->state != PANO_MATCHED)
@@ -239,9 +241,9 @@ static void * gpu_thread(void *arg)
 {
     struct thread *self = (struct thread*)arg;
     struct work_item *work;
-    PStitcher ps = PStitcher::createDefault(false);
+    PStitcher ps = PStitcher::createDefault();
     stringstream pano_name;
-    int err = 0, oldstate /* not used */;
+    int oldstate /* not used */;
     enum exit_reason reason;
 
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
@@ -319,7 +321,8 @@ static int spawn_threads(void)
     if (threads)
         return -1;
 
-    threads = (struct thread*)calloc(num_gpus, sizeof(*threads));
+    num_threads = num_gpus;
+    threads = (struct thread*)calloc(num_threads, sizeof(*threads));
     if (!threads) {
         std::cerr << "!! no memory" << std::endl;
         return -1;
@@ -373,7 +376,6 @@ static void prune_paths(paths_t &_paths, const string &ext)
 static int add_images(images_t &imgs)
 {
     struct work_item *work;
-    int err;
     
     work = new struct work_item;
     if (!work)
@@ -398,7 +400,6 @@ int main(void)
 {
     paths_t paths;
     images_t imgs;
-    int err;
 
     num_gpus = cv::gpu::getCudaEnabledDeviceCount();
     if (num_gpus < 1) {

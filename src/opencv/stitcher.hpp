@@ -70,7 +70,7 @@ public:
     enum Status { OK, ERR_NEED_MORE_IMGS };
 
     // Creates stitcher with default parameters
-    static PStitcher createDefault(bool try_use_gpu = false);
+    static PStitcher createDefault(void);
 
     int findFeatures(const images_t &images, features_t &features,
             bool try_gpu = false, int num_threads = 1);

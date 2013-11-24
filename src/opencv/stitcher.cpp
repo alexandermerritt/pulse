@@ -63,7 +63,7 @@
 using namespace std;
 using namespace cv;
 
-PStitcher PStitcher::createDefault(bool try_use_gpu)
+PStitcher PStitcher::createDefault(void)
 {
     PStitcher stitcher;
     stitcher.setRegistrationResol(0.6);
@@ -71,8 +71,6 @@ PStitcher PStitcher::createDefault(bool try_use_gpu)
     stitcher.setCompositingResol(ORIG_RESOL);
     stitcher.setWaveCorrection(true);
     stitcher.setWaveCorrectKind(detail::WAVE_CORRECT_HORIZ);
-
-    //if (try_use_gpu && cv::gpu::getCudaEnabledDeviceCount() > 0)
 
     return stitcher;
 }
