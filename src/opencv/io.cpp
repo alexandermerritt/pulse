@@ -5,7 +5,10 @@
 /* C includes */
 #include <stdio.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <dirent.h>
+#include <errno.h>
 #include <strings.h>
 #include <getopt.h>
 
@@ -33,78 +36,93 @@
 
 /* Local includes */
 #include "io.hpp"
+#include "types.hpp"
 
 using namespace std;
 using namespace cv;
 
 /* Internal functions */
 
-/* read all images in directory path into memory */
-static int read_images(vector<cv::Mat> &imgs, string &dirpath)
+// checks if path exists, is file, readable by user, etc, basically if opening
+// and reading it will cause us to fail
+static bool _file_okay(const string &path)
 {
-    int err = 0;
-    cv::Mat m;
-    DIR *dir;
-    struct dirent *ent;
-    const char ext[] = ".jpg";
-    string filename;
-    if ((dir = opendir(dirpath.c_str()))) {
-        while ((ent = readdir(dir))) {
-            filename = ent->d_name;
-            /* skip . and .. and anything hidden .* */
-            if (filename[0] == '.')
-                continue;
-            /* skip if no extension */
-            const char *pos = strrchr(filename.c_str(), '.');
-            if (!pos)
-                continue;
-            /* skip not jpg */
-            if (0 != strncasecmp(pos, ext, strlen(ext)))
-                continue;
-            m = cv::imread(dirpath + "/" + filename);
-            if (!m.data) {
-                cerr << "!! Error reading " << filename << endl;
-                continue;
-            }
-            imgs.push_back(m);
-            cout << "    " << filename << endl;
-        }
-        closedir(dir);
-    } else {
-        err = -1;
-    }
-    cout << endl;
-    return err;
+    struct stat buf;
+    uid_t uid = geteuid();
+    gid_t gid = getegid();
+
+    if (stat(path.c_str(), &buf))
+        return false;
+
+    // check permissions
+    if ((buf.st_uid == uid) && !(buf.st_mode & S_IRUSR))
+        return false;
+    else if ((buf.st_gid == gid) && !(buf.st_mode & S_IRGRP))
+        return false;
+    else if (!(buf.st_mode & S_IROTH))
+        return false;
+
+    // check file type
+    if (!S_ISREG(buf.st_mode))
+        return false;
+
+    return true;
+}
+
+// return 0 if all okay, else > 0
+// table contains T/F indicating which
+static int file_okay(const paths_t &paths, vector<bool> &okay)
+{
+    int ret = 0, item = 0;
+    if (paths.empty())
+        return -EINVAL;
+    okay.resize(paths.size());
+    for (const string &path : paths)
+            ret += !(okay[item++] = _file_okay(path));
+    return ret;
 }
 
 /* Public functions */
 
-int load_images(vector<cv::Mat> &imgs, string &dirlist)
+// expect one path per line as input
+void read_stdin(paths_t &paths)
 {
-    int err = 0;
-    ifstream ifs;
-    string dirpath;
+    string line;
+    paths.clear();
+    while (getline(cin, line))
+        paths.push_back(line);
+}
 
-    cout << ">> loading images" << endl;
+// you should santize paths before calling this
+int load_images(images_t &imgs, const paths_t &_paths)
+{
+    list<string> paths(_paths);
+    vector<bool> okay;
 
-    ifs.open(dirlist.c_str());
-    if (!ifs.is_open())
-        return -1;
+    imgs.clear();
 
-    while (!ifs.eof()) {
-        ifs >> dirpath;
-        if (dirpath[0] == '#')
-            continue;
-        if (dirpath.empty())
-            continue;
-        err = read_images(imgs, dirpath);
-        if (err)
-            break;
-        dirpath.clear();
+    std::cout << ">> loading images" << std::endl;
+
+    if (file_okay(paths, okay)) {
+        size_t item = 0;
+        for (const string &path : paths) {
+            if (!okay[item++]) {
+                cerr << "!! '" << path << "' not readable" << endl;
+            }
+        }
+        return -EINVAL;
     }
 
-    ifs.close();
-    return err;
+    for (string &path : paths) {
+        std::cout << "."; std::cout.flush();
+        cv::Mat m = cv::imread(path);
+        if (!m.data)
+            return -EINVAL;
+        imgs.push_back(m);
+    }
+    std::cout << std::endl;
+
+    return 0;
 }
 
 int write_features(string &dirpath,

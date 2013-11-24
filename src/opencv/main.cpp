@@ -168,15 +168,16 @@ static enum exit_reason sort_images(struct work_item *work)
     if (!work || work->state != PANO_LOADED)
         return EXIT_EINVAL;
 
-    //ps.findFeatures(work->images, features, true, 1);
-    ps.findFeatures(work->images, features, false, 24);
+    ps.findFeatures(work->images, features, true, 1);
+    //ps.findFeatures(work->images, features, false, 24);
     while (work->images.size() > 1) {
         // use new b/c struct contains classes
         struct work_item *next = new struct work_item;
         if (!next)
             return EXIT_ENOMEM;
-        //ps.matchFeatures(features, matches, true, 1);
-        ps.matchFeatures(features, matches, false, 24);
+
+        ps.matchFeatures(features, matches, true, 1);
+        //ps.matchFeatures(features, matches, false, 24);
 
         next->features = features;
         next->matches = matches;
@@ -221,8 +222,6 @@ static enum exit_reason make_pano(struct work_item *work)
 
     if (!work || work->state != PANO_MATCHED)
         return EXIT_EINVAL;
-
-    fprintf(stderr, ">> %lu images in pano\n", work->features.size());
 
     // this runs only on the CPU for now, single thread
     ps.estimateCameraParams(work->features, work->matches,
@@ -313,40 +312,74 @@ static void * gpu_thread(void *arg)
     pthread_exit(NULL);
 }
 
-static enum exit_reason add_images(std::string &dirlist,
-        size_t num, size_t offset)
+static int spawn_threads(void)
+{
+    int err;
+
+    if (threads)
+        return -1;
+
+    threads = (struct thread*)calloc(num_gpus, sizeof(*threads));
+    if (!threads) {
+        std::cerr << "!! no memory" << std::endl;
+        return -1;
+    }
+
+    for (int t = 0; t < num_gpus; t++) {
+        threads[t].gpu = t;
+        threads[t].alive = false;
+        err = pthread_create(&threads[t].tid, NULL, gpu_thread, &threads[t]);
+        if (err) {
+            std::cerr <<  "!! error spawning thread" << std::endl;
+            return -1;
+        }
+    }
+    return 0;
+}
+
+static void join_threads(void)
+{
+    int err;
+    for (int t = 0; t < num_gpus; t++) {
+        err = pthread_join(threads[t].tid, NULL);
+        if (err) {
+            std::cerr << "!! error joining thread" << std::endl;
+        }
+    }
+}
+
+
+static void prune_paths(paths_t &_paths, const string &ext)
+{
+    paths_t paths;
+    size_t pos;
+
+    for (string &s : _paths) {
+        if (s.empty())
+            continue;
+        if (s[0] == '#')
+            continue;
+        pos = s.find_last_of('.');
+        if (pos == string::npos)
+            continue;
+        if (!ext.empty() && s.substr(pos) != ext)
+            continue;
+        paths.push_back(s);
+    }
+
+    _paths = paths;
+}
+
+static int add_images(images_t &imgs)
 {
     struct work_item *work;
-    size_t count;
     int err;
     
     work = new struct work_item;
     if (!work)
         return EXIT_ENOMEM;
 
-    err = load_images(work->images, dirlist);
-    if (err)
-        return EXIT_IMAGE_LOADING;
-
-    count = work->images.size();
-
-    if (num > 0) {
-        if (offset >= count)
-            return EXIT_EINVAL;
-        else if (num > (count - offset))
-            return EXIT_EINVAL;
-    } else if (num == 0) {
-        if (offset > count)
-            return EXIT_EINVAL;
-        num = count - offset;
-    }
-
-    if (num < count) {
-        auto from = work->images.begin() + offset;
-        images_t imgs(from, from + num);
-        work->images = imgs;
-    }
-
+    work->images = imgs;
     work->state = PANO_LOADED;
     work->confidence = 1.0f;
 
@@ -363,58 +396,33 @@ static enum exit_reason add_images(std::string &dirlist,
 
 int main(void)
 {
-    std::string dirlist("dirlist");
-    enum exit_reason reason;
+    paths_t paths;
+    images_t imgs;
     int err;
 
     num_gpus = cv::gpu::getCudaEnabledDeviceCount();
-
     if (num_gpus < 1) {
         std::cerr << "!! no GPGPUs or "
             << "OpenCV not compiled with CUDA" << std::endl;
         return -1;
     }
-
     printf(">> %d GPGPUs for use\n", num_gpus);
 
     pthread_mutex_init(&queue_lock, NULL); // do before spawning threads
 
-    // Spawn the threads
-    threads = (struct thread*)calloc(num_gpus, sizeof(*threads));
-    if (!threads) {
-        std::cerr << "!! no memory" << std::endl;
+    if (spawn_threads())
         return -1;
-    }
 
-    for (int t = 0; t < num_gpus; t++) {
-        threads[t].gpu = t;
-        threads[t].alive = false;
-        err = pthread_create(&threads[t].tid, NULL, gpu_thread, &threads[t]);
-        if (err) {
-            std::cerr <<  "!! error spawning thread" << std::endl;
-            return -1;
-        }
-    }
+    read_stdin(paths);
+    prune_paths(paths, string(".jpg"));
 
-    reason = add_images(dirlist, 0, 0);
-    if (reason) {
-        printf("!! error adding images\n");
+    if (load_images(imgs, paths))
         return -1;
-    }
 
-#if 0
-    while (1) {
-        sleep(1);
-        fprintf(stderr, ">> work_queue %lu\n", work_queue.size());
-    }
-#endif
+    if (add_images(imgs))
+        return -1;
 
-    for (int t = 0; t < num_gpus; t++) {
-        err = pthread_join(threads[t].tid, NULL);
-        if (err) {
-            std::cerr << "!! error joining thread" << std::endl;
-        }
-    }
+    join_threads();
 
     free(threads);
     for (struct work_item * w : work_queue)

@@ -5,11 +5,15 @@
 #ifndef _IO_HPP_INCLUDED_
 #define _IO_HPP_INCLUDED_
 
+#include "types.hpp"
+
+void read_stdin(paths_t &paths);
+
 /*
  * dirlist  path to file containing list of directories to scan for files
  * mats     container into which to read files found on disk
  */
-int load_images(std::vector< cv::Mat > &mats, std::string &dirlist);
+int load_images(images_t &imgs, const paths_t &_paths);
 
 int write_features(std::string &dirpath,
         std::vector< cv::Mat > &imgs,
