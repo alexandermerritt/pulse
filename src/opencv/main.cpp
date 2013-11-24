@@ -365,7 +365,9 @@ static void prune_paths(paths_t &_paths, const string &ext)
         pos = s.find_last_of('.');
         if (pos == string::npos)
             continue;
-        if (!ext.empty() && s.substr(pos) != ext)
+        if (!ext.empty() &&
+                0 != strncasecmp(s.substr(pos).c_str(),
+                    ext.c_str(), ext.length()))
             continue;
         paths.push_back(s);
     }
