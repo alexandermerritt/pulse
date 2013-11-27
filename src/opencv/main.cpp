@@ -409,6 +409,7 @@ int main(void)
             << "OpenCV not compiled with CUDA" << std::endl;
         return -1;
     }
+    num_gpus = 1;
     printf(">> %d GPGPUs for use\n", num_gpus);
 
     pthread_mutex_init(&queue_lock, NULL); // do before spawning threads
