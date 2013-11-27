@@ -418,14 +418,11 @@ int PStitcher::composePanorama(images_t &images, cameras_t &cameras,
     double work_scale = 1;
     if (registr_resol >= 0)
         work_scale = min(1.0, sqrt(registr_resol * 1e6 / images[0].size().area()));
-    assert(work_scale != 1);
     //std::cout << ">>    work_scale " << work_scale << std::endl;
 
     double seam_scale =
         std::min(1.0, sqrt(seam_est_resol * 1e6 / images[0].size().area()));
     double seam_work_aspect = seam_scale / work_scale;
-    assert(seam_scale != 1);
-    assert(seam_work_aspect != 1);
     //cout << "      seam_scale " << seam_scale << endl;
     //cout << "      seam_work_aspect " << seam_work_aspect << endl;
 
