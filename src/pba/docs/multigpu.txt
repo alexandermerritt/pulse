@@ -1,0 +1,63 @@
+//By Pravin Bhat
+#include "nvml.h" //nvidia's nvml library
+
+SparseBundleCU::SparseBundleCU(int device) : ParallelBA(PBA_INVALID_DEVICE),
+                    _num_camera(0), _num_point(0), _num_imgpt(0),
+                    _camera_data(NULL), _point_data(NULL), _imgpt_data(NULL),
+                    _camera_idx(NULL), _point_idx(NULL),  _projection_sse(0)
+{
+    if(device == PBA_CUDA_DEVICE_DEFAULT)
+        __selected_device = GetBestCudaDeviceID();
+    else
+        __selected_device = device;
+}
+
+int
+SparseBundleCU::GetBestCudaDeviceID()
+{
+    nvmlReturn_t nvmlRet;
+
+    nvmlRet = nvmlInit();
+    if(nvmlRet != NVML_SUCCESS) return -1;
+
+    uint device_count;
+    nvmlRet = nvmlDeviceGetCount(&device_count);
+    if(nvmlRet != NVML_SUCCESS) return -1;
+
+    if(device_count < 1) return -1;
+    if(device_count == 1) return 0;
+
+    int bestDeviceID = -1;
+    double bestDeviceScore = 0;
+    for(uint iDevice = 0; iDevice < device_count; iDevice++)
+    {
+        nvmlDevice_t device;
+        double deviceScore = 0;
+
+        nvmlRet = nvmlDeviceGetHandleByIndex(iDevice, &device);
+        if(nvmlRet != NVML_SUCCESS) return -1;
+
+        nvmlMemory_t deviceMem;
+        nvmlRet = nvmlDeviceGetMemoryInfo(device, &deviceMem);
+        if(nvmlRet == NVML_SUCCESS)
+        {
+            deviceScore += (double) deviceMem.free;
+        }
+
+        nvmlUtilization_t deviceUtil;
+        nvmlRet = nvmlDeviceGetUtilizationRates(device, &deviceUtil);
+        if(nvmlRet == NVML_SUCCESS)
+        {
+            deviceScore += (100 - deviceUtil.memory) * 1.0e+06;
+            deviceScore += (100 - deviceUtil.gpu)    * 1.0e+06;
+        }
+
+        if(deviceScore > bestDeviceScore)
+        {
+            bestDeviceID    = (int) iDevice;
+            bestDeviceScore = deviceScore;
+        }
+    }
+
+    return bestDeviceID;
+}
