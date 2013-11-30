@@ -1,0 +1,37 @@
+#! /usr/bin/env python
+
+import os
+import commands
+import sys
+
+__author__ = "Alex Merritt"
+__email__ = "merritt.alex@gatech.edu"
+
+cxx = os.environ.get('CXX', 'clang++')
+
+arg_debug = int(ARGUMENTS.get('debug', 0))
+
+ccflags = ['-Wall', '-Wextra', '-Werror']
+ccflags.append('-Wno-unused-parameter')
+
+local_lpath = [os.getcwd() + '/../SiftGPU/bin/']
+local_cpath = [os.getcwd() + '/../SiftGPU/src/']
+
+libpath = [local_lpath]
+cpath = [local_cpath]
+libs = ['siftgpu']
+
+if arg_debug:
+    ccflags.append('-ggdb')
+    ccflags.append('-O0')
+else:
+    ccflags.append('-O2')
+
+sources = ['app.cpp']
+
+env = Environment(CXX = cxx, CCFLAGS = ccflags, LIBS = libs)
+env.Append(CPPPATH = cpath)
+env.Append(LIBPATH = libpath)
+
+env.Program('app', sources)
+
