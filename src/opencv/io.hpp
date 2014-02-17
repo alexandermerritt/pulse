@@ -27,6 +27,14 @@ static inline int write_features(const char *dirpath,
     return write_features(s, imgs, features);
 }
 
+int write_image(std::string &filepath, const cv::Mat &img);
+
+static inline int write_image(const char *filepath, const cv::Mat &img)
+{
+    std::string s(filepath);
+    return write_image(s, img);
+}
+
 int write_images(std::string &dirpath,
         const std::vector< cv::Mat > &imgs,
         std::string prefix = std::string(""));

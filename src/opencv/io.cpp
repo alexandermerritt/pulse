@@ -101,7 +101,7 @@ int load_images(images_t &imgs, const paths_t &_paths)
 
     imgs.clear();
 
-    std::cout << ">> loading images" << std::endl;
+    std::cout << ">> loading " << paths.size() << " images" << std::endl;
 
     if (file_okay(paths, okay)) {
         size_t item = 0;
@@ -142,6 +142,11 @@ int write_features(string &dirpath,
     }
     img.release();
     return 0;
+}
+
+int write_image(string &filepath, const cv::Mat &img)
+{
+    return !imwrite(filepath, img);
 }
 
 int write_images(string &dirpath,
