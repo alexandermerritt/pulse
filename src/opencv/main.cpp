@@ -49,7 +49,8 @@ enum exit_reason
     EXIT_UNMATCHED,
     EXIT_COMPOSITION,
     EXIT_INVALID_WORKSTATE,
-    EXIT_IMAGE_LOADING
+    EXIT_IMAGE_LOADING,
+    EXIT_IMAGE_WRITING
 };
 
 struct work_item
@@ -71,6 +72,7 @@ struct thread
     int gpu;
     bool alive;
     enum exit_reason reason;
+    int imgidx; // used for writing panos
 };
 
 //===----------------------------------------------------------------------===//
@@ -288,7 +290,12 @@ static void * gpu_thread(void *arg)
                 self->reason = reason;
                 pthread_exit(NULL);
             }
-            // TODO write pano to disk
+            stringstream s;
+            s << "/tmp/img_" << self->gpu << "_" << self->imgidx++ << ".jpg";
+            if (write_image(s.str().c_str(), work->pano)) {
+                self->reason = EXIT_IMAGE_WRITING;
+                pthread_exit(NULL);
+            }
             // TODO reset GPU device
             delete work;
             work = NULL;
