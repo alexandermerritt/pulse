@@ -6,6 +6,7 @@
 #include <iomanip>
 
 #include <unistd.h> // sleep
+#include <signal.h>
 
 /* OpenCV includes */
 #include <opencv2/opencv.hpp>
@@ -314,6 +315,25 @@ static void * gpu_thread(void *arg)
     pthread_exit(NULL);
 }
 
+static void sighandler(int sig)
+{
+    if (sig == SIGUSR1)
+        for (int i = 0; i < num_threads; i++)
+            pthread_cancel(threads[i].tid);
+}
+
+static int add_sigusr1(void)
+{
+    struct sigaction action;
+    printf(">> kill me with 'killall -s SIGUSR1 stitcher' when idling\n");
+    memset(&action, 0, sizeof(action));
+    action.sa_handler = sighandler;
+    sigemptyset(&action.sa_mask);
+    if (0 > sigaction(SIGUSR1, &action, NULL))
+        return -1;
+    return 0;
+}
+
 static int spawn_threads(void)
 {
     int err;
@@ -417,6 +437,9 @@ int main(void)
     if (spawn_threads())
         return -1;
 
+    if (add_sigusr1())
+        return -1;
+
     read_stdin(paths);
     prune_paths(paths, string(".jpg"));
 
@@ -432,6 +455,8 @@ int main(void)
     for (struct work_item * w : work_queue)
         delete w;
     work_queue.clear();
+
+    printf(">> done.\n");
 
     return 0;
 }
