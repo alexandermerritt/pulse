@@ -42,6 +42,7 @@
 #include "stitcher.hpp"
 #include "io.hpp"
 #include "types.hpp"
+#include "memcached.hpp"
 
 //===----------------------------------------------------------------------===//
 // Definitions

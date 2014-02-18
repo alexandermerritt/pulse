@@ -42,6 +42,7 @@ env.Append(LIBPATH = libpath)
 env.Append(LIBS = libs)
 
 sources = ['io.cpp', 'stitcher.cpp', 'matchers.cpp', 'motion_estimators.cpp']
+sources.extend(['memcached.cpp'])
 
 env.Program('stitcher', ['main.cpp', sources])
 
