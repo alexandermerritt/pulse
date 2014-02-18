@@ -1,19 +1,33 @@
 /* file: main.cpp
  * author: Alexander Merritt merritt.alex@gatech.edu
+ *
+ * -- execute --
+ * $ find /path/to/images -type f | ./stitcher
+ *
+ * -- kill --
+ * $ killall -s SIGUSR1 stitcher
+ *
  */
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
+/* C++ system includes */
 #include <iostream>
 #include <iomanip>
 
-#include <unistd.h> // sleep
+/* C system includes */
+#include <unistd.h>
 #include <signal.h>
+#include <stdlib.h>
+#include <errno.h>
 
 /* OpenCV includes */
 #include <opencv2/opencv.hpp>
 #include <opencv2/gpu/gpu.hpp>
 #include <opencv2/core/gpumat.hpp>
 #include <opencv2/stitching/stitcher.hpp>
-
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/stitching/warpers.hpp>
@@ -24,12 +38,13 @@
 #include <opencv2/stitching/detail/blenders.hpp>
 #include <opencv2/stitching/detail/camera.hpp>
 
+/* Local includes */
 #include "stitcher.hpp"
 #include "io.hpp"
 #include "types.hpp"
 
 //===----------------------------------------------------------------------===//
-// Types, defines
+// Definitions
 //===----------------------------------------------------------------------===//
 
 enum pano_state
@@ -75,9 +90,18 @@ struct thread
     int imgidx; // used for writing panos
 };
 
+struct config
+{
+    int help;
+    int use_memcached;
+};
+
 //===----------------------------------------------------------------------===//
-// State
+// Global state
 //===----------------------------------------------------------------------===//
+
+// program configuration (based on cmd arguments)
+static struct config config;
 
 // gpu stuff
 static int num_gpus;
@@ -90,8 +114,15 @@ static pthread_mutex_t queue_lock;
 static int num_threads;
 static thread *threads;
 
+// arguments
+static const struct option options[] = {
+    {"help", no_argument, (int*)&config.help, true},
+    {"memcached", no_argument, (int*)&config.use_memcached, true},
+    {NULL, no_argument, NULL, 0} // terminator
+};
+
 //===----------------------------------------------------------------------===//
-// Utility functions
+// Private functions
 //===----------------------------------------------------------------------===//
 
 static inline void lock_queue(void)
@@ -421,14 +452,49 @@ static int add_images(images_t &imgs)
     return EXIT_NORMAL;
 }
 
+static void usage(char *argv[])
+{
+    fprintf(stderr, "\nUsage: %s [options]\n\n", *argv);
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "    --help\t\tDisplay this help\n");
+    fprintf(stderr, "    --memcached\t\tConnect to memcached for data\n");
+}
+
+static int parse_args(int argc, char *argv[])
+{
+    int opt, idx, ret;
+    const int done = -1; // man getopt_long
+
+    while (done != (opt = getopt_long(argc, argv, "", options, &idx)))
+        if (opt == '?')
+            return -EINVAL;
+
+    if (config.help)
+        return -EINVAL;
+
+    if (config.use_memcached)
+        if ((ret = watch_memcached()))
+            return ret;
+
+    return 0;
+}
+
 //===----------------------------------------------------------------------===//
 // Entry
 //===----------------------------------------------------------------------===//
 
-int main(void)
+int main(int argc, char *argv[])
 {
     paths_t paths;
     images_t imgs;
+    int ret;
+
+    ret = parse_args(argc, argv);
+    if (ret < 0) {
+        if (ret == -EINVAL)
+            usage(argv);
+        return -1;
+    }
 
     num_gpus = cv::gpu::getCudaEnabledDeviceCount();
     if (num_gpus < 1) {
