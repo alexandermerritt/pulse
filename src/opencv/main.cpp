@@ -56,20 +56,6 @@ enum pano_state
     PANO_MATCHED,
 };
 
-enum exit_reason
-{
-    EXIT_NORMAL = 0,
-    // system errors
-    EXIT_EINVAL,
-    EXIT_ENOMEM,
-    // stitching errors
-    EXIT_UNMATCHED,
-    EXIT_COMPOSITION,
-    EXIT_INVALID_WORKSTATE,
-    EXIT_IMAGE_LOADING,
-    EXIT_IMAGE_WRITING
-};
-
 struct work_item
 {
     enum pano_state state;
@@ -88,7 +74,7 @@ struct thread
     pthread_t tid;
     int gpu;
     bool alive;
-    enum exit_reason reason;
+    int exit_code;
     int imgidx; // used for writing panos
 };
 
@@ -99,6 +85,7 @@ struct config
     bool match_only;
     bool gpu_all;
     bool cpu_all;
+    long num_cpus;
 };
 
 //===----------------------------------------------------------------------===//
@@ -179,20 +166,7 @@ static void gpu_thread_cleanup(void *arg)
 
     std::stringstream err;
     err << "!! thread for GPU " << self->gpu << ": ";
-    if (self->reason == EXIT_NORMAL) {
-        // do nothing
-    } else if (self->reason == EXIT_EINVAL) {
-        err << "bad arguments";
-    } else if (self->reason == EXIT_ENOMEM) {
-        err << "no memory";
-    } else if (self->reason == EXIT_COMPOSITION) {
-        err << "could not compose panorama";
-    } else if (self->reason == EXIT_INVALID_WORKSTATE) {
-        err << "work item has invalid state";
-    } else {
-        err << "unknown reason";
-    }
-    err << std::endl;
+    err << strerror(self->exit_code) << std::endl;
     std::cerr << err.str();
 
     cv::gpu::resetDevice();
@@ -200,13 +174,9 @@ static void gpu_thread_cleanup(void *arg)
     self->alive = false;
 }
 
-// Searches for features on each image, matches all, then sorts into separate
-// panoramas, inserting each as a new work unit into the global queue.  Called
-// only by gpu_thread.  Any non-zero exit status causes the calling thread to
-// exit.
-// TODO maybe have this function ot rely on global state... have it return the
-// sorted images and the caller can push onto the queue
-static enum exit_reason sort_images(struct work_item *work)
+static int do_sort_images(struct work_item *work, // input
+        std::list< struct work_item * > &sets, images_t &unmatched, // output
+        bool use_gpu, int num_cpus) // tuning; num_cpus not used if use_gpu=1
 {
     PStitcher ps = PStitcher::createDefault();
     matches_t matches;
@@ -215,21 +185,27 @@ static enum exit_reason sort_images(struct work_item *work)
     bool have_matching;
     int offset;
     float confidence;
+    struct work_item *next;
 
-    if (!work || work->state != PANO_LOADED)
-        return EXIT_EINVAL;
+    if (!work)
+        return -EINVAL;
+    if (work->state != PANO_LOADED)
+       return -EINVAL;
+    if (work->images.size() < 2)
+        return -EINVAL;
 
-    ps.findFeatures(work->images, features, true, 1);
-    //ps.findFeatures(work->images, features, false, 24);
+    ps.findFeatures(work->images, features, use_gpu, (use_gpu ? 1 : num_cpus));
+
     while (work->images.size() > 1) {
+
         // use new b/c struct contains classes
-        struct work_item *next = new struct work_item;
+        next = new struct work_item;
         if (!next)
-            return EXIT_ENOMEM;
+            return -ENOMEM;
 
-        ps.matchFeatures(features, matches, true, 1);
-        //ps.matchFeatures(features, matches, false, 24);
+        ps.matchFeatures(features, matches, use_gpu, (use_gpu ? 1 : num_cpus));
 
+        // match images, reducing confidence until we do, else quit
         have_matching = false;
         confidence = work->confidence;
         do {
@@ -246,17 +222,13 @@ static enum exit_reason sort_images(struct work_item *work)
                 << confidence << std::endl;
         } while (confidence > 0.5f);
 
-        // none matched... can't do anything with them now
         if (!have_matching) {
-            cerr << "    dropping " << work->images.size()
-                << " unmatched images" << std::endl;
-            for (auto &img : work->images)
-                std::cout << get<1>(img) << std::endl;
-            delete next;
+            unmatched = work->images;
+            work->images.clear();
             break;
         }
 
-        // some images did match. move them from work to next
+        // some images did match, create new work item
         std::sort(indices.begin(), indices.end());
         offset = 0;
         for (auto _idx : indices) {
@@ -267,31 +239,62 @@ static enum exit_reason sort_images(struct work_item *work)
         }
         next->state = PANO_MATCHED;
         next->confidence = work->confidence;
+        std::cout << "    adding new work item" << std::endl;
+        sets.push_back(next);
+    }
 
-        if (config.match_only) {
-            std::cout << "    matched images:" << std::endl;
-            for (auto &img : next->images)
-                std::cout << get<1>(img) << std::endl;
-            delete next;
-        } else {
-            // enqueue for next stage of processing
+    return 0;
+}
+
+static int sort_images(struct work_item *work)
+{
+    std::list< struct work_item * > sets;
+    images_t unmatched;
+    static int num = 0;
+    int err;
+
+    if (!work)
+        return -EINVAL;
+
+    err = do_sort_images(work, sets, unmatched,
+            config.gpu_all, config.num_cpus);
+    if (err) {
+        std::cerr << "!! error sorting: " << strerror(err) << std::endl;
+        return -ENOTRECOVERABLE;
+    }
+
+    if (!unmatched.empty())
+        for (auto &img : unmatched)
+            std::cout << "nomatch " << get<1>(img) << std::endl;
+
+    for (auto item : sets) {
+        for (auto &img : item->images)
+            std::cout << "match-" << num << " " << get<1>(img) << std::endl;
+        num++;
+    }
+
+    if (!config.match_only) {
+        for (auto item : sets) {
             lock_queue();
-            work_queue.push_back(next);
+            work_queue.push_back(item);
             unlock_queue();
         }
     }
-    return EXIT_NORMAL;
+
+    work->images.clear();
+
+    return 0;
 }
 
 // Takes a set of images, features, matching info etc and composites the final
 // panorama. Called only by gpu_thread.
-static enum exit_reason make_pano(struct work_item *work)
+static int make_pano(struct work_item *work)
 {
     PStitcher ps = PStitcher::createDefault();
     int err = 0;
 
     if (!work || work->state != PANO_MATCHED)
-        return EXIT_EINVAL;
+        return -EINVAL;
 
     // this runs only on the CPU for now, single thread
     ps.estimateCameraParams(work->features, work->matches,
@@ -300,9 +303,9 @@ static enum exit_reason make_pano(struct work_item *work)
     err = ps.composePanorama(work->images, work->cameras,
             work->pano, true, 1);
     if (err)
-        return EXIT_COMPOSITION;
+        return -ENOTRECOVERABLE;
 
-    return EXIT_NORMAL;
+    return 0;
 }
 
 static void * gpu_thread(void *arg)
@@ -312,17 +315,16 @@ static void * gpu_thread(void *arg)
     PStitcher ps = PStitcher::createDefault();
     stringstream pano_name;
     int oldstate /* not used */;
-    enum exit_reason reason;
 
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
     pthread_cleanup_push(gpu_thread_cleanup, self);
 
     if (!self || self->gpu < 0) {
-        self->reason = EXIT_EINVAL;
+        self->exit_code = -EINVAL;
         pthread_exit(NULL);
     }
 
-    self->reason = EXIT_NORMAL;
+    self->exit_code = 0;
     self->alive  = true;
 
     cv::gpu::setDevice(self->gpu);
@@ -341,24 +343,23 @@ static void * gpu_thread(void *arg)
         // TODO set pano_num
 
         if (work->state == PANO_LOADED) {
-            reason = sort_images(work);
-            if (reason) {
-                self->reason = reason;
+            if ((self->exit_code = sort_images(work)))
                 pthread_exit(NULL);
-            }
             delete work;
             work = NULL;
         }
         else if (work->state == PANO_MATCHED) {
-            reason = make_pano(work);
-            if (reason) {
-                self->reason = reason;
+            if ((self->exit_code = make_pano(work)))
+                pthread_exit(NULL);
+            if (!work->pano.data) {
+                self->exit_code = -ENOTRECOVERABLE;
                 pthread_exit(NULL);
             }
             stringstream s;
             s << "/tmp/img_" << self->gpu << "_" << self->imgidx++ << ".jpg";
+            std::cout << "    writing pano to " << s.str() << std::endl;
             if (write_image(s.str().c_str(), work->pano)) {
-                self->reason = EXIT_IMAGE_WRITING;
+                self->exit_code = -ENOTRECOVERABLE;
                 pthread_exit(NULL);
             }
             // TODO reset GPU device
@@ -366,7 +367,7 @@ static void * gpu_thread(void *arg)
             work = NULL;
         }
         else {
-            self->reason = EXIT_INVALID_WORKSTATE;
+            self->exit_code = -ENOTRECOVERABLE;
             pthread_exit(NULL);
         }
 #if 0
@@ -472,7 +473,7 @@ static int add_images(images_t &imgs)
     
     work = new struct work_item;
     if (!work)
-        return EXIT_ENOMEM;
+        return -ENOMEM;
 
     work->images = imgs;
     work->state = PANO_LOADED;
@@ -482,7 +483,7 @@ static int add_images(images_t &imgs)
     work_queue.push_back(work);
     unlock_queue();
 
-    return EXIT_NORMAL;
+    return 0;
 }
 
 static void usage(char *argv[])
@@ -492,7 +493,6 @@ static void usage(char *argv[])
     fprintf(stderr, "    --help\t\tDisplay this help\n");
     fprintf(stderr, "    --memcached\t\tConnect to memcached for data\n");
     fprintf(stderr, "    --match-only\tStop after matching images. Print paths.\n");
-    fprintf(stderr, "Not yet implemented:\n");
     fprintf(stderr, "    --cpu-all\t\tUse CPU for all operations\n");
     fprintf(stderr, "    --gpu-all\t\tUse GPU for all operations, where implemented\n");
 }
@@ -512,11 +512,10 @@ static int parse_args(int argc, char *argv[])
     if (config.gpu_all && config.cpu_all)
         return -EINVAL;
 
-    if (config.gpu_all)
-        return -EINVAL; // TODO not yet implemented
-
     if (config.cpu_all)
-        return -EINVAL; // TODO not yet implemented
+        config.num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
+    else 
+        config.num_cpus = 1;
 
     if (config.use_memcached)
         if ((ret = watch_memcached()))
