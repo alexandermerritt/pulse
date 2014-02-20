@@ -22,6 +22,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <getopt.h>
 
 /* OpenCV includes */
 #include <opencv2/opencv.hpp>
@@ -94,7 +95,10 @@ struct thread
 struct config
 {
     int help;
-    int use_memcached;
+    bool use_memcached;
+    bool match_only;
+    bool gpu_all;
+    bool cpu_all;
 };
 
 //===----------------------------------------------------------------------===//
@@ -119,6 +123,11 @@ static thread *threads;
 static const struct option options[] = {
     {"help", no_argument, (int*)&config.help, true},
     {"memcached", no_argument, (int*)&config.use_memcached, true},
+    /* don't stich images, just print which match and which don't */
+    {"match-only", no_argument, (int*)&config.match_only, true},
+    /* TODO attempt to use the GPU or CPU for all stages which support it */
+    {"gpu-all", no_argument, (int*)&config.gpu_all, true},
+    {"cpu-all", no_argument, (int*)&config.cpu_all, true},
     {NULL, no_argument, NULL, 0} // terminator
 };
 
@@ -195,12 +204,17 @@ static void gpu_thread_cleanup(void *arg)
 // panoramas, inserting each as a new work unit into the global queue.  Called
 // only by gpu_thread.  Any non-zero exit status causes the calling thread to
 // exit.
+// TODO maybe have this function ot rely on global state... have it return the
+// sorted images and the caller can push onto the queue
 static enum exit_reason sort_images(struct work_item *work)
 {
     PStitcher ps = PStitcher::createDefault();
     matches_t matches;
     features_t features;
     indices_t indices;
+    bool have_matching;
+    int offset;
+    float confidence;
 
     if (!work || work->state != PANO_LOADED)
         return EXIT_EINVAL;
@@ -216,24 +230,35 @@ static enum exit_reason sort_images(struct work_item *work)
         ps.matchFeatures(features, matches, true, 1);
         //ps.matchFeatures(features, matches, false, 24);
 
-        next->features = features;
-        next->matches = matches;
-        ps.findRelated(next->features, next->matches,
-                indices, work->confidence);
-        if (next->features.size() < 2) {
-            if (work->confidence > 0.5f) {
-                work->confidence -= 0.25f;
-                continue;
-            } else {
-                fprintf(stderr, ">> dropping %lu unmatched images\n",
-                        work->images.size());
-                //return EXIT_UNMATCHED; // XXX hmm..
+        have_matching = false;
+        confidence = work->confidence;
+        do {
+            next->features = features;
+            next->matches = matches;
+            ps.findRelated(next->features, next->matches,
+                    indices, confidence);
+            if (next->features.size() > 1) {
+                have_matching = true;
                 break;
             }
+            confidence -= 0.25f;
+            std::cout << "    reducing confidence to "
+                << confidence << std::endl;
+        } while (confidence > 0.5f);
+
+        // none matched... can't do anything with them now
+        if (!have_matching) {
+            cerr << "    dropping " << work->images.size()
+                << " unmatched images" << std::endl;
+            for (auto &img : work->images)
+                std::cout << get<1>(img) << std::endl;
+            delete next;
+            break;
         }
 
+        // some images did match. move them from work to next
         std::sort(indices.begin(), indices.end());
-        int offset = 0;
+        offset = 0;
         for (auto _idx : indices) {
             int idx = _idx - offset++;
             next->images.push_back(work->images[idx]);
@@ -243,9 +268,17 @@ static enum exit_reason sort_images(struct work_item *work)
         next->state = PANO_MATCHED;
         next->confidence = work->confidence;
 
-        lock_queue();
-        work_queue.push_back(next);
-        unlock_queue();
+        if (config.match_only) {
+            std::cout << "    matched images:" << std::endl;
+            for (auto &img : next->images)
+                std::cout << get<1>(img) << std::endl;
+            delete next;
+        } else {
+            // enqueue for next stage of processing
+            lock_queue();
+            work_queue.push_back(next);
+            unlock_queue();
+        }
     }
     return EXIT_NORMAL;
 }
@@ -410,7 +443,6 @@ static void join_threads(void)
     }
 }
 
-
 static void prune_paths(paths_t &_paths, const string &ext)
 {
     paths_t paths;
@@ -459,6 +491,10 @@ static void usage(char *argv[])
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "    --help\t\tDisplay this help\n");
     fprintf(stderr, "    --memcached\t\tConnect to memcached for data\n");
+    fprintf(stderr, "    --match-only\tStop after matching images. Print paths.\n");
+    fprintf(stderr, "Not yet implemented:\n");
+    fprintf(stderr, "    --cpu-all\t\tUse CPU for all operations\n");
+    fprintf(stderr, "    --gpu-all\t\tUse GPU for all operations, where implemented\n");
 }
 
 static int parse_args(int argc, char *argv[])
@@ -472,6 +508,15 @@ static int parse_args(int argc, char *argv[])
 
     if (config.help)
         return -EINVAL;
+
+    if (config.gpu_all && config.cpu_all)
+        return -EINVAL;
+
+    if (config.gpu_all)
+        return -EINVAL; // TODO not yet implemented
+
+    if (config.cpu_all)
+        return -EINVAL; // TODO not yet implemented
 
     if (config.use_memcached)
         if ((ret = watch_memcached()))
