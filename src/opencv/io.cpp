@@ -114,11 +114,12 @@ int load_images(images_t &imgs, const paths_t &_paths)
     }
 
     for (string &path : paths) {
+        cv::Mat mat;
         std::cout << "."; std::cout.flush();
-        cv::Mat m = cv::imread(path);
-        if (!m.data)
+        mat = cv::imread(path);
+        if (!mat.data)
             return -EINVAL;
-        imgs.push_back(m);
+        imgs.push_back(make_tuple(mat, path));
     }
     std::cout << std::endl;
 

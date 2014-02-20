@@ -93,7 +93,8 @@ int PStitcher::findFeatures(const images_t &images, features_t &features,
 
     double work_scale = 1;
     if (registr_resol >= 0)
-        work_scale = min(1.0, sqrt(registr_resol * 1e6 / images[0].size().area()));
+        work_scale = min(1.0,
+                sqrt(registr_resol * 1e6 / get<0>(images[0]).size().area()));
 
     // fix up use of gpu, and number of threads used
     try_gpu = (try_gpu ? gpu::getCudaEnabledDeviceCount() > 0 : false);
@@ -115,7 +116,7 @@ int PStitcher::findFeatures(const images_t &images, features_t &features,
 #pragma omp for
         for (size_t i = 0; i < images.size(); ++i) {
             Mat img;
-            resize(images[i], img, Size(), work_scale, work_scale);
+            resize(get<0>(images[i]), img, Size(), work_scale, work_scale);
             (*finder)(img, features[i]);
             //features[i].img_idx = (int)i; // XXX what is this for?
             std::cout << "    " << features[i].keypoints.size() << std::endl;
@@ -417,18 +418,19 @@ int PStitcher::composePanorama(images_t &images, cameras_t &cameras,
     // compute seam scales (and recompute work scale)
     double work_scale = 1;
     if (registr_resol >= 0)
-        work_scale = min(1.0, sqrt(registr_resol * 1e6 / images[0].size().area()));
+        work_scale = min(1.0,
+                sqrt(registr_resol * 1e6 / get<0>(images[0]).size().area()));
     //std::cout << ">>    work_scale " << work_scale << std::endl;
 
-    double seam_scale =
-        std::min(1.0, sqrt(seam_est_resol * 1e6 / images[0].size().area()));
+    double seam_scale = std::min(1.0,
+            sqrt(seam_est_resol * 1e6 / get<0>(images[0]).size().area()));
     double seam_work_aspect = seam_scale / work_scale;
     //cout << "      seam_scale " << seam_scale << endl;
     //cout << "      seam_work_aspect " << seam_work_aspect << endl;
 
     for (auto &image : images) {
-        cv::resize(image, img, cv::Size(), seam_scale, seam_scale);
-        seam_est_images.push_back(img.clone());
+        cv::resize(get<0>(image), img, cv::Size(), seam_scale, seam_scale);
+        seam_est_images.push_back(make_tuple(img.clone(), get<1>(image)));
     }
     img.release();
 
@@ -445,7 +447,7 @@ int PStitcher::composePanorama(images_t &images, cameras_t &cameras,
     // Prepare image masks
     for (size_t i = 0; i < images.size(); ++i)
     {
-        masks[i].create(seam_est_images[i].size(), CV_8U);
+        masks[i].create(get<0>(seam_est_images[i]).size(), CV_8U);
         masks[i].setTo(Scalar::all(255));
     }
 
@@ -475,7 +477,7 @@ int PStitcher::composePanorama(images_t &images, cameras_t &cameras,
         K(1,1) *= (float)seam_work_aspect;
         K(1,2) *= (float)seam_work_aspect;
 
-        corners[i] = w->warp(seam_est_images[i], K, cameras[i].R, INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
+        corners[i] = w->warp(get<0>(seam_est_images[i]), K, cameras[i].R, INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
         sizes[i] = images_warped[i].size();
 
         w->warp(masks[i], K, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
@@ -515,7 +517,8 @@ int PStitcher::composePanorama(images_t &images, cameras_t &cameras,
 
     // prepare for blender loop --------------------------------------
     if (compose_resol > 0)
-        compose_scale = min(1.0, sqrt(compose_resol * 1e6 / images[0].size().area()));
+        compose_scale = min(1.0,
+                sqrt(compose_resol * 1e6 / get<0>(images[0]).size().area()));
 
     compose_work_aspect = compose_scale / work_scale;
     warped_image_scale *= static_cast<float>(compose_work_aspect);
@@ -531,11 +534,11 @@ int PStitcher::composePanorama(images_t &images, cameras_t &cameras,
         cameras[i].ppy *= compose_work_aspect;
 
         // Update corner and size
-        cv::Size sz = images[i].size();
+        cv::Size sz = get<0>(images[i]).size();
         if (std::abs(compose_scale - 1) > 1e-1)
         {
-            sz.width = cvRound(images[i].size().width * compose_scale);
-            sz.height = cvRound(images[i].size().height * compose_scale);
+            sz.width  = cvRound(get<0>(images[i]).size().width * compose_scale);
+            sz.height = cvRound(get<0>(images[i]).size().height * compose_scale);
         }
 
         Mat K;
@@ -553,10 +556,10 @@ int PStitcher::composePanorama(images_t &images, cameras_t &cameras,
         std::cout.flush();
 
         // Read image and resize it if necessary
-        img = images[img_idx]; // XXX is this dangerous if resize is used later?
+        img = get<0>(images[img_idx]); // XXX is this dangerous if resize is used later?
 
         if (std::abs(compose_scale - 1) > 1e-1)
-            cv::resize(images[img_idx], img, Size(), compose_scale, compose_scale);
+            cv::resize(get<0>(images[img_idx]), img, Size(), compose_scale, compose_scale);
 
         Size img_size = img.size();
 
