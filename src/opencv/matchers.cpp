@@ -50,6 +50,7 @@
 #include <opencv2/stitching/detail/blenders.hpp>
 #include <opencv2/stitching/detail/camera.hpp>
 #include <opencv2/calib3d/calib3d.hpp> // for CV_RANSAC
+#include <opencv2/gpu/gpu.hpp> // BFMatcher_GPU
 
 #include <iostream>
 
