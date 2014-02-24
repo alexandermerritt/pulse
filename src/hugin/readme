@@ -1,0 +1,41 @@
+HUGIN INSTALLATION
+------------------
+
+Some dependencies:
+
+    yum install wxBase libwxgtk-devel OpenEXR-devel exiv2-devel \
+                rpm-build libgcj-devel liblensfun-devel
+
+    ...others?
+
+libpano13 (flags set for RPM build).
+
+    hg clone http://hg.code.sf.net/p/panotools/libpano13 libpano.hg
+    mkdir build
+    cd build
+    cmake28 ../libpano.hg/  -DCMAKE_INSTALL_PREFIX=/usr/local \
+            -DCPACK_BINARY_DEB:BOOL=OFF -DCPACK_BINARY_NSIS:BOOL=OFF \
+            -DCPACK_BINARY_RPM:BOOL=ON -DCPACK_BINARY_STGZ:BOOL=OFF \
+            -DCPACK_BINARY_TBZ2:BOOL=OFF -DCPACK_BINARY_TGZ:BOOL=OFF \
+            -DCPACK_BINARY_TZ:BOOL=OFF 
+    rpm -Uvh libpano*.rpm
+
+Boost >= 1.44
+
+    ./boostrap.sh
+    ./b2 -jN
+    ./b2 install --prefix=/usr/local
+
+swig >= 2.0
+
+    sigh fuck it ... too much needed to update CentOS 6.5
+
+Build Hugin
+
+    tar xjf <file>
+    mkdir build
+    cd build/
+    cmake28 -DCMAKE_INSTALL_PREFIX=/usr/local ../hugin-2014.0.0/
+    make -jN
+    make install
+
