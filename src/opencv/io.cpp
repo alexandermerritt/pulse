@@ -45,40 +45,40 @@ using namespace cv;
 
 // checks if path exists, is file, readable by user, etc, basically if opening
 // and reading it will cause us to fail
-static bool _file_okay(const string &path)
+static bool file_bad(const string &path)
 {
     struct stat buf;
     uid_t uid = geteuid();
     gid_t gid = getegid();
 
     if (stat(path.c_str(), &buf))
-        return false;
+        return true;
 
     // check permissions
     if ((buf.st_uid == uid) && !(buf.st_mode & S_IRUSR))
-        return false;
+        return true;
     else if ((buf.st_gid == gid) && !(buf.st_mode & S_IRGRP))
-        return false;
+        return true;
     else if (!(buf.st_mode & S_IROTH))
-        return false;
+        return true;
 
     // check file type
     if (!S_ISREG(buf.st_mode))
-        return false;
+        return true;
 
-    return true;
+    return false;
 }
 
 // return 0 if all okay, else > 0
 // table contains T/F indicating which
-static int file_okay(const paths_t &paths, vector<bool> &okay)
+static int files_bad(const paths_t &paths, vector<bool> &bad)
 {
     int ret = 0, item = 0;
     if (paths.empty())
         return -EINVAL;
-    okay.resize(paths.size());
+    bad.resize(paths.size());
     for (const string &path : paths)
-            ret += !(okay[item++] = _file_okay(path));
+        ret += !(bad[item++] = file_bad(path));
     return ret;
 }
 
@@ -94,19 +94,37 @@ void read_stdin(paths_t &paths)
 }
 
 // you should santize paths before calling this
+int load_image(image_t &img, const path_t &path)
+{
+    std::cout << ">> loading 1 image" << std::endl;
+
+    if (file_bad(path)) {
+        cerr << "!! '" << path << "' not readable" << endl;
+        return -EINVAL;
+    }
+
+    cv::Mat mat = cv::imread(path);
+    if (!mat.data)
+        return -EINVAL;
+
+    img = make_tuple(mat, path);
+    return 0;
+}
+
+// you should santize paths before calling this
 int load_images(images_t &imgs, const paths_t &_paths)
 {
     list<string> paths(_paths);
-    vector<bool> okay;
+    vector<bool> bad;
 
     imgs.clear();
 
     std::cout << ">> loading " << paths.size() << " images" << std::endl;
 
-    if (file_okay(paths, okay)) {
+    if (files_bad(paths, bad)) {
         size_t item = 0;
         for (const string &path : paths) {
-            if (!okay[item++]) {
+            if (!bad[item++]) {
                 cerr << "!! '" << path << "' not readable" << endl;
             }
         }
@@ -164,5 +182,34 @@ int write_images(string &dirpath,
             return -1;
     }
     return 0;
+}
+
+void prune_paths(paths_t &_paths, const vector< string > &exts)
+{
+    paths_t paths;
+    size_t pos;
+
+    if (paths.empty() || exts.empty())
+        return;
+
+    for (string &s : _paths) {
+        if (s.empty())
+            continue;
+        if (s[0] == '#')
+            continue;
+        pos = s.find_last_of('.');
+        if (pos == string::npos)
+            continue;
+        for (const string &ext : exts) {
+            if (!ext.empty() &&
+                    0 == strncasecmp(s.substr(pos).c_str(),
+                        ext.c_str(), ext.length())) {
+                paths.push_back(s);
+                break; // file only has one extension
+            }
+        }
+    }
+
+    _paths = paths;
 }
 

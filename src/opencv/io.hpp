@@ -14,6 +14,7 @@ void read_stdin(paths_t &paths);
  * mats     container into which to read files found on disk
  */
 int load_images(images_t &imgs, const paths_t &_paths);
+int load_image(image_t &img, const path_t &path);
 
 int write_features(std::string &dirpath,
         std::vector< cv::Mat > &imgs,
@@ -46,5 +47,7 @@ static inline int write_images(const char *dirpath,
     std::string s(dirpath);
     return write_images(s, imgs, prefix);
 }
+
+void prune_paths(paths_t &_paths, const std::vector< std::string > &exts);
 
 #endif /* _IO_HPP_INCLUDED_ */
