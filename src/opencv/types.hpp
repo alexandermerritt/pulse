@@ -20,6 +20,7 @@
 #include <opencv2/stitching/detail/blenders.hpp>
 #include <opencv2/stitching/detail/camera.hpp>
 
+typedef std::string path_t;
 typedef std::list< std::string > paths_t;
 
 typedef std::vector< cv::detail::ImageFeatures > features_t;

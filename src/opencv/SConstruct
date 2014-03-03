@@ -47,3 +47,5 @@ sources.extend(['memcached.cpp'])
 
 env.Program('stitcher', ['main.cpp', sources])
 
+env.Program('dicer', ['dicer-app.cpp', 'io.cpp'])
+
