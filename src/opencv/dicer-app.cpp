@@ -9,6 +9,7 @@
 
 /* C++ system includes */
 #include <iostream>
+#include <memory>
 
 /* C system includes */
 #include <stdio.h>
@@ -81,26 +82,83 @@ static void usage(const char *name)
  *      cv::Mat mat = __img(..)
  */
 static inline cv::Mat &
-__img(image_t img)
+__img(image_t &img)
 {
     return std::get<0>(img);
 }
+static inline std::string &
+__pth(image_t &img)
+{
+    return std::get<1>(img);
+}
+
+#if 0
+static int
+get_features(cv::Mat &mat, cv::detail::ImageFeatures &features)
+{
+    std::unique_ptr< cv::detail::FeaturesFinder >
+        finder(new cv::detail::SurfFeaturesFinder(4000., 4, 6));
+        //finder(new cv::detail::OrbFeaturesFinder());
+    if (!finder)
+        return -ENOMEM;
+    finder->operator()(mat, features);
+    return 0;
+}
+#endif
 
 static int dice_one(image_t &image, images_t &subimages)
 {
     cv::Mat mat = __img(image);
-    cv::Mat sub;
-    size_t width  = mat.size().width;
-    size_t height = mat.size().height;
+    size_t img_width  = mat.size().width;
+    size_t img_height = mat.size().height;
 
-    if (width == 0 || height == 0)
+    cv::Rect roi;
+    int x, y, w, h;
+
+    if (img_width == 0 || img_height == 0)
         return -1;
 
-    subimages.clear();
-    sub = mat(cv::Rect(0, 0, width / 2, height / 2));
+#if 0
+    cv::detail::ImageFeatures features;
+    std::cout << ">> loading features";
+    std::cout.flush();
+    if (get_features(mat, features))
+        return -1;
+    std::cout << " " << features.keypoints.size() << " found" << std::endl;
+
+    if (write_features("/tmp/surf.jpg", mat, features))
+        return -1;
 
     if (write_image("/tmp/rect.jpg", sub))
         return -1;
+#endif
+
+    subimages.clear();
+
+    w = img_width / 5;
+    h = img_height;
+
+    std::cout << ">> describing sub-images ";
+    std::cout.flush();
+
+    x = y = 0;
+    while ((x + (0.75 * w)) < img_width) {
+        roi = cv::Rect(x, y, w, h);
+        subimages.push_back(make_tuple(mat(roi), __pth(image)));
+        x += (0.75 * w);
+    }
+    std::cout << subimages.size() << std::endl;
+
+    std::cout << ">> writing sub-images ";
+    std::cout.flush();
+
+    static int subset_num = 0;
+    std::stringstream ss;
+    ss << "sub-" << subset_num;
+    if (write_images("/tmp/", subimages, ss.str()))
+        return -1;
+
+    std::cout << std::endl;
 
     return 0;
 }
