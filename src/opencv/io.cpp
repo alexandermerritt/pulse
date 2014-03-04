@@ -163,22 +163,36 @@ int write_features(string &dirpath,
     return 0;
 }
 
+int write_features(string &filepath,
+        Mat &img, detail::ImageFeatures &features)
+{
+    Mat img2;
+    drawKeypoints(img, features.keypoints, img2,
+            Scalar::all(-1), DrawMatchesFlags::DEFAULT);
+    std::cout << "    writing " << filepath << std::endl;
+    if (!imwrite(filepath, img2))
+        return -1;
+    return 0;
+}
+
 int write_image(string &filepath, const cv::Mat &img)
 {
     return !imwrite(filepath, img);
 }
 
+#define __img(image_t)  (get<0>(image_t))
+
 int write_images(string &dirpath,
-        const vector< cv::Mat > &imgs, string prefix)
+        const images_t &images, string prefix)
 {
     stringstream s;
-    if (imgs.size() < 1)
+    if (images.size() < 1)
         return -1;
     /* TODO check dirpath */
-    for (size_t i = 0; i < imgs.size(); i++) {
+    for (size_t i = 0; i < images.size(); i++) {
         s.str(std::string()); // reset it
         s << dirpath << "/" << prefix << i << ".jpg";
-        if (!imwrite(s.str(), imgs[i]))
+        if (!imwrite(s.str(), __img(images[i])))
             return -1;
     }
     return 0;

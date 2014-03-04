@@ -16,6 +16,7 @@ void read_stdin(paths_t &paths);
 int load_images(images_t &imgs, const paths_t &_paths);
 int load_image(image_t &img, const path_t &path);
 
+/* XXX this writes many images, so first arg is diretory path */
 int write_features(std::string &dirpath,
         std::vector< cv::Mat > &imgs,
         std::vector< cv::detail::ImageFeatures > &features);
@@ -28,6 +29,16 @@ static inline int write_features(const char *dirpath,
     return write_features(s, imgs, features);
 }
 
+/* XXX this writes one file, so first arg is full filename, not a directory */
+int write_features(std::string &filepath,
+        cv::Mat &img, cv::detail::ImageFeatures &features);
+static inline int write_features(const char *filepath,
+        cv::Mat &img, cv::detail::ImageFeatures &features)
+{
+    std::string s(filepath);
+    return write_features(s, img, features);
+}
+
 int write_image(std::string &filepath, const cv::Mat &img);
 
 static inline int write_image(const char *filepath, const cv::Mat &img)
@@ -37,11 +48,11 @@ static inline int write_image(const char *filepath, const cv::Mat &img)
 }
 
 int write_images(std::string &dirpath,
-        const std::vector< cv::Mat > &imgs,
+        const images_t &imgs,
         std::string prefix = std::string(""));
 
 static inline int write_images(const char *dirpath,
-        const std::vector< cv::Mat > &imgs,
+        const images_t &imgs,
         std::string prefix = std::string(""))
 {
     std::string s(dirpath);
