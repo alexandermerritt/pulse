@@ -13,10 +13,9 @@ if ARGUMENTS.get('clang', 0):
     cxx = 'clang++'
 
 cuda_root = os.environ.get('CUDA_ROOT', '/usr/local/cuda')
-
-ccflags = ['-Wall', '-Wextra', '-Werror']
+ccflags = ['-std=c++11']
+ccflags.extend(['-Wall', '-Wextra', '-Werror'])
 ccflags.append('-Wno-unused-function')
-ccflags.append('-std=c++11')
 
 if ARGUMENTS.get('debug', 0):
     ccflags.extend(['-ggdb', '-O0'])
