@@ -109,11 +109,8 @@ get_features(cv::Mat &mat, cv::detail::ImageFeatures &features)
 static int dice_one(image_t &image, images_t &subimages)
 {
     cv::Mat mat = __img(image);
-    size_t img_width  = mat.size().width;
-    size_t img_height = mat.size().height;
-
-    cv::Rect roi;
-    int x, y, w, h;
+    int img_width  = mat.size().width;
+    int img_height = mat.size().height;
 
     if (img_width == 0 || img_height == 0)
         return -1;
@@ -135,18 +132,33 @@ static int dice_one(image_t &image, images_t &subimages)
 
     subimages.clear();
 
-    w = img_width / 5;
-    h = img_height;
-
     std::cout << ">> describing sub-images ";
     std::cout.flush();
 
-    x = y = 0;
-    while ((x + (0.75 * w)) < img_width) {
+    /* control over number of subimages to generate */
+    int num_vert = 1, num_horiz = 5;
+    (void)num_vert;
+
+    /* subimage bounding box */
+    int bbx, bby, bbw, bbh;
+    bbw = img_width / num_horiz;
+    bbh = img_height;
+    bbx = bby = 0;
+    float bboverlap = 0.5; /* used when shifting bb */
+
+    /* subimage */
+    int x, y, w, h;
+    cv::Rect roi;
+
+    while ((bbx + bbw) < img_width) {
+        /* subimage is bb */
+        x = bbx; y = bby;
+        w = bbw; h = bbh;
         roi = cv::Rect(x, y, w, h);
         subimages.push_back(make_tuple(mat(roi), __pth(image)));
-        x += (0.75 * w);
+        bbx += ((1. - bboverlap) * bbw);
     }
+
     std::cout << subimages.size() << std::endl;
 
     std::cout << ">> writing sub-images ";
@@ -155,7 +167,7 @@ static int dice_one(image_t &image, images_t &subimages)
     static int subset_num = 0;
     std::stringstream ss;
     ss << "sub-" << subset_num;
-    if (write_images("/tmp/", subimages, ss.str()))
+    if (write_images(config.out_dir, subimages, ss.str()))
         return -1;
 
     std::cout << std::endl;
