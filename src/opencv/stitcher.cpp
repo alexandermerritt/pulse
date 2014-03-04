@@ -110,14 +110,16 @@ int PStitcher::findFeatures(const images_t &images, features_t &features,
     private(finder) \
     num_threads(num_threads)
     {
-        if (try_gpu) finder = new detail::SurfFeaturesFinderGpu();
-        else         finder = new detail::SurfFeaturesFinder();
+        #define SURF_PARAMS 4000., 1, 6
+        if (try_gpu) finder = new detail::SurfFeaturesFinderGpu(SURF_PARAMS);
+        else         finder = new detail::SurfFeaturesFinder(SURF_PARAMS);
+        #undef SURF_PARAMS
 
 #pragma omp for
         for (size_t i = 0; i < images.size(); ++i) {
-            Mat img;
+            Mat img; // TODO put outside loop?
             resize(get<0>(images[i]), img, Size(), work_scale, work_scale);
-            (*finder)(img, features[i]);
+            (*finder)(img, features[i]); /* modules/stitching/src/matchers.cpp */
             //features[i].img_idx = (int)i; // XXX what is this for?
             std::cout << "    " << features[i].keypoints.size() << std::endl;
         }
@@ -228,7 +230,8 @@ void PStitcher::bestOf2NearestMatcher(const features_t &features,
             if (features[i].keypoints.size() > 0 && features[j].keypoints.size() > 0 && mask_(i, j))
                 near_pairs.push_back(make_pair(i, j));
 
-    std::cout << "    " << near_pairs.size() << " comparisons needed " << std::endl;
+    std::cout << "    " << near_pairs.size() << " comparisons needed "
+        << "(" << match_conf << " match conf)" << std::endl;
 
     matches.resize(num_images * num_images);
 
@@ -291,6 +294,7 @@ int PStitcher::matchFeatures(const features_t &features, matches_t &matches,
         bool try_gpu, int num_threads)
 {
     //Ptr< PFeaturesMatcher > matcher;
+    float match_conf = 0.2f;
 
     std::cout << ">> pairwise matching" << std::endl;
 
@@ -301,7 +305,7 @@ int PStitcher::matchFeatures(const features_t &features, matches_t &matches,
     //matcher = new PBestOf2NearestMatcher(try_gpu, num_threads);
 
     matches.clear();
-    bestOf2NearestMatcher(features, matches, try_gpu, num_threads);
+    bestOf2NearestMatcher(features, matches, try_gpu, num_threads, match_conf);
 
     LOGLN("Pairwise matching, time: " << ((getTickCount() - t)
                 / getTickFrequency()) << " sec");
@@ -351,8 +355,7 @@ void PStitcher::estimateCameraParams(features_t &features,
 
     unsigned long usec;
     timer_init(CLOCK_REALTIME, &t);
-    std::cout << "    bundle adjustment (thresh "
-        << conf_thresh << ")" << std::endl;
+    std::cout << "    bundle adjustment (" << conf_thresh << " match conf)" << std::endl;
     std::cout.flush();
     adjuster = new cv::detail::BundleAdjusterRay();
     //adjuster = new cv::detail::BundleAdjusterReproj();

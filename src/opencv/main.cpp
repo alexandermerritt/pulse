@@ -174,6 +174,57 @@ static void gpu_thread_cleanup(void *arg)
     self->alive = false;
 }
 
+static void __dump_features(const images_t &images, const features_t &features)
+{
+    static size_t imgnum = 0UL;
+    std::stringstream ss;
+
+    for (auto &feat : features) {
+        string path = get<1>(images[imgnum]);
+        path = path.substr(path.find_last_of("/") + 1);
+        ss << "features____" << path << "____.yaml";
+        cv::FileStorage fs(ss.str(), cv::FileStorage::WRITE);
+        cv::write(fs, std::string(), feat.keypoints);
+        imgnum++;
+        ss.str(std::string());
+    }
+}
+
+static void __print_features(const features_t &features)
+{
+    size_t imgnum = 0UL, kpnum = 0UL;
+    std::cout << "    features:" << std::endl;
+    std::cout << "image keypoint coord.x coord.y size angle rsp oct id" << std::endl;
+    for (auto &feat : features) {
+        kpnum = 0UL;
+        for (auto &kp : feat.keypoints) {
+            std::cout << imgnum
+                << " " << kpnum
+                << " " << kp.pt.x << " " << kp.pt.y
+                << " " << kp.size
+                << " " << kp.angle
+                << " " << kp.response
+                << " " << kp.octave
+                << " " << kp.class_id
+                << std::endl;
+            kpnum++;
+        }
+        imgnum++;
+    }
+}
+
+static inline void dump_features(const images_t &images, const features_t &features)
+{
+    if (getenv("DUMP_FEATURES"))
+        __dump_features(images, features);
+}
+
+static inline void print_features(const features_t &features)
+{
+    if (getenv("PRINT_FEATURES"))
+        __print_features(features);
+}
+
 static int do_sort_images(struct work_item *work, // input
         std::list< struct work_item * > &sets, images_t &unmatched, // output
         bool use_gpu, int num_cpus) // tuning; num_cpus not used if use_gpu=1
@@ -196,6 +247,9 @@ static int do_sort_images(struct work_item *work, // input
 
     ps.findFeatures(work->images, features, use_gpu, (use_gpu ? 1 : num_cpus));
 
+    print_features(features);
+    dump_features(work->images, features);
+
     while (work->images.size() > 1) {
 
         // use new b/c struct contains classes
@@ -217,14 +271,16 @@ static int do_sort_images(struct work_item *work, // input
                 have_matching = true;
                 break;
             }
-            confidence -= 0.25f;
+            confidence -= 0.1f;
             std::cout << "    reducing confidence to "
                 << confidence << std::endl;
-        } while (confidence > 0.5f);
+        } while (confidence > 0.2f);
 
         if (!have_matching) {
-            unmatched = work->images;
+            for (auto &img : work->images)
+                unmatched.push_back(img);
             work->images.clear();
+            delete next;
             break;
         }
 
@@ -296,12 +352,12 @@ static int make_pano(struct work_item *work)
     if (!work || work->state != PANO_MATCHED)
         return -EINVAL;
 
-    // this runs only on the CPU for now, single thread
+    // Bundle Adjustment - runs only on the CPU for now, single thread
     ps.estimateCameraParams(work->features, work->matches,
             work->cameras, work->confidence);
 
     err = ps.composePanorama(work->images, work->cameras,
-            work->pano, true, 1);
+            work->pano, config.gpu_all, config.num_cpus);
     if (err)
         return -ENOTRECOVERABLE;
 
@@ -356,12 +412,14 @@ static void * gpu_thread(void *arg)
                 pthread_exit(NULL);
             }
             stringstream s;
-            s << "/tmp/img_" << self->gpu << "_" << self->imgidx++ << ".jpg";
-            std::cout << "    writing pano to " << s.str() << std::endl;
+            s << "/tmp/pano_thread-" << self->gpu << "_img-" << self->imgidx++ << ".jpg";
+            std::cout << "    writing pano to " << s.str() << " ...";
             if (write_image(s.str().c_str(), work->pano)) {
+                std::cout << std::endl;
                 self->exit_code = -ENOTRECOVERABLE;
                 pthread_exit(NULL);
             }
+            std::cout << " done" << std::endl;
             // TODO reset GPU device
             delete work;
             work = NULL;
@@ -444,29 +502,6 @@ static void join_threads(void)
     }
 }
 
-static void prune_paths(paths_t &_paths, const string &ext)
-{
-    paths_t paths;
-    size_t pos;
-
-    for (string &s : _paths) {
-        if (s.empty())
-            continue;
-        if (s[0] == '#')
-            continue;
-        pos = s.find_last_of('.');
-        if (pos == string::npos)
-            continue;
-        if (!ext.empty() &&
-                0 != strncasecmp(s.substr(pos).c_str(),
-                    ext.c_str(), ext.length()))
-            continue;
-        paths.push_back(s);
-    }
-
-    _paths = paths;
-}
-
 static int add_images(images_t &imgs)
 {
     struct work_item *work;
@@ -477,7 +512,7 @@ static int add_images(images_t &imgs)
 
     work->images = imgs;
     work->state = PANO_LOADED;
-    work->confidence = 1.0f;
+    work->confidence = 2.;
 
     lock_queue();
     work_queue.push_back(work);
@@ -558,8 +593,11 @@ int main(int argc, char *argv[])
     if (add_sigusr1())
         return -1;
 
+    std::vector< std::string > types;
+    types.push_back(".jpg");
+
     read_stdin(paths);
-    prune_paths(paths, string(".jpg"));
+    prune_paths(paths, types);
 
     if (load_images(imgs, paths))
         return -1;
