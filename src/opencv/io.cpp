@@ -78,7 +78,7 @@ static int files_bad(const paths_t &paths, vector<bool> &bad)
         return -EINVAL;
     bad.resize(paths.size());
     for (const string &path : paths)
-        ret += !(bad[item++] = file_bad(path));
+        ret += (bad[item++] = file_bad(path));
     return ret;
 }
 
