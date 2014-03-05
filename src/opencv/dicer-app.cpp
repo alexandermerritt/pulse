@@ -10,6 +10,7 @@
 /* C++ system includes */
 #include <iostream>
 #include <memory>
+#include <algorithm>
 
 /* C system includes */
 #include <stdio.h>
@@ -92,43 +93,99 @@ __pth(image_t &img)
     return std::get<1>(img);
 }
 
-#if 0
 static int
 get_features(cv::Mat &mat, cv::detail::ImageFeatures &features)
 {
+#define SURF_PARAMS 4000., 1, 6
     std::unique_ptr< cv::detail::FeaturesFinder >
-        finder(new cv::detail::SurfFeaturesFinder(4000., 4, 6));
+        finder(new cv::detail::SurfFeaturesFinder(SURF_PARAMS));
         //finder(new cv::detail::OrbFeaturesFinder());
+#undef SURF_PARAMS
     if (!finder)
         return -ENOMEM;
     finder->operator()(mat, features);
     return 0;
 }
-#endif
+
+static inline void dump_keypoint(const cv::KeyPoint &kp)
+{
+    std::cout  << kp.pt.x
+        << " " << kp.pt.y
+        << " " << kp.size
+        << " " << kp.angle
+        << " " << kp.response
+        << " " << kp.octave
+        << " " << kp.class_id
+        << std::endl;
+}
+
+typedef std::unique_ptr< cv::detail::ImageFeatures > featptr_t;
+typedef std::unique_ptr< cv::Mat > matptr_t;
+
+static int do_kmeans(featptr_t &feat, matptr_t &centers, int min_resp = 25000)
+{
+    matptr_t samples, labels;
+    cv::TermCriteria criteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 1.0 );
+    int clusters = 4;
+    int attempts = 3, flags = cv::KMEANS_PP_CENTERS;
+
+    samples.reset( new cv::Mat(feat->keypoints.size(), 2, CV_32F) );
+    centers.reset( new cv::Mat(clusters, 1, CV_32F) );
+    labels.reset(  new cv::Mat() );
+
+    int x = 0;
+    for (auto &kp : feat->keypoints) {
+        samples->at<float>(x, 0) = kp.pt.x;
+        samples->at<float>(x, 1) = kp.pt.y;
+    }
+
+    cv::kmeans(*samples, clusters, *labels, criteria,
+            attempts, flags, *centers);
+
+    return 0;
+}
 
 static int dice_one(image_t &image, images_t &subimages)
 {
     cv::Mat mat = __img(image);
     int img_width  = mat.size().width;
     int img_height = mat.size().height;
+    std::stringstream ss;
 
     if (img_width == 0 || img_height == 0)
         return -1;
 
-#if 0
-    cv::detail::ImageFeatures features;
-    std::cout << ">> loading features";
-    std::cout.flush();
-    if (get_features(mat, features))
-        return -1;
-    std::cout << " " << features.keypoints.size() << " found" << std::endl;
+    featptr_t feat;
+    if (getenv("USE_FEATURES")) {
+        std::cout << ">> loading features ";
+        std::cout.flush();
 
-    if (write_features("/tmp/surf.jpg", mat, features))
-        return -1;
+        feat.reset( new cv::detail::ImageFeatures );
+        if (!feat) return -1;
 
-    if (write_image("/tmp/rect.jpg", sub))
-        return -1;
-#endif
+        if (get_features(mat, *feat))
+            return -1;
+        std::cout << " " << feat->keypoints.size() << " found" << std::endl;
+
+        //if (write_features("/tmp/surf.jpg", mat, *feat))
+            //return -1;
+
+        //std::cout << "x y size angle resp oct id" << std::endl;
+        //for (auto &kp : feat->keypoints)
+            //if (kp.response > 25000)
+                //dump_keypoint(kp);
+
+        matptr_t centers;
+        if (do_kmeans(feat, centers))
+            return -1;
+
+        std::cout << ">> centers: ";
+        for (size_t i = 0; i < centers->total(); i++) {
+            cv::Point p = centers->at<cv::Point2f>(i);
+            std::cout << p << " ";
+        }
+        std::cout << std::endl;
+    }
 
     subimages.clear();
 
@@ -136,41 +193,52 @@ static int dice_one(image_t &image, images_t &subimages)
     std::cout.flush();
 
     /* control over number of subimages to generate */
-    int num_vert = 1, num_horiz = 5;
-    (void)num_vert;
+    int num_vert = 4, num_horiz = 5;
 
     /* subimage bounding box */
+    float bboverlap = 0.5;
     int bbx, bby, bbw, bbh;
-    bbw = img_width / num_horiz;
-    bbh = img_height;
-    bbx = bby = 0;
-    float bboverlap = 0.5; /* used when shifting bb */
+    bbw = std::min( (img_width / num_horiz) * (1 + bboverlap), (float)img_width);
+    bbh = std::min( (img_height / num_vert) * (1 + bboverlap), (float)img_height);
 
     /* subimage */
     int x, y, w, h;
     cv::Rect roi;
 
-    while ((bbx + bbw) < img_width) {
-        /* subimage is bb */
-        x = bbx; y = bby;
-        w = bbw; h = bbh;
-        roi = cv::Rect(x, y, w, h);
-        subimages.push_back(make_tuple(mat(roi), __pth(image)));
-        bbx += ((1. - bboverlap) * bbw);
+    matptr_t boxed( new cv::Mat( mat.clone() ) );
+    bby = 0;
+    while ((bby + bbh) <= img_height) {
+        bbx = 0;
+        while ((bbx + bbw) <= img_width) {
+            /* subimage is bb */
+            x = bbx;
+            y = bby;
+            w = bbw;
+            h = bbh;
+            roi = cv::Rect(x, y, w, h);
+            subimages.push_back(make_tuple(mat(roi), __pth(image)));
+            bbx += ((1. - bboverlap) * bbw);
+
+            cv::rectangle(*boxed, cv::Point(x,y), cv::Point(x+w, y+h),
+                    cv::Scalar(0,0,255), 10, 8, 0);
+        }
+        bby += ((1. - bboverlap) * bbh);
     }
 
     std::cout << subimages.size() << std::endl;
 
-    std::cout << ">> writing sub-images ";
-    std::cout.flush();
+    std::cout << ">> writing image with regions overlay" << std::endl;
+    ss.str( std::string() );
+    ss << config.out_dir << "/diced.jpg";
+    if (!imwrite(ss.str(), *boxed))
+        return -1;
 
+    std::cout << ">> writing sub-images" << std::endl;
     static int subset_num = 0;
-    std::stringstream ss;
+    ss.str( std::string() );
     ss << "sub-" << subset_num;
     if (write_images(config.out_dir, subimages, ss.str()))
         return -1;
-
-    std::cout << std::endl;
 
     return 0;
 }
