@@ -37,7 +37,8 @@ const int MIN_SUBIMG_DIM = 640;
 struct config
 {
     bool help;
-    char *out_dir;
+    path_t out_dir;
+    path_t filep;
 };
 
 //===----------------------------------------------------------------------===//
@@ -49,6 +50,7 @@ static struct config config;
 static const struct option options[] = {
     {"help", no_argument, (int*)&config.help, true},
     {"dir", required_argument, NULL, 'd'},
+    {"file", required_argument, NULL, 'f'},
     {NULL, no_argument, NULL, 0} // terminator
 };
 
@@ -65,13 +67,15 @@ static int parse_args(int argc, char *argv[])
         if (opt == '?')
             return -EINVAL;
         if (opt == 'd')
-            config.out_dir = optarg;
+            config.out_dir = std::string(optarg);
+        if (opt == 'f')
+            config.filep = std::string(optarg);
     }
 
     if (config.help)
         return -EINVAL;
 
-    if (!config.out_dir)
+    if (config.out_dir.empty())
         return -EINVAL;
 
     return 0;
@@ -79,7 +83,7 @@ static int parse_args(int argc, char *argv[])
 
 static void usage(const char *name)
 {
-    fprintf(stderr, "Usage: %s --dir=/output/path/ < image_list\n", name);
+    fprintf(stderr, "Usage: %s --file=/path/to/image --dir=/output/path/\n", name);
 }
 
 #define __img(image_t) std::get<0>(image_t)
@@ -235,58 +239,51 @@ static int do_transform(cv::Mat &mat, float shrink_by)
     return 0;
 }
 
-static int dice(paths_t &paths)
+static int dice(path_t &path)
 {
     image_t image;
     rois_t rois;
-    int image_num = 0;
 
-    /* load one at a time, else we run out of memory */
-    for (path_t &path : paths) {
+    /* load and dice */
+    if (load_image(image, path)) {
+        std::cerr << "!! error loading image" << std::endl;
+        return -1;
+    }
+    if (dice_one(image, rois, false)) {
+        std::cerr << "!! error dicing image" << std::endl;
+        return -1;
+    }
 
-        /* load and dice */
-        if (load_image(image, path)) {
-            std::cerr << "!! error loading image" << std::endl;
-            return -1;
-        }
-        if (dice_one(image, rois, false)) {
-            std::cerr << "!! error dicing image" << std::endl;
-            return -1;
-        }
+    std::cout << ">> applying transformations"
+        << " (" << rois.size() << " subimages)"
+        << std::endl;
 
-        std::cout << ">> applying transformations"
-            << " (" << rois.size() << " subimages)"
-            << std::endl;
 #pragma omp parallel for
-        for (size_t subidx = 0; subidx < rois.size(); subidx++) {
-            std::stringstream ss;
-            cv::Mat mat, sub, clone;
+    for (size_t subidx = 0; subidx < rois.size(); subidx++) {
+        std::stringstream ss;
+        cv::Mat mat, sub, clone;
 
-            mat = __img(image);
-            sub = mat(rois[subidx]);
-            clone = sub.clone();
-            do_transform(clone, 0.2);
+        mat = __img(image);
+        sub = mat(rois[subidx]);
+        clone = sub.clone();
+        do_transform(clone, 0.2);
 
-            ss.str( std::string() );
-            ss << config.out_dir << "/img-" << image_num
-                << "_sub-" << subidx << ".png";
-            if (!imwrite(ss.str(), clone)) {
-                std::cerr << "!! error writing subimage '"
-                    << ss.str() << "'" << std::endl;
-            }
-            std::cout << ss.str() << std::endl;
-            clone.release();
-        } // for each subimage
-
-        image_num++;
-    } // for each image
+        ss.str( std::string() );
+        ss << config.out_dir
+            << "/submg-" << subidx << ".png";
+        if (!imwrite(ss.str(), clone)) {
+            std::cerr << "!! error writing subimage '"
+                << ss.str() << "'" << std::endl;
+        }
+        std::cout << ss.str() << std::endl;
+        clone.release();
+    } // for each subimage
 
     return 0;
 }
 
 int main(int argc, char *argv[])
 {
-    paths_t paths;
     std::vector< std::string > types;
 
     if (parse_args(argc, argv)) {
@@ -294,13 +291,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    types.push_back(".jpg");
-    types.push_back(".png");
-
-    read_stdin(paths);
-    prune_paths(paths, types);
-
-    if (dice(paths))
+    if (dice(config.filep))
         return -1;
 
     return 0;
