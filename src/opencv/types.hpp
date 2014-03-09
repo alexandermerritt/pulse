@@ -37,6 +37,8 @@ typedef std::set< std::pair< int, int > > MatchesSet;
 typedef std::tuple< cv::Mat, std::string > image_t;
 typedef std::vector< image_t > images_t;
 
+typedef std::vector< cv::Rect > rois_t;
+
 /* for sorting an images_t by path */
 static inline bool
 image_path_compare(const image_t &a, const image_t &b)

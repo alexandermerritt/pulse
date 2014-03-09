@@ -7,14 +7,18 @@
  * crop, rotate (in and out of the plane), resize
  */
 
+#define _USE_MATH_DEFINES
+
 /* C++ system includes */
 #include <iostream>
 #include <memory>
 #include <algorithm>
+#include <cstdlib>
 
 /* C system includes */
 #include <stdio.h>
 #include <getopt.h>
+#include <stdlib.h>
 
 /* OpenCV includes */
 #include <opencv2/highgui/highgui.hpp>
@@ -27,6 +31,8 @@
 //===----------------------------------------------------------------------===//
 // Definitions
 //===----------------------------------------------------------------------===//
+
+const int MIN_SUBIMG_DIM = 640;
 
 struct config
 {
@@ -76,189 +82,199 @@ static void usage(const char *name)
     fprintf(stderr, "Usage: %s --dir=/output/path/ < image_list\n", name);
 }
 
-/* Don't use this to assign to a reference:
- *      cv::Mat &mat = __img(..)
- * as seems to screw with the underlying type. Use it to assign to a
- * non-reference type instead:
- *      cv::Mat mat = __img(..)
- */
-static inline cv::Mat &
-__img(image_t &img)
-{
-    return std::get<0>(img);
-}
-static inline std::string &
-__pth(image_t &img)
-{
-    return std::get<1>(img);
-}
-
-static int
-get_features(cv::Mat &mat, cv::detail::ImageFeatures &features)
-{
-#define SURF_PARAMS 4000., 1, 6
-    std::unique_ptr< cv::detail::FeaturesFinder >
-        finder(new cv::detail::SurfFeaturesFinder(SURF_PARAMS));
-        //finder(new cv::detail::OrbFeaturesFinder());
-#undef SURF_PARAMS
-    if (!finder)
-        return -ENOMEM;
-    finder->operator()(mat, features);
-    return 0;
-}
-
-static inline void dump_keypoint(const cv::KeyPoint &kp)
-{
-    std::cout  << kp.pt.x
-        << " " << kp.pt.y
-        << " " << kp.size
-        << " " << kp.angle
-        << " " << kp.response
-        << " " << kp.octave
-        << " " << kp.class_id
-        << std::endl;
-}
+#define __img(image_t) std::get<0>(image_t)
+#define __pth(image_t) std::get<1>(image_t)
 
 typedef std::unique_ptr< cv::detail::ImageFeatures > featptr_t;
 typedef std::unique_ptr< cv::Mat > matptr_t;
 
-static int do_kmeans(featptr_t &feat, matptr_t &centers, int min_resp = 25000)
-{
-    matptr_t samples, labels;
-    cv::TermCriteria criteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 1.0 );
-    int clusters = 4;
-    int attempts = 3, flags = cv::KMEANS_PP_CENTERS;
-
-    samples.reset( new cv::Mat(feat->keypoints.size(), 2, CV_32F) );
-    centers.reset( new cv::Mat(clusters, 1, CV_32F) );
-    labels.reset(  new cv::Mat() );
-
-    int x = 0;
-    for (auto &kp : feat->keypoints) {
-        samples->at<float>(x, 0) = kp.pt.x;
-        samples->at<float>(x, 1) = kp.pt.y;
-    }
-
-    cv::kmeans(*samples, clusters, *labels, criteria,
-            attempts, flags, *centers);
-
-    return 0;
-}
-
-static int dice_one(image_t &image, images_t &subimages)
+static int dice_one(image_t &image, rois_t &rois, bool show_boxed = false)
 {
     cv::Mat mat = __img(image);
     int img_width  = mat.size().width;
     int img_height = mat.size().height;
     std::stringstream ss;
+    matptr_t boxed;
 
     if (img_width == 0 || img_height == 0)
         return -1;
 
-    featptr_t feat;
-    if (getenv("USE_FEATURES")) {
-        std::cout << ">> loading features ";
-        std::cout.flush();
+    rois.clear();
 
-        feat.reset( new cv::detail::ImageFeatures );
-        if (!feat) return -1;
+    std::cout << ">> describing sub-images " << std::endl;
 
-        if (get_features(mat, *feat))
-            return -1;
-        std::cout << " " << feat->keypoints.size() << " found" << std::endl;
-
-        //if (write_features("/tmp/surf.jpg", mat, *feat))
-            //return -1;
-
-        //std::cout << "x y size angle resp oct id" << std::endl;
-        //for (auto &kp : feat->keypoints)
-            //if (kp.response > 25000)
-                //dump_keypoint(kp);
-
-        matptr_t centers;
-        if (do_kmeans(feat, centers))
-            return -1;
-
-        std::cout << ">> centers: ";
-        for (size_t i = 0; i < centers->total(); i++) {
-            cv::Point p = centers->at<cv::Point2f>(i);
-            std::cout << p << " ";
-        }
-        std::cout << std::endl;
-    }
-
-    subimages.clear();
-
-    std::cout << ">> describing sub-images ";
-    std::cout.flush();
-
-    /* control over number of subimages to generate */
-    int num_vert = 4, num_horiz = 5;
-
-    /* subimage bounding box */
-    float bboverlap = 0.5;
-    int bbx, bby, bbw, bbh;
-    bbw = std::min( (img_width / num_horiz) * (1 + bboverlap), (float)img_width);
-    bbh = std::min( (img_height / num_vert) * (1 + bboverlap), (float)img_height);
-
-    /* subimage */
-    int x, y, w, h;
     cv::Rect roi;
+    cv::RNG rng(time(NULL));
+    int num_vert  = rng.uniform(3, 6);
+    int num_horiz = rng.uniform(3, 6);
+    int width     = img_width / (num_vert + 1);
+    int height    = img_height / (num_horiz + 1);
 
-    matptr_t boxed( new cv::Mat( mat.clone() ) );
-    bby = 0;
-    while ((bby + bbh) <= img_height) {
-        bbx = 0;
-        while ((bbx + bbw) <= img_width) {
-            /* subimage is bb */
-            x = bbx;
-            y = bby;
-            w = bbw;
-            h = bbh;
-            roi = cv::Rect(x, y, w, h);
-            subimages.push_back(make_tuple(mat(roi), __pth(image)));
-            bbx += ((1. - bboverlap) * bbw);
+    /* ensure enough overlap */
+    int xbounce   = width / 4;
+    int ybounce   = height / 4;
+    int whbounce  = std::max(width, height) / 4;
 
-            cv::rectangle(*boxed, cv::Point(x,y), cv::Point(x+w, y+h),
-                    cv::Scalar(0,0,255), 10, 8, 0);
+    if (show_boxed)
+        boxed.reset( new cv::Mat( mat.clone() ) );
+
+    for (int v = 0; v < num_vert; v++) {
+        int y = img_height / (num_vert + 1) * v;
+
+        for (int h = 0; h < num_vert; h++) {
+            int x = img_width / (num_horiz + 1) * h;
+
+            roi.x = x + rng.uniform( 0, xbounce );
+            roi.y = y + rng.uniform( 0, ybounce );
+            roi.x = std::max( roi.x, 0 );
+            roi.y = std::max( roi.y, 0 );
+
+            roi.width  = width + (whbounce + rng.uniform(0, whbounce));
+            roi.height = height + (whbounce + rng.uniform(0, whbounce));
+            if (roi.x + roi.width > img_width)
+                roi.width = img_width - roi.x;
+            if (roi.y + roi.height > img_height)
+                roi.height = img_height - roi.y;
+
+            if (roi.width < std::min(MIN_SUBIMG_DIM, (img_width / 10)) ||
+                    roi.height < std::min(MIN_SUBIMG_DIM, (img_height / 10)))
+                continue; /* image 'too small' */
+
+            rois.push_back(roi);
+
+            if (show_boxed) {
+                cv::rectangle(*boxed, cv::Point(roi.x, roi.y),
+                        cv::Point(roi.x + roi.width, roi.y + roi.height),
+                        cv::Scalar(0,0,255), 10, 8, 0);
+                std::cout << "box " << roi << std::endl;
+            }
         }
-        bby += ((1. - bboverlap) * bbh);
     }
 
-    std::cout << subimages.size() << std::endl;
+    if (show_boxed) {
+        std::cout << ">> writing image with regions overlay" << std::endl;
+        ss.str( std::string() );
+        ss << config.out_dir << "/boxed.jpg";
+        if (!imwrite(ss.str(), *boxed))
+            return -1;
+    }
 
-    std::cout << ">> writing image with regions overlay" << std::endl;
-    ss.str( std::string() );
-    ss << config.out_dir << "/diced.jpg";
-    if (!imwrite(ss.str(), *boxed))
+    return 0;
+}
+
+// see also perspectiveTransform, warpPerspective
+static int do_transform(cv::Mat &mat, float shrink_by)
+{
+    cv::Mat copy;
+    cv::RNG rng(time(NULL));
+    cv::Rect sub;
+
+    try {
+        copy = mat.clone();
+    } catch (cv::Exception &e) {
+        std::cerr << "!! error setting up image transform" << std::endl;
         return -1;
+    }
 
-    std::cout << ">> writing sub-images" << std::endl;
-    static int subset_num = 0;
-    ss.str( std::string() );
-    ss << "sub-" << subset_num;
-    if (write_images(config.out_dir, subimages, ss.str()))
+    // original image dimensions (large letters)
+    float W = mat.cols, H = mat.rows;
+    cv::Point2f center(W / 2., H / 2.);
+
+    // shrunken subimage dimensions (small letters)
+    float w = W * (1 - shrink_by), h = H * (1 - shrink_by);
+
+    // length of diagonals
+    float D = std::sqrt( W * W + H * H );
+    float d = std::sqrt( w * w + h * h );
+
+    // angle underneath large diagonal
+    float beta = std::atan(H / W);
+
+    // rotate subimage diagonal, what is angle?
+    float delta;
+    if (W > H)
+        delta = std::asin(H / d);
+    else if (W < H)
+        delta = std::acos(W / d);
+
+    // how much freedom for rotation we have without losing pixels
+    float rad = std::abs(delta - beta);
+
+    // rotate original image by some random adjustment
+    float _rad = rng.uniform(-rad, rad);
+    try {
+        float scale = 1.;
+        float deg = _rad * 180. / M_PI;
+        cv::Mat rmat = cv::getRotationMatrix2D(center, deg, scale);
+        cv::warpAffine(mat, copy, rmat, mat.size());
+    } catch (cv::Exception &e) {
+        std::cerr << "!! error rotating" << std::endl;
         return -1;
+    }
 
+    sub = cv::Rect(center.x - w / 2., center.y - h / 2., w, h);
+
+#if 0
+    // draw subimage into copy and write to disk
+    try {
+        rectangle(copy, sub, cv::Scalar(0,0,255), 2);
+    } catch (cv::Exception &e) {
+        std::cerr << "!! error drawing rectangle" << std::endl;
+        return -1;
+    }
+
+    try {
+        imwrite("/tmp/dicer/copy.jpg", copy);
+    } catch (cv::Exception &e) {
+        std::cerr << "!! error writing images" << std::endl;
+        return -1;
+    }
+#endif
+
+    mat = copy(sub);
     return 0;
 }
 
 static int dice(paths_t &paths)
 {
     image_t image;
-    images_t subimages;
+    rois_t rois;
+    std::stringstream ss;
+    cv::Mat mat;
+    int image_num = 0;
 
     /* load one at a time, else we run out of memory */
     for (path_t &path : paths) {
+
+        /* load and dice */
         if (load_image(image, path)) {
             std::cerr << "!! error loading image" << std::endl;
             return -1;
         }
-        if (dice_one(image, subimages)) {
+        if (dice_one(image, rois, false)) {
             std::cerr << "!! error dicing image" << std::endl;
             return -1;
         }
-    }
+
+        std::cout << ">> applying transformations"
+            << " (" << rois.size() << " subimages)"
+            << std::endl;
+        cv::Mat sub, clone;
+        for (size_t subidx = 0; subidx < rois.size(); subidx++) {
+            mat = __img(image);
+            sub = mat(rois[subidx]);
+            clone = sub.clone();
+            do_transform(clone, 0.2);
+            ss.str( std::string() );
+            ss << config.out_dir << "/img-" << image_num
+                << "_sub-" << subidx << ".jpg";
+            imwrite(ss.str(), clone);
+            std::cout << ss.str() << std::endl;
+            clone.release();
+        } // for each subimage
+
+        image_num++;
+    } // for each image
 
     return 0;
 }
