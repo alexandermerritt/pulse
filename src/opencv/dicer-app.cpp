@@ -239,8 +239,6 @@ static int dice(paths_t &paths)
 {
     image_t image;
     rois_t rois;
-    std::stringstream ss;
-    cv::Mat mat;
     int image_num = 0;
 
     /* load one at a time, else we run out of memory */
@@ -259,19 +257,22 @@ static int dice(paths_t &paths)
         std::cout << ">> applying transformations"
             << " (" << rois.size() << " subimages)"
             << std::endl;
-        cv::Mat sub, clone;
+#pragma omp parallel for
         for (size_t subidx = 0; subidx < rois.size(); subidx++) {
+            std::stringstream ss;
+            cv::Mat mat, sub, clone;
+
             mat = __img(image);
             sub = mat(rois[subidx]);
             clone = sub.clone();
             do_transform(clone, 0.2);
+
             ss.str( std::string() );
             ss << config.out_dir << "/img-" << image_num
                 << "_sub-" << subidx << ".png";
             if (!imwrite(ss.str(), clone)) {
                 std::cerr << "!! error writing subimage '"
                     << ss.str() << "'" << std::endl;
-                return -1;
             }
             std::cout << ss.str() << std::endl;
             clone.release();
