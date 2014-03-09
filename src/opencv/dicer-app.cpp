@@ -187,8 +187,7 @@ static int do_transform(cv::Mat &mat, float shrink_by)
     // shrunken subimage dimensions (small letters)
     float w = W * (1 - shrink_by), h = H * (1 - shrink_by);
 
-    // length of diagonals
-    float D = std::sqrt( W * W + H * H );
+    // length of diagonal in subimage
     float d = std::sqrt( w * w + h * h );
 
     // angle underneath large diagonal
@@ -196,10 +195,14 @@ static int do_transform(cv::Mat &mat, float shrink_by)
 
     // rotate subimage diagonal, what is angle?
     float delta;
-    if (W > H)
-        delta = std::asin(H / d);
-    else if (W < H)
-        delta = std::acos(W / d);
+    if (d < W && d < H) {
+        // can fully rotate subimage; restrict to 45-deg
+        delta = M_PI / 4.;
+    } else {
+        // subimage diagonal will hit *something* when rotated
+        if (W > H)  delta = std::asin(H / d);
+        else        delta = std::acos(W / d);
+    }
 
     // how much freedom for rotation we have without losing pixels
     float rad = std::abs(delta - beta);
