@@ -267,8 +267,12 @@ static int dice(paths_t &paths)
             do_transform(clone, 0.2);
             ss.str( std::string() );
             ss << config.out_dir << "/img-" << image_num
-                << "_sub-" << subidx << ".jpg";
-            imwrite(ss.str(), clone);
+                << "_sub-" << subidx << ".png";
+            if (!imwrite(ss.str(), clone)) {
+                std::cerr << "!! error writing subimage '"
+                    << ss.str() << "'" << std::endl;
+                return -1;
+            }
             std::cout << ss.str() << std::endl;
             clone.release();
         } // for each subimage
