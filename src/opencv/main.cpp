@@ -23,6 +23,9 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <getopt.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 /* OpenCV includes */
 #include <opencv2/opencv.hpp>
@@ -86,6 +89,7 @@ struct config
     bool gpu_all;
     bool cpu_all;
     long num_cpus;
+    const char *input; /* input file with list of images */
 };
 
 //===----------------------------------------------------------------------===//
@@ -112,9 +116,9 @@ static const struct option options[] = {
     {"memcached", no_argument, (int*)&config.use_memcached, true},
     /* don't stich images, just print which match and which don't */
     {"match-only", no_argument, (int*)&config.match_only, true},
-    /* TODO attempt to use the GPU or CPU for all stages which support it */
     {"gpu-all", no_argument, (int*)&config.gpu_all, true},
     {"cpu-all", no_argument, (int*)&config.cpu_all, true},
+    {"input", required_argument, NULL, 'i'},
     {NULL, no_argument, NULL, 0} // terminator
 };
 
@@ -537,9 +541,23 @@ static int parse_args(int argc, char *argv[])
     int opt, idx, ret;
     const int done = -1; // man getopt_long
 
-    while (done != (opt = getopt_long(argc, argv, "", options, &idx)))
-        if (opt == '?')
+    while (done != (opt = getopt_long(argc, argv, "i", options, &idx))) {
+        if (opt == 'i')
+            config.input = strdup(optarg);
+        else if (opt == '?')
             return -EINVAL;
+    }
+
+    /* use input file in place of stdin */
+    if (config.input) {
+        int fd = open(config.input, O_RDONLY);
+        if (fd < 0) {
+            perror("open input file");
+            return -1;
+        }
+        dup2(fd, 0);
+        close(fd);
+    }
 
     if (config.help)
         return -EINVAL;
