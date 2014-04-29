@@ -52,16 +52,28 @@
 #include <opencv2/stitching/detail/blenders.hpp>
 #include <opencv2/stitching/detail/camera.hpp>
 #include <opencv2/calib3d/calib3d.hpp> // for CV_RANSAC
+#include <opencv2/contrib/contrib.hpp> // for LevMarqSparse
 
 #include <iostream>
 #include "stitcher.hpp"
 #include "matchers.hpp"
 #include "motion_estimators.hpp"
 
+#include <tuple>
 #include <timer.h>
+#include "types.hpp"
 
 using namespace std;
 using namespace cv;
+
+static inline void print_event(const char *str)
+{
+    struct timespec sp;
+    unsigned long ns;
+    clock_gettime(CLOCK_REALTIME, &sp);
+    ns = sp.tv_sec * 1e9 + sp.tv_nsec;
+    fprintf(stderr, "%lu ocv_%s\n", ns, str);
+}
 
 PStitcher PStitcher::createDefault(void)
 {
@@ -110,18 +122,21 @@ int PStitcher::findFeatures(const images_t &images, features_t &features,
     private(finder) \
     num_threads(num_threads)
     {
+        //print_event("find-features-create-start");
         #define SURF_PARAMS 4000., 1, 6
         if (try_gpu) finder = new detail::SurfFeaturesFinderGpu(SURF_PARAMS);
         else         finder = new detail::SurfFeaturesFinder(SURF_PARAMS);
+        //print_event("find-features-create-end");
         #undef SURF_PARAMS
 
 #pragma omp for
         for (size_t i = 0; i < images.size(); ++i) {
             Mat img; // TODO put outside loop?
             resize(get<0>(images[i]), img, Size(), work_scale, work_scale);
+            //print_event("find-features-img-start");
             (*finder)(img, features[i]); /* modules/stitching/src/matchers.cpp */
+            //print_event("find-features-img-end");
             //features[i].img_idx = (int)i; // XXX what is this for?
-            std::cout << "    " << features[i].keypoints.size() << std::endl;
         }
 
         finder->collectGarbage();
@@ -230,9 +245,6 @@ void PStitcher::bestOf2NearestMatcher(const features_t &features,
             if (features[i].keypoints.size() > 0 && features[j].keypoints.size() > 0 && mask_(i, j))
                 near_pairs.push_back(make_pair(i, j));
 
-    std::cout << "    " << near_pairs.size() << " comparisons needed "
-        << "(" << match_conf << " match conf)" << std::endl;
-
     matches.resize(num_images * num_images);
 
     // fix up use of gpu, and number of threads used
@@ -249,7 +261,6 @@ void PStitcher::bestOf2NearestMatcher(const features_t &features,
 
     // ---------------------------------------- MatchPairsBody
     // Replaced MatchPairsBody class with its operator() directly
-    std::cout << "    ";
 #pragma omp parallel \
     private(matcher) \
     num_threads(num_threads)
@@ -262,9 +273,6 @@ void PStitcher::bestOf2NearestMatcher(const features_t &features,
             int from = near_pairs[i].first;
             int to = near_pairs[i].second;
             int pair_idx = from*num_images + to;
-
-            std::cout << ".";
-            std::cout.flush();
 
             // Calls match() on subclass, which is probably
             // PBestOf2NearestMatcher::match().
@@ -287,7 +295,6 @@ void PStitcher::bestOf2NearestMatcher(const features_t &features,
                         matches[dual_pair_idx].matches[j].trainIdx);
         }
     }
-    std::cout << std::endl;
 }
 
 int PStitcher::matchFeatures(const features_t &features, matches_t &matches,
@@ -328,8 +335,36 @@ void PStitcher::findRelated(features_t &features, matches_t &matches,
 void PStitcher::estimateCameraParams(features_t &features,
         matches_t &matches, cameras_t &cameras, float conf_thresh)
 {
-    cv::Ptr< cv::detail::BundleAdjusterBase > adjuster;
-    //cv::Ptr< PBundleAdjusterBase > adjuster;
+#if 1 // alex's modified code.. tried to make faster
+    cv::Ptr< PBundleAdjusterBase > adjuster;
+    detail::HomographyBasedEstimator estimator;
+
+    std::cout << "    estimator" << std::endl;
+
+    cameras.clear();
+    estimator(features, matches, cameras);
+
+    for (size_t i = 0; i < cameras.size(); ++i)
+    {
+        Mat R;
+        cameras[i].R.convertTo(R, CV_32F);
+        cameras[i].R = R;
+    }
+
+    CvTermCriteria crit;
+    crit.type = 3;
+    crit.max_iter =10;
+    crit.epsilon = 2.e-5;
+
+    adjuster = new PBundleAdjusterRay();
+    adjuster->setTermCriteria(crit);
+    std::cout << "    adjuster" << std::endl;
+    (*adjuster)(features, matches, cameras); // XXX
+
+#else
+
+    //cv::Ptr< cv::detail::BundleAdjusterBase > adjuster;
+    cv::Ptr< PBundleAdjusterBase > adjuster;
     struct timer t;
 
     detail::HomographyBasedEstimator estimator;
@@ -339,27 +374,23 @@ void PStitcher::estimateCameraParams(features_t &features,
     cameras.clear();
 
     std::cout << "    estimator" << std::endl;
-    estimator(features, matches, cameras);
+    estimator(features, matches, cameras); // very quick operation
 
-    std::cout << "    conversion ";
+    std::cout << "    conversion " << std::endl; // also not slow
     for (size_t i = 0; i < cameras.size(); ++i)
     {
         Mat R;
         cameras[i].R.convertTo(R, CV_32F);
         cameras[i].R = R;
-        std::cout << ".";
-        std::cout.flush();
         LOGLN("Initial intrinsic parameters #" << indices[i] + 1 << ":\n " << cameras[i].K());
     }
-    std::cout << std::endl;
 
     unsigned long usec;
     timer_init(CLOCK_REALTIME, &t);
     std::cout << "    bundle adjustment (" << conf_thresh << " match conf)" << std::endl;
-    std::cout.flush();
-    adjuster = new cv::detail::BundleAdjusterRay();
+    //adjuster = new cv::detail::BundleAdjusterRay();
     //adjuster = new cv::detail::BundleAdjusterReproj();
-    //adjuster = new PBundleAdjusterRay();
+    adjuster = new PBundleAdjusterRay();
     //adjuster = new PBundleAdjusterReproj();
     (*adjuster).setConfThresh(conf_thresh);
     timer_start(&t);
@@ -369,7 +400,6 @@ void PStitcher::estimateCameraParams(features_t &features,
 
     if (do_wave_correct)
     {
-        std::cout << "    wave correction" << std::endl;
         vector<Mat> rmats;
         for (size_t i = 0; i < cameras.size(); ++i)
             rmats.push_back(cameras[i].R);
@@ -377,6 +407,7 @@ void PStitcher::estimateCameraParams(features_t &features,
         for (size_t i = 0; i < cameras.size(); ++i)
             cameras[i].R = rmats[i];
     }
+#endif
 }
 
 int PStitcher::composePanorama(images_t &images, cameras_t &cameras,
@@ -423,13 +454,10 @@ int PStitcher::composePanorama(images_t &images, cameras_t &cameras,
     if (registr_resol >= 0)
         work_scale = min(1.0,
                 sqrt(registr_resol * 1e6 / get<0>(images[0]).size().area()));
-    //std::cout << ">>    work_scale " << work_scale << std::endl;
 
     double seam_scale = std::min(1.0,
             sqrt(seam_est_resol * 1e6 / get<0>(images[0]).size().area()));
     double seam_work_aspect = seam_scale / work_scale;
-    //cout << "      seam_scale " << seam_scale << endl;
-    //cout << "      seam_work_aspect " << seam_work_aspect << endl;
 
     for (auto &image : images) {
         cv::resize(get<0>(image), img, cv::Size(), seam_scale, seam_scale);
@@ -468,7 +496,7 @@ int PStitcher::composePanorama(images_t &images, cameras_t &cameras,
         warped_image_scale = static_cast<float>(focals[fsz / 2 - 1] + focals[fsz / 2]) * 0.5f;
 
     // Warp images and their masks
-    std::cout << "    warping images" << std::endl;
+    std::cout << "    warping images " << std::endl;
     timer_start(&t);
     w = warper->create(float(warped_image_scale * seam_work_aspect));
     for (size_t i = 0; i < images.size(); ++i)
@@ -480,10 +508,11 @@ int PStitcher::composePanorama(images_t &images, cameras_t &cameras,
         K(1,1) *= (float)seam_work_aspect;
         K(1,2) *= (float)seam_work_aspect;
 
-        corners[i] = w->warp(get<0>(seam_est_images[i]), K, cameras[i].R, INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
+        corners[i] = w->warp(get<0>(seam_est_images[i]), K, cameras[i].R,
+                INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
         sizes[i] = images_warped[i].size();
-
         w->warp(masks[i], K, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
+
     }
 
     vector<Mat> images_warped_f(images.size());
@@ -491,10 +520,11 @@ int PStitcher::composePanorama(images_t &images, cameras_t &cameras,
         images_warped[i].convertTo(images_warped_f[i], CV_32F);
 
     usec = timer_end(&t, MICROSECONDS);
-    std::cout << "    warping took " << usec / 1000000.0f << " sec" << std::endl;
+    //std::cout << "    warping took " << usec / 1000000.0f << " sec" << std::endl;
     LOGLN("Warping images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     // Find seams
+    std::cout << "    finding seams " << std::endl;
     exposure_comp->feed(corners, images_warped, masks_warped);
     seam_finder->find(images_warped_f, corners, masks_warped);
 
@@ -508,6 +538,7 @@ int PStitcher::composePanorama(images_t &images, cameras_t &cameras,
 #if ENABLE_LOG
     t = getTickCount();
 #endif
+    timer_start(&t);
 
     Mat img_warped, img_warped_s;
     Mat dilated_mask, seam_mask, mask, mask_warped;
@@ -552,12 +583,8 @@ int PStitcher::composePanorama(images_t &images, cameras_t &cameras,
     }
 
     // blender loop --------------------------------------
-    std::cout << "      ";
     for (size_t img_idx = 0; img_idx < images.size(); ++img_idx)
     {
-        std::cout << " " << img_idx;
-        std::cout.flush();
-
         // Read image and resize it if necessary
         img = get<0>(images[img_idx]); // XXX is this dangerous if resize is used later?
 
@@ -600,11 +627,12 @@ int PStitcher::composePanorama(images_t &images, cameras_t &cameras,
         // Blend the current image
         blender->feed(img_warped_s, mask_warped, corners[img_idx]);
     }
-    std::cout << std::endl;
 
     Mat result, result_mask;
     blender->blend(result, result_mask);
 
+    usec = timer_end(&t, MICROSECONDS);
+    //std::cout << "    compositing took " << usec / 1000000.0f << " sec" << std::endl;
     LOGLN("Compositing, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     // Preliminary result is in CV_16SC3 format, but all values are in [0,255] range,
