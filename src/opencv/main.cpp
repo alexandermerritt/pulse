@@ -534,6 +534,7 @@ static void usage(char *argv[])
     fprintf(stderr, "    --match-only\tStop after matching images. Print paths.\n");
     fprintf(stderr, "    --cpu-all\t\tUse CPU for all operations\n");
     fprintf(stderr, "    --gpu-all\t\tUse GPU for all operations, where implemented\n");
+    fprintf(stderr, "    --input  \t\tSpecify file with images to parse, instead of stdin\n");
 }
 
 static int parse_args(int argc, char *argv[])
