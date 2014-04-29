@@ -29,12 +29,11 @@ if ARGUMENTS.get('omp', 0):
 if cc == 'clang' or cxx == 'clang++':
     ccflags.append('-fcolor-diagnostics')
 
-cpath = ['/usr/local/include', '../include']
+cpath = ['/usr/local/include', '../include', cuda_root + '/include']
 
 libpath = []
 
 libs = ['opencv_core', 'opencv_gpu', 'opencv_stitching', 'gomp']
-
 
 env = Environment(CC = cc, CXX = cxx)
 env.Append(CCFLAGS = ccflags)
