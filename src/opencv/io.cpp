@@ -96,8 +96,6 @@ void read_stdin(paths_t &paths)
 // you should santize paths before calling this
 int load_image(image_t &img, const path_t &path)
 {
-    std::cout << ">> loading 1 image" << std::endl;
-
     if (file_bad(path)) {
         cerr << "!! '" << path << "' not readable" << endl;
         return -EINVAL;
@@ -119,8 +117,6 @@ int load_images(images_t &imgs, const paths_t &_paths)
 
     imgs.clear();
 
-    std::cout << ">> loading " << paths.size() << " images" << std::endl;
-
     if (files_bad(paths, bad)) {
         size_t item = 0;
         for (const string &path : paths) {
@@ -133,13 +129,11 @@ int load_images(images_t &imgs, const paths_t &_paths)
 
     for (string &path : paths) {
         cv::Mat mat;
-        std::cout << "."; std::cout.flush();
         mat = cv::imread(path);
         if (!mat.data)
             return -EINVAL;
         imgs.push_back(make_tuple(mat, path));
     }
-    std::cout << std::endl;
 
     return 0;
 }
@@ -155,7 +149,6 @@ int write_features(string &dirpath,
         drawKeypoints(imgs[i], features[i].keypoints, img,
                 Scalar::all(-1), DrawMatchesFlags::DEFAULT);
         s << dirpath << "/match-" << i << ".jpg";
-        std::cout << "    writing " << s.str() << std::endl;
         if (!imwrite(s.str(), img))
             return -1;
     }
@@ -169,7 +162,6 @@ int write_features(string &filepath,
     Mat img2;
     drawKeypoints(img, features.keypoints, img2,
             Scalar::all(-1), DrawMatchesFlags::DEFAULT);
-    std::cout << "    writing " << filepath << std::endl;
     if (!imwrite(filepath, img2))
         return -1;
     return 0;
