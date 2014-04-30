@@ -81,6 +81,7 @@ struct thread
     int imgidx; // used for writing panos
 };
 
+// global application configuration
 struct config
 {
     int help;
@@ -169,9 +170,11 @@ static void gpu_thread_cleanup(void *arg)
     struct thread *self = (struct thread*)arg;
 
     std::stringstream err;
-    err << "!! thread for GPU " << self->gpu << ": ";
-    err << strerror(self->exit_code) << std::endl;
-    std::cerr << err.str();
+    if (self->gpu != 0) {
+        err << "!! thread for GPU " << self->gpu << ": ";
+        err << strerror(self->exit_code) << std::endl;
+        std::cerr << err.str();
+    }
 
     cv::gpu::resetDevice();
 
@@ -299,7 +302,6 @@ static int do_sort_images(struct work_item *work, // input
         }
         next->state = PANO_MATCHED;
         next->confidence = work->confidence;
-        std::cout << "    adding new work item" << std::endl;
         sets.push_back(next);
     }
 
@@ -450,20 +452,30 @@ static void * gpu_thread(void *arg)
     pthread_exit(NULL);
 }
 
+static const char *signames[] = {
+    [SIGUSR1] = "SIGUSR1",
+    [SIGINT]  = "SIGINT",
+};
+
 static void sighandler(int sig)
 {
-    if (sig == SIGUSR1)
-        for (int i = 0; i < num_threads; i++)
+    if (sig == SIGUSR1 || sig == SIGINT) {
+        printf(">> signal %s received\n", signames[sig]);
+        for (int i = 0; i < num_threads; i++) {
             pthread_cancel(threads[i].tid);
+        }
+    }
 }
 
-static int add_sigusr1(void)
+// program can be aborted with SIGINT or SIGUSR1
+static int add_signals(void)
 {
     struct sigaction action;
-    printf(">> kill me with 'killall -s SIGUSR1 stitcher' when idling\n");
     memset(&action, 0, sizeof(action));
     action.sa_handler = sighandler;
     sigemptyset(&action.sa_mask);
+    if (0 > sigaction(SIGINT, &action, NULL))
+        return -1;
     if (0 > sigaction(SIGUSR1, &action, NULL))
         return -1;
     return 0;
@@ -609,7 +621,7 @@ int main(int argc, char *argv[])
     if (spawn_threads())
         return -1;
 
-    if (add_sigusr1())
+    if (add_signals())
         return -1;
 
     std::vector< std::string > types;
