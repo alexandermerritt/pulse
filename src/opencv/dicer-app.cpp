@@ -86,15 +86,12 @@ static void usage(const char *name)
     fprintf(stderr, "Usage: %s --file=/path/to/image --dir=/output/path/\n", name);
 }
 
-#define __img(image_t) std::get<0>(image_t)
-#define __pth(image_t) std::get<1>(image_t)
-
 typedef std::unique_ptr< cv::detail::ImageFeatures > featptr_t;
 typedef std::unique_ptr< cv::Mat > matptr_t;
 
 static int dice_one(image_t &image, rois_t &rois, bool show_boxed = false)
 {
-    cv::Mat mat = __img(image);
+    cv::Mat mat = image;
     int img_width  = mat.size().width;
     int img_height = mat.size().height;
     std::stringstream ss;
@@ -266,7 +263,7 @@ static int dice(path_t &path)
         std::stringstream ss;
         cv::Mat mat, sub, clone;
 
-        mat = __img(image);
+        mat = image;
         sub = mat(rois[subidx]);
         clone = sub.clone();
         do_transform(clone, 0.2);

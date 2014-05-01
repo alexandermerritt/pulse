@@ -101,11 +101,10 @@ int load_image(image_t &img, const path_t &path)
         return -EINVAL;
     }
 
-    cv::Mat mat = cv::imread(path);
-    if (!mat.data)
+    img = cv::imread(path);
+    if (!img.data)
         return -EINVAL;
 
-    img = make_tuple(mat, path);
     return 0;
 }
 
@@ -132,7 +131,7 @@ int load_images(images_t &imgs, const paths_t &_paths)
         mat = cv::imread(path);
         if (!mat.data)
             return -EINVAL;
-        imgs.push_back(make_tuple(mat, path));
+        imgs.push_back(mat);
     }
 
     return 0;
@@ -172,8 +171,6 @@ int write_image(string &filepath, const cv::Mat &img)
     return !imwrite(filepath, img);
 }
 
-#define __img(image_t)  (get<0>(image_t))
-
 int write_images(string &dirpath,
         const images_t &images, string prefix)
 {
@@ -184,7 +181,7 @@ int write_images(string &dirpath,
     for (size_t i = 0; i < images.size(); i++) {
         s.str(std::string()); // reset it
         s << dirpath << "/" << prefix << i << ".jpg";
-        if (!imwrite(s.str(), __img(images[i])))
+        if (!imwrite(s.str(), images[i]))
             return -1;
     }
     return 0;

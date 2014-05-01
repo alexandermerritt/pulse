@@ -26,6 +26,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <pthread.h>
 
 /* OpenCV includes */
 #include <opencv2/opencv.hpp>
@@ -61,9 +62,6 @@ enum pano_state
 
 struct work_item
 {
-    enum pano_state state;
-    int pano_num;
-    int gpu_id;
     float confidence;
     cv::Mat pano;
     images_t images;
@@ -75,10 +73,8 @@ struct work_item
 struct thread
 {
     pthread_t tid;
-    int gpu;
     bool alive;
     int exit_code;
-    int imgidx; // used for writing panos
 };
 
 // global application configuration
@@ -90,6 +86,7 @@ struct config
     bool gpu_all;
     bool cpu_all;
     long num_cpus;
+    bool verbose;
     const char *input; /* input file with list of images */
 };
 
@@ -100,16 +97,11 @@ struct config
 // program configuration (based on cmd arguments)
 static struct config config;
 
-// gpu stuff
-static int num_gpus;
-
 // work stuf
 static std::list< struct work_item * > work_queue;
 static pthread_mutex_t queue_lock;
 
-// thread stuff
-static int num_threads;
-static thread *threads;
+static struct thread main_state;
 
 // arguments
 static const struct option options[] = {
@@ -120,6 +112,7 @@ static const struct option options[] = {
     {"gpu-all", no_argument, (int*)&config.gpu_all, true},
     {"cpu-all", no_argument, (int*)&config.cpu_all, true},
     {"input", required_argument, NULL, 'i'},
+    {"verbose", no_argument, (int*)&config.verbose, true},
     {NULL, no_argument, NULL, 0} // terminator
 };
 
@@ -137,316 +130,144 @@ static inline void unlock_queue(void)
     pthread_mutex_unlock(&queue_lock);
 }
 
-#if 0
-static void printMatches(const matches_t &matches)
-{
-    int i = 0;
-    std::cout << "---- matches start ----" << std::endl;
-    for (auto &m : matches) {
-        std::cout << std::setw(2) << i++
-            << " (" << m.src_img_idx << "," << m.dst_img_idx << ")"
-            << ": " << std::setw(10) << m.confidence
-            << std::endl;
-    }
-    std::cout << "---- matches end ----" << std::endl;
-}
-
-static void printFeatures(features_t &features)
-{
-    int i = 0;
-    std::cout << "---- features start ----" << std::endl;
-    for (auto &f : features) {
-        std::cout << std::setw(2) << i++
-            << " img " << f.img_idx
-            << " pts " << f.keypoints.size()
-            << std::endl;
-    }
-    std::cout << "---- matches end ----" << std::endl;
-}
-#endif
-
 static void gpu_thread_cleanup(void *arg)
 {
     struct thread *self = (struct thread*)arg;
-
-    std::stringstream err;
-    if (self->gpu != 0) {
-        err << "!! thread for GPU " << self->gpu << ": ";
-        err << strerror(self->exit_code) << std::endl;
-        std::cerr << err.str();
-    }
-
-    cv::gpu::resetDevice();
-
     self->alive = false;
+    std::cerr << "!! main thread: "
+        << strerror(self->exit_code) << std::endl;
 }
 
-static void __dump_features(const images_t &images, const features_t &features)
-{
-    static size_t imgnum = 0UL;
-    std::stringstream ss;
-
-    for (auto &feat : features) {
-        string path = get<1>(images[imgnum]);
-        path = path.substr(path.find_last_of("/") + 1);
-        ss << "features____" << path << "____.yaml";
-        cv::FileStorage fs(ss.str(), cv::FileStorage::WRITE);
-        cv::write(fs, std::string(), feat.keypoints);
-        imgnum++;
-        ss.str(std::string());
-    }
-}
-
-static void __print_features(const features_t &features)
-{
-    size_t imgnum = 0UL, kpnum = 0UL;
-    std::cout << "    features:" << std::endl;
-    std::cout << "image keypoint coord.x coord.y size angle rsp oct id" << std::endl;
-    for (auto &feat : features) {
-        kpnum = 0UL;
-        for (auto &kp : feat.keypoints) {
-            std::cout << imgnum
-                << " " << kpnum
-                << " " << kp.pt.x << " " << kp.pt.y
-                << " " << kp.size
-                << " " << kp.angle
-                << " " << kp.response
-                << " " << kp.octave
-                << " " << kp.class_id
-                << std::endl;
-            kpnum++;
-        }
-        imgnum++;
-    }
-}
-
-static inline void dump_features(const images_t &images, const features_t &features)
-{
-    if (getenv("DUMP_FEATURES"))
-        __dump_features(images, features);
-}
-
-static inline void print_features(const features_t &features)
-{
-    if (getenv("PRINT_FEATURES"))
-        __print_features(features);
-}
-
-static int do_sort_images(struct work_item *work, // input
-        std::list< struct work_item * > &sets, images_t &unmatched, // output
+static int do_sort_images(struct work_item *item, // input
+        images_t &unmatched, // output
         bool use_gpu, int num_cpus) // tuning; num_cpus not used if use_gpu=1
 {
     PStitcher ps = PStitcher::createDefault();
-    matches_t matches;
-    features_t features;
+    matches_t matches, mtmp;
+    features_t features, ftmp;
     indices_t indices;
     bool have_matching;
     int offset;
     float confidence;
-    struct work_item *next;
 
-    if (!work)
-        return -EINVAL;
-    if (work->state != PANO_LOADED)
-       return -EINVAL;
-    if (work->images.size() < 2)
+    if (!item)
         return -EINVAL;
 
-    ps.findFeatures(work->images, features, use_gpu, (use_gpu ? 1 : num_cpus));
+    // We'll return unmatched images to the caller to decide further.
+    ps.findFeatures(item->images, features, use_gpu, (use_gpu ? 1 : num_cpus));
+    ps.matchFeatures(features, matches, use_gpu, (use_gpu ? 1 : num_cpus));
 
-    print_features(features);
-    dump_features(work->images, features);
-
-    while (work->images.size() > 1) {
-
-        // use new b/c struct contains classes
-        next = new struct work_item;
-        if (!next)
-            return -ENOMEM;
-
-        ps.matchFeatures(features, matches, use_gpu, (use_gpu ? 1 : num_cpus));
-
-        // match images, reducing confidence until we do, else quit
-        have_matching = false;
-        confidence = work->confidence;
-        do {
-            next->features = features;
-            next->matches = matches;
-            ps.findRelated(next->features, next->matches,
-                    indices, confidence);
-            if (next->features.size() > 1) {
-                have_matching = true;
-                break;
-            }
-            confidence -= 0.1f;
-            std::cout << "    reducing confidence to "
-                << confidence << std::endl;
-        } while (confidence > 0.2f);
-
-        if (!have_matching) {
-            for (auto &img : work->images)
-                unmatched.push_back(img);
-            work->images.clear();
-            delete next;
+    // Match images, reducing confidence until we do, else quit
+    have_matching = false;
+    confidence = item->confidence;
+    do {
+        // findRelated modifies its input args, so we make copy
+        ftmp = features; mtmp = matches;
+        ps.findRelated(ftmp, mtmp, indices, confidence);
+        if (ftmp.size() > 1) {
+            have_matching = true;
             break;
         }
+        confidence -= 0.1f;
+    } while (confidence > 0.2f);
 
-        // some images did match, create new work item
-        std::sort(indices.begin(), indices.end());
-        offset = 0;
-        for (auto _idx : indices) {
-            int idx = _idx - offset++;
-            next->images.push_back(work->images[idx]);
-            work->images.erase(work->images.begin() + idx);
-            features.erase(features.begin() + idx);
-        }
-        next->state = PANO_MATCHED;
-        next->confidence = work->confidence;
-        sets.push_back(next);
+    // None of the images match with any confidence
+    if (!have_matching) {
+        std::cout << "    no matching images in set" << std::endl;
+        unmatched = item->images;
+        item->images.clear();
+        return 0;
     }
+
+    // Some did match, so filter out ones which didn't
+    std::cout << "    " << indices.size() << " images match" << std::endl;
+    std::sort(indices.begin(), indices.end());
+    offset = 0;
+    images_t newset(0);
+    for (int _idx : indices) {
+        int idx = _idx - offset++;
+        newset.push_back(item->images[idx]);
+        item->images.erase(item->images.begin() + idx);
+        //features.erase(features.begin() + idx);
+    }
+
+    item->features = ftmp;
+    item->matches  = mtmp;
+    item->images   = newset;
 
     return 0;
 }
 
-static int sort_images(struct work_item *work)
+static int sort_images(struct work_item *item)
 {
-    std::list< struct work_item * > sets;
-    images_t unmatched;
-    static int num = 0;
+    images_t unmatched; // ignored for now
     int err;
 
-    if (!work)
+    if (!item)
         return -EINVAL;
 
-    err = do_sort_images(work, sets, unmatched,
+    err = do_sort_images(item, unmatched,
             config.gpu_all, config.num_cpus);
-    if (err) {
-        std::cerr << "!! error sorting: " << strerror(err) << std::endl;
-        return -ENOTRECOVERABLE;
-    }
-
-    if (!unmatched.empty())
-        for (auto &img : unmatched)
-            std::cout << "nomatch " << get<1>(img) << std::endl;
-
-    for (auto item : sets) {
-        for (auto &img : item->images)
-            std::cout << "match-" << num << " " << get<1>(img) << std::endl;
-        num++;
-    }
-
-    if (!config.match_only) {
-        for (auto item : sets) {
-            lock_queue();
-            work_queue.push_back(item);
-            unlock_queue();
-        }
-    }
-
-    work->images.clear();
-
-    return 0;
-}
-
-// Takes a set of images, features, matching info etc and composites the final
-// panorama. Called only by gpu_thread.
-static int make_pano(struct work_item *work)
-{
-    PStitcher ps = PStitcher::createDefault();
-    int err = 0;
-
-    if (!work || work->state != PANO_MATCHED)
-        return -EINVAL;
-
-    // Bundle Adjustment - runs only on the CPU for now, single thread
-    ps.estimateCameraParams(work->features, work->matches,
-            work->cameras, work->confidence);
-
-    err = ps.composePanorama(work->images, work->cameras,
-            work->pano, config.gpu_all, config.num_cpus);
     if (err)
         return -ENOTRECOVERABLE;
 
     return 0;
 }
 
-static void * gpu_thread(void *arg)
+// Takes a set of images, features, matching info etc and composites the final
+// panorama. Called only by gpu_thread.
+static int make_pano(struct work_item *item)
+{
+    PStitcher ps = PStitcher::createDefault();
+    int err = 0;
+
+    if (!item)
+        return -EINVAL;
+
+    // Bundle Adjustment - runs only on the CPU for now, single thread
+    ps.estimateCameraParams(item->features, item->matches,
+            item->cameras, item->confidence);
+
+    err = ps.composePanorama(item->images, item->cameras,
+            item->pano, config.gpu_all, config.num_cpus);
+    if (err)
+        return -ENOTRECOVERABLE;
+
+    return 0;
+}
+
+static void* main_thread(void *arg)
 {
     struct thread *self = (struct thread*)arg;
-    struct work_item *work;
-    PStitcher ps = PStitcher::createDefault();
-    stringstream pano_name;
-    int oldstate /* not used */;
+    int olddata;
 
-    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &olddata);
     pthread_cleanup_push(gpu_thread_cleanup, self);
 
-    if (!self || self->gpu < 0) {
-        self->exit_code = -EINVAL;
-        pthread_exit(NULL);
-    }
-
-    self->exit_code = 0;
     self->alive  = true;
 
-    cv::gpu::setDevice(self->gpu);
-
+    struct work_item *i = NULL;
     while (true) {
+        if (work_queue.size() == 0) // TODO replace with cond var
+            { sleep(1); continue; }
+
         lock_queue();
-        if (work_queue.size() == 0) {
-            unlock_queue();
-            sleep(1);
-            continue;
-        }
-        work = work_queue.front();
+        if (work_queue.size() == 0)
+            { unlock_queue(); continue; }
+        i = work_queue.front();
         work_queue.pop_front();
         unlock_queue();
 
-        // TODO set pano_num
-
-        if (work->state == PANO_LOADED) {
-            if ((self->exit_code = sort_images(work)))
-                pthread_exit(NULL);
-            delete work;
-            work = NULL;
-        }
-        else if (work->state == PANO_MATCHED) {
-            if ((self->exit_code = make_pano(work)))
-                pthread_exit(NULL);
-            if (!work->pano.data) {
-                self->exit_code = -ENOTRECOVERABLE;
-                pthread_exit(NULL);
-            }
-            stringstream s;
-            s << "/tmp/pano_thread-" << self->gpu << "_img-" << self->imgidx++ << ".jpg";
-            std::cout << "    writing pano to " << s.str() << " ...";
-            if (write_image(s.str().c_str(), work->pano)) {
-                std::cout << std::endl;
-                self->exit_code = -ENOTRECOVERABLE;
-                pthread_exit(NULL);
-            }
-            std::cout << " done" << std::endl;
-            // TODO reset GPU device
-            delete work;
-            work = NULL;
-        }
-        else {
-            self->exit_code = -ENOTRECOVERABLE;
+        if ((self->exit_code = sort_images(i)))
             pthread_exit(NULL);
-        }
-#if 0
-        cv::gpu::resetDevice();
-        pano_name << "sets/pano-" << work->pano_num << ".jpg";
-        std::cout << ">> writing " << pano_name.str() << std::endl;
-        if (!cv::imwrite(pano_name.str(), work->pano)) {
-            std::cerr << "!! thread " << work->pano_num
-                << ": error writing panorama" << std::endl;
-        }
-#endif
 
-        cv::gpu::resetDevice();
+        if (i->images.size() < 2) // no matches...
+            { delete i; continue; }
 
-    } // while
+        if ((self->exit_code = make_pano(i)))
+            pthread_exit(NULL);
+
+    }
 
     pthread_cleanup_pop(1);
     pthread_exit(NULL);
@@ -461,9 +282,7 @@ static void sighandler(int sig)
 {
     if (sig == SIGUSR1 || sig == SIGINT) {
         printf(">> signal %s received\n", signames[sig]);
-        for (int i = 0; i < num_threads; i++) {
-            pthread_cancel(threads[i].tid);
-        }
+        pthread_cancel(main_state.tid);
     }
 }
 
@@ -481,57 +300,40 @@ static int add_signals(void)
     return 0;
 }
 
-static int spawn_threads(void)
+static int spawn(void)
 {
     int err;
 
-    if (threads)
+    if (main_state.alive)
         return -1;
 
-    num_threads = num_gpus;
-    threads = (struct thread*)calloc(num_threads, sizeof(*threads));
-    if (!threads) {
-        std::cerr << "!! no memory" << std::endl;
+    main_state.alive = false;
+    err = pthread_create(&main_state.tid, NULL, main_thread, &main_state);
+    if (err) {
+        std::cerr <<  "!! error spawning thread" << std::endl;
         return -1;
-    }
-
-    for (int t = 0; t < num_gpus; t++) {
-        threads[t].gpu = t;
-        threads[t].alive = false;
-        err = pthread_create(&threads[t].tid, NULL, gpu_thread, &threads[t]);
-        if (err) {
-            std::cerr <<  "!! error spawning thread" << std::endl;
-            return -1;
-        }
     }
     return 0;
 }
 
-static void join_threads(void)
+static int join(void)
 {
-    int err;
-    for (int t = 0; t < num_gpus; t++) {
-        err = pthread_join(threads[t].tid, NULL);
-        if (err) {
-            std::cerr << "!! error joining thread" << std::endl;
-        }
-    }
+    return (0 == pthread_join(main_state.tid, NULL));
 }
 
 static int add_images(images_t &imgs)
 {
-    struct work_item *work;
+    struct work_item *item;
     
-    work = new struct work_item;
-    if (!work)
+    item = new struct work_item;
+    if (!item)
         return -ENOMEM;
 
-    work->images = imgs;
-    work->state = PANO_LOADED;
-    work->confidence = 2.;
+    item->images = imgs;
+    item->confidence = 2.;
 
     lock_queue();
-    work_queue.push_back(work);
+    work_queue.push_back(item);
     unlock_queue();
 
     return 0;
@@ -547,6 +349,7 @@ static void usage(char *argv[])
     fprintf(stderr, "    --cpu-all\t\tUse CPU for all operations\n");
     fprintf(stderr, "    --gpu-all\t\tUse GPU for all operations, where implemented\n");
     fprintf(stderr, "    --input  \t\tSpecify file with images to parse, instead of stdin\n");
+    fprintf(stderr, "    --verbose\t\tDump text in gobs\n");
 }
 
 static int parse_args(int argc, char *argv[])
@@ -574,6 +377,9 @@ static int parse_args(int argc, char *argv[])
 
     if (config.help)
         return -EINVAL;
+
+    if (!config.verbose)
+        { close(1); close(2); }
 
     if (config.gpu_all && config.cpu_all)
         return -EINVAL;
@@ -607,18 +413,9 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    num_gpus = cv::gpu::getCudaEnabledDeviceCount();
-    if (num_gpus < 1) {
-        std::cerr << "!! no GPGPUs or "
-            << "OpenCV not compiled with CUDA" << std::endl;
-        return -1;
-    }
-    num_gpus = 1;
-    printf(">> %d GPGPUs for use\n", num_gpus);
-
     pthread_mutex_init(&queue_lock, NULL); // do before spawning threads
 
-    if (spawn_threads())
+    if (spawn())
         return -1;
 
     if (add_signals())
@@ -636,14 +433,12 @@ int main(int argc, char *argv[])
     if (add_images(imgs))
         return -1;
 
-    join_threads();
+    if(join())
+        return -1;
 
-    free(threads);
     for (struct work_item * w : work_queue)
         delete w;
     work_queue.clear();
-
-    printf(">> done.\n");
 
     return 0;
 }

@@ -5,6 +5,7 @@
 #ifndef _IO_HPP_INCLUDED_
 #define _IO_HPP_INCLUDED_
 
+#include <stdio.h>
 #include "types.hpp"
 
 void read_stdin(paths_t &paths);

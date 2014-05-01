@@ -34,17 +34,10 @@ typedef std::vector< int > indices_t;
 typedef std::set< std::pair< int, int > > MatchesSet;
 
 /* "image" is its data and path on disk */
-typedef std::tuple< cv::Mat, std::string > image_t;
+typedef cv::Mat image_t;
 typedef std::vector< image_t > images_t;
 
 typedef std::vector< cv::Rect > rois_t;
-
-/* for sorting an images_t by path */
-static inline bool
-image_path_compare(const image_t &a, const image_t &b)
-{
-    return std::get<1>(a) < std::get<1>(b);
-}
 
 #endif /* TYPES_HPP_INCLUDED */
 
