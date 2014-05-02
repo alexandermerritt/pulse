@@ -10,6 +10,9 @@
 
 void read_stdin(paths_t &paths);
 
+void progress_bar(int i, int max);
+void progress_clear(void);
+
 /*
  * dirlist  path to file containing list of directories to scan for files
  * mats     container into which to read files found on disk

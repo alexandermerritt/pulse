@@ -216,3 +216,25 @@ void prune_paths(paths_t &_paths, const vector< string > &exts)
     _paths = paths;
 }
 
+int progress_chars = 0;
+
+void __erase_bar(void)
+{
+    while (progress_chars-- > 0)
+        printf("\b");
+}
+
+void progress_bar(int i, int max)
+{
+    float val = (100. * i) / max;
+    __erase_bar();
+    progress_chars = printf("%02.01f%%", val);
+    fflush(stdout);
+}
+
+void progress_clear(void)
+{
+    __erase_bar();
+    fflush(stdout);
+}
+
