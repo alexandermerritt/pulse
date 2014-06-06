@@ -267,6 +267,11 @@ static void* main_thread(void *arg)
         if ((self->exit_code = make_pano(i)))
             pthread_exit(NULL);
 
+        if (!(i->pano.data)) {
+            std::cerr << "!! pano object has no data" << std::endl;
+            continue;
+        }
+
     }
 
     pthread_cleanup_pop(1);

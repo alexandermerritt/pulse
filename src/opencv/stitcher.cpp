@@ -58,6 +58,7 @@
 #include "stitcher.hpp"
 #include "matchers.hpp"
 #include "motion_estimators.hpp"
+#include "io.hpp"
 
 #include <tuple>
 #include <timer.h>
@@ -129,9 +130,9 @@ int PStitcher::findFeatures(const images_t &images, features_t &features,
         for (size_t i = 0; i < images.size(); ++i) {
             Mat img; // TODO put outside loop?
             resize(images[i], img, Size(), work_scale, work_scale);
-            print_event("find-features-img-start");
+            //print_event("find-features-img-start");
             (*finder)(img, features[i]); /* modules/stitching/src/matchers.cpp */
-            print_event("find-features-img-end");
+            //print_event("find-features-img-end");
             std::cout << "    " << features[i].keypoints.size() << std::endl;
             //features[i].img_idx = (int)i; // XXX what is this for?
         }
@@ -251,9 +252,9 @@ void PStitcher::bestOf2NearestMatcher(const features_t &features,
         //num_threads = 1;
     num_threads = std::min(features.size(), (unsigned long)num_threads); // FIXME
     if (try_gpu)
-        std::cout << "    using gpu" << std::endl;
+        std::cout << "    using gpu - ";
     else
-        std::cout << "    using " << num_threads << " threads" << std::endl;
+        std::cout << "    using " << num_threads << " threads - ";
 
     // ---------------------------------------- MatchPairsBody
     // Replaced MatchPairsBody class with its operator() directly
@@ -270,7 +271,7 @@ void PStitcher::bestOf2NearestMatcher(const features_t &features,
             int to = near_pairs[i].second;
             int pair_idx = from*num_images + to;
 
-            std::cout << "."; std::cout.flush();
+            progress_bar(i, near_pairs.size());
 
             // Calls match() on subclass, which is probably
             // PBestOf2NearestMatcher::match().
@@ -293,6 +294,7 @@ void PStitcher::bestOf2NearestMatcher(const features_t &features,
                         matches[dual_pair_idx].matches[j].trainIdx);
         }
     }
+    progress_clear();
     std::cout << std::endl;
 }
 
