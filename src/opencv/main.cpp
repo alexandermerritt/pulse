@@ -81,12 +81,12 @@ struct thread
 struct config
 {
     int help;
-    bool use_memcached;
-    bool match_only;
-    bool gpu_all;
-    bool cpu_all;
+    int use_memcached;
+    int match_only;
+    int gpu_all;
+    int cpu_all;
     long num_cpus;
-    bool verbose;
+    int verbose;
     const char *input; /* input file with list of images */
 };
 
