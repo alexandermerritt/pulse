@@ -27,6 +27,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <uuid/uuid.h>
 
 /* OpenCV includes */
 #include <opencv2/opencv.hpp>
@@ -198,6 +199,7 @@ static int do_sort_images(struct work_item *item, // input
     return 0;
 }
 
+// removes images from item which do not 'match'
 static int sort_images(struct work_item *item)
 {
     images_t unmatched; // ignored for now
@@ -272,21 +274,27 @@ static void* main_thread(void *arg)
             continue;
         }
 
+        uuid_t uuid;
+        char uuid_str[48]; // uuid_unparse generates 36 chars
+        memset(uuid_str, 0, sizeof(uuid_str));
+        uuid_generate(uuid);
+        uuid_unparse(uuid, uuid_str);
+        std::string filename = "/tmp/image_" + std::string(uuid_str) + ".jpg";
+        if (!cv::imwrite(filename, i->pano))
+            std::cerr << "!! error writing out pano: " << filename << std::endl;
+        else
+            std::cout << "wrote output file: " + filename << std::endl;
+
     }
 
     pthread_cleanup_pop(1);
     pthread_exit(NULL);
 }
 
-static const char *signames[] = {
-    [SIGUSR1] = "SIGUSR1",
-    [SIGINT]  = "SIGINT",
-};
-
 static void sighandler(int sig)
 {
     if (sig == SIGUSR1 || sig == SIGINT) {
-        printf(">> signal %s received\n", signames[sig]);
+        printf(">> signal %d received\n", sig);
         pthread_cancel(main_state.tid);
     }
 }
