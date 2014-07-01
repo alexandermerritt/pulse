@@ -2,8 +2,8 @@
 
 import os
 
-cc = 'gcc-4.7'
-cxx = 'g++-4.7'
+cc = 'gcc'
+cxx = 'g++'
 
 # cmd args > env values
 cc = os.environ.get('CC', cc)
@@ -12,11 +12,17 @@ if ARGUMENTS.get('clang', 0):
     cc = 'clang'
     cxx = 'clang++'
 
-cuda_root = os.environ.get('CUDA_ROOT', '/usr/local/cuda')
 ccflags = ['-std=c++11']
 ccflags.extend(['-Wall', '-Wextra', '-Werror'])
 ccflags.append('-Wno-unused-function')
 ccflags.append('-Wno-unused-parameter')
+
+# CUDA
+cuda_root = os.environ.get('CUDA_ROOT', '/usr/local/cuda')
+
+# OpenCL
+ocl_root = os.environ.get('OCL_ROOT', '/something')
+
 
 if ARGUMENTS.get('debug', 0):
     ccflags.extend(['-ggdb', '-O0'])
@@ -33,7 +39,28 @@ cpath = ['/usr/local/include', '../include', cuda_root + '/include']
 
 libpath = []
 
-libs = ['opencv_core', 'opencv_gpu', 'opencv_stitching', 'gomp']
+# libs acquired from 'pkg-config --libs opencv'
+libs = ['opencv_calib3d',
+        'opencv_contrib',
+        'opencv_core',
+        'opencv_features2d',
+        'opencv_flann',
+        'opencv_gpu',
+        'opencv_highgui',
+        'opencv_imgproc',
+        'opencv_legacy',
+        'opencv_ml',
+        'opencv_nonfree',
+        'opencv_objdetect',
+        'opencv_ocl',
+        'opencv_photo',
+        'opencv_stitching',
+        'opencv_superres',
+        'opencv_ts',
+        'opencv_video',
+        'opencv_videostab']
+libs.extend(['tbb', 'rt', 'pthread', 'm', 'dl'])
+libs.append('uuid')
 
 env = Environment(CC = cc, CXX = cxx)
 env.Append(CCFLAGS = ccflags)
@@ -47,4 +74,5 @@ sources.extend(['memcached.cpp'])
 env.Program('stitcher', ['main.cpp', sources])
 
 env.Program('dicer', ['dicer-app.cpp', sources])
+env.Program('sizes', ['show-sizes.cpp', sources])
 
