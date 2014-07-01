@@ -1,0 +1,17 @@
+storm nimbus
+    Run this on one node.
+
+storm supervisor
+    Run this on all nodes.
+
+./compile_java.sh
+    Compiles Java code and builds a jar.
+
+storm jar <name>.jar <ClassName>
+    For local execution
+
+storm jar <name>.jar <ClassName> <topologyName>
+    For submission to Storm cluster.
+
+http://demeter.inf.ed.ac.uk/cross/stormcpp.html
+    For C++ integration.
