@@ -106,24 +106,17 @@ int PStitcher::findFeatures(const images_t &images, features_t &features,
         work_scale = min(1.0,
                 sqrt(registr_resol * 1e6 / images[0].size().area()));
 
-    // fix up use of gpu, and number of threads used
-    try_gpu = (try_gpu ? gpu::getCudaEnabledDeviceCount() > 0 : false);
     if (try_gpu)
-        num_threads = 1;
-    num_threads = std::min(images.size(), (unsigned long)num_threads);
+        return -1;
 
-    if (try_gpu)
-        std::cout << "    using gpu" << std::endl;
-    else
-        std::cout << "    using " << num_threads << " threads" << std::endl;
+    num_threads = std::min(images.size(), (unsigned long)num_threads);
 
 #pragma omp parallel \
     private(finder) \
     num_threads(num_threads)
     {
         #define SURF_PARAMS 4000., 1, 6
-        if (try_gpu) finder = new detail::SurfFeaturesFinderGpu(SURF_PARAMS);
-        else         finder = new detail::SurfFeaturesFinder(SURF_PARAMS);
+        finder = new detail::SurfFeaturesFinder(SURF_PARAMS);
         #undef SURF_PARAMS
 
 #pragma omp for
@@ -244,17 +237,9 @@ void PStitcher::bestOf2NearestMatcher(const features_t &features,
 
     matches.resize(num_images * num_images);
 
-    // fix up use of gpu, and number of threads used
-    try_gpu = (try_gpu ? gpu::getCudaEnabledDeviceCount() > 0 : false);
-    if (try_gpu)
-        num_threads = 1;
-    //if (!matcher->isThreadSafe())
-        //num_threads = 1;
     num_threads = std::min(features.size(), (unsigned long)num_threads); // FIXME
     if (try_gpu)
-        std::cout << "    using gpu - ";
-    else
-        std::cout << "    using " << num_threads << " threads - ";
+        abort();
 
     // ---------------------------------------- MatchPairsBody
     // Replaced MatchPairsBody class with its operator() directly
@@ -262,8 +247,7 @@ void PStitcher::bestOf2NearestMatcher(const features_t &features,
     private(matcher) \
     num_threads(num_threads)
     {
-        if (try_gpu) matcher = new GpuMatcher(match_conf);
-        else         matcher = new CpuMatcher(match_conf);
+        matcher = new CpuMatcher(match_conf);
 #pragma omp for
         for (size_t i = 0; i < near_pairs.size(); ++i)
         {
@@ -307,6 +291,9 @@ int PStitcher::matchFeatures(const features_t &features, matches_t &matches,
     std::cout << ">> pairwise matching" << std::endl;
 
     //matcher = new PBestOf2NearestMatcher(try_gpu, num_threads);
+
+    if (try_gpu)
+        return -1;
 
     matches.clear();
     bestOf2NearestMatcher(features, matches, try_gpu, num_threads, match_conf);
@@ -421,22 +408,12 @@ int PStitcher::composePanorama(images_t &images, cameras_t &cameras,
 
     std::cout << ">> composing panorama" << std::endl;
 
-    // fix up use of gpu, and number of threads used
-    try_gpu = (try_gpu ? gpu::getCudaEnabledDeviceCount() > 0 : false);
     if (try_gpu)
-        num_threads = 1;
-    num_threads = std::min(images.size(), (unsigned long)num_threads);
-    if (try_gpu)
-        std::cout << "    using gpu" << std::endl;
-    else
-        std::cout << "    using " << num_threads << " threads" << std::endl;
+        return -1;
 
-    if (try_gpu)    warper = new cv::SphericalWarperGpu();
-    else            warper = new cv::SphericalWarper();
-
-    if (try_gpu)    seam_finder = new cv::detail::GraphCutSeamFinderGpu();
-    else            seam_finder = new cv::detail::GraphCutSeamFinder(
-                                    cv::detail::GraphCutSeamFinder::COST_COLOR);
+    warper = new cv::SphericalWarper();
+    seam_finder = new cv::detail::GraphCutSeamFinder(
+            cv::detail::GraphCutSeamFinder::COST_COLOR);
 
     blender = new detail::MultiBandBlender(try_gpu);
 
@@ -514,8 +491,11 @@ int PStitcher::composePanorama(images_t &images, cameras_t &cameras,
 
     // Find seams
     std::cout << "    finding seams " << std::endl;
+    timer_start(&t);
     exposure_comp->feed(corners, images_warped, masks_warped);
     seam_finder->find(images_warped_f, corners, masks_warped);
+    usec = timer_end(&t, MICROSECONDS);
+    std::cout << "      seam finding took " << usec / 1000000.0f << " sec" << std::endl;
 
     // Release unused memory
     seam_est_images.clear();
