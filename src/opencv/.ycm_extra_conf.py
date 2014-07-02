@@ -32,6 +32,7 @@ flags = [
 '-isystem', '/usr/local/include/',
 '-isystem', '/usr/lib/gcc/x86_64-redhat-linux/4.4.7/include/',
 '-isystem', '/usr/include/',
+'-isystem', '/usr/include/jsoncpp/',
 '-isystem', cuda_root + '/include/',
 '-I', os.getcwd() + '/../include/',
 '-I', os.getcwd() + '/',
