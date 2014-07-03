@@ -257,7 +257,7 @@ namespace storm
 		if (!stream.empty())
 			v["stream"] = stream;
 		Json::Value json_anchors;
-		for (int i = 0; i < anchors.size(); ++i)
+		for (unsigned long i = 0; i < anchors.size(); ++i)
 			json_anchors.append(anchors[i].GetID());
 		v["anchors"] = json_anchors;
 		if (task != -1)
@@ -337,7 +337,6 @@ namespace storm
 	class Spout
 	{
 		public:
-			Spout();
 			virtual void Initialize(Json::Value conf, Json::Value context) = 0;
 			// Read the next tuple and write it to stdout.
 			virtual void NextTuple() = 0;
