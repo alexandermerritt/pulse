@@ -17,12 +17,7 @@ ccflags.extend(['-Wall', '-Wextra', '-Werror'])
 ccflags.append('-Wno-unused-function')
 ccflags.append('-Wno-unused-parameter')
 
-# CUDA
-cuda_root = os.environ.get('CUDA_ROOT', '/usr/local/cuda')
-
-# OpenCL
-ocl_root = os.environ.get('OCL_ROOT', '/something')
-
+libs = []
 
 if ARGUMENTS.get('debug', 0):
     ccflags.extend(['-ggdb', '-O0'])
@@ -31,16 +26,20 @@ else:
 
 if ARGUMENTS.get('omp', 0):
     ccflags.append('-fopenmp')
+    libs.append('gomp')
 
 if cc == 'clang' or cxx == 'clang++':
     ccflags.append('-fcolor-diagnostics')
 
-cpath = ['/usr/local/include', '../include', cuda_root + '/include']
+cpath = ['/usr/local/include', '../include']
 
 libpath = []
 
+if ARGUMENTS.get('ocl', 0):
+    libs.append('amdocl64')
+
 # libs acquired from 'pkg-config --libs opencv'
-libs = ['opencv_calib3d',
+libs.extend(['opencv_calib3d',
         'opencv_contrib',
         'opencv_core',
         'opencv_features2d',
@@ -58,7 +57,7 @@ libs = ['opencv_calib3d',
         'opencv_superres',
         'opencv_ts',
         'opencv_video',
-        'opencv_videostab']
+        'opencv_videostab'])
 libs.extend(['tbb', 'rt', 'pthread', 'm', 'dl'])
 libs.append('uuid')
 
@@ -71,8 +70,18 @@ env.Append(LIBS = libs)
 sources = ['io.cpp', 'stitcher.cpp', 'matchers.cpp', 'motion_estimators.cpp']
 sources.extend(['memcached.cpp'])
 
-env.Program('stitcher', ['main.cpp', sources])
+#env.Program('stitcher', ['main.cpp', sources])
 
-env.Program('dicer', ['dicer-app.cpp', sources])
-env.Program('sizes', ['show-sizes.cpp', sources])
+#env.Program('dicer', ['dicer-app.cpp', sources])
+#env.Program('sizes', ['show-sizes.cpp', sources])
+
+# Separate environment for the storm proxy code.
+storm_files = ['StormStitcher.cpp', 'StormWrapper.cpp']
+env = Environment(CC = cc, CXX = cxx)
+env.Append(CCFLAGS = ccflags)
+env.Append(CPPPATH = cpath)
+env.Append(CPPPATH = ['/usr/include/jsoncpp/'])
+env.Append(LIBPATH = libpath)
+env.Append(LIBS = ['jsoncpp'])
+env.Program('stormstitcher', storm_files)
 

@@ -1,6 +1,11 @@
+/**
+ * StitcherTopology.java
+ */
+
 import backtype.storm.Config;
 import backtype.storm.LocalCluster;
 import backtype.storm.spout.SpoutOutputCollector;
+import backtype.storm.spout.ShellSpout;
 import backtype.storm.StormSubmitter;
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.ShellBolt;
@@ -20,59 +25,34 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+// Helpful Notes.
+//
+// - ShellBolt constructor basically acts as a call to system(). See
+// StitcherTopology.h for the command line flags to use.
+//
+// - Each bolt/spout class in java is just a proxy for the C++ class equivalent
+
 public class StitcherTopology {
 
-    public static class RequestSpout
-            extends BaseRichSpout
+    public static class StitcherSpout
+            extends ShellSpout implements IRichSpout
         {
-            private SpoutOutputCollector _collector;
-            private int _msgId;
-
-            public RequestSpout()
+            public StitcherSpout()
             {
+                super("stormstitcher", "--spout");
             }
 
             @Override
-            public void fail(Object msgId)
+            public Map<String, Object> getComponentConfiguration()
             {
+                return null;
             }
-
-            @Override
-            public void ack(Object msgId)
-            {
-            }
-
-            @Override
-            public void nextTuple()
-            {
-                _collector.emit(new Values("hello from spout"));
-                try {
-                    Thread.sleep(100); // ms
-                } catch (InterruptedException e) {
-                    // shut up compiler
-                }
-            }
-
-            @Override
-            public void open(Map conf, TopologyContext context,
-                    SpoutOutputCollector collector)
-            {
-                _collector = collector;
-            }
-
-//            @Override
-//            public Map<String, Object> getComponentConfiguration()
-//            {
-//                System.out.println("getComponentConfiguration");
-//                return null;
-//            }
 
             @Override
             public void declareOutputFields(OutputFieldsDeclarer declarer)
             {
-                declarer.declare(new Fields("word"));
+                declarer.declare(new Fields("cmd", "args"));
             }
-
         }
 
     public static class FeatureBolt
@@ -82,34 +62,19 @@ public class StitcherTopology {
 
             public FeatureBolt()
             {
-                super("feature_bolt");
-            }
-
-            @Override
-            public void prepare(Map stormConf,
-                    TopologyContext context,
-                    OutputCollector collector)
-            {
-                _collector = collector;
-            }
-
-            @Override
-            public void execute(Tuple input)
-            {
-                String text = input.getString(0);
-                System.out.println("Got: " + text);
-            }
-
-            @Override
-            public void declareOutputFields(OutputFieldsDeclarer declarer)
-            {
-                declarer.declare(new Fields("word"));
+                super("stormstitcher", "--bolt=feature");
             }
 
             @Override
             public Map<String, Object> getComponentConfiguration()
             {
-                return null; // ???
+                return null;
+            }
+
+            @Override
+            public void declareOutputFields(OutputFieldsDeclarer declarer)
+            {
+                declarer.declare(new Fields("cmd", "args"));
             }
         }
 
@@ -118,7 +83,7 @@ public class StitcherTopology {
     {
         TopologyBuilder builder = new TopologyBuilder();
         // [spout] -> x
-        builder.setSpout("spout", new RequestSpout(), 1);
+        builder.setSpout("spout", new StitcherSpout(), 1);
         // [spout] -> [feature] -> x
         builder.setBolt("feature", new FeatureBolt(), 1)
             .shuffleGrouping("spout");
