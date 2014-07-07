@@ -2,6 +2,11 @@
  * clang++ --std=c++11 load_graph.cpp -o load_graph \
  *              -I/usr/include/jsoncpp -ljsoncpp -lmemcached
  *
+ * we assume graph has vertices whose labels are unsigned int, existing on a
+ * contiguous range from 0-N. this is needed so we can randomly pick a valid
+ * vertex using rand() and to provide the range of values in a separate graph
+ * key
+ *
  * graph file should be a 2-col file with elements of type unsigned int,
  * separated by a single space character
  */
@@ -13,9 +18,11 @@
 #include <stdio.h>
 
 const char config_string[] = "--SERVER=192.168.1.221"; // --SERVER=192.168.1.222";
+const char info_key[] = "graph_info";
 
 // node and edge set
 std::map< unsigned int, std::list< unsigned int > > graph;
+unsigned int max_key = 0;
 
 int load(std::string &path)
 {
@@ -31,6 +38,7 @@ int load(std::string &path)
         // unordered graph
         graph[n0].push_back(n1);
         graph[n1].push_back(n0);
+        max_key = std::max(max_key, std::max(n0, n1));
     }
     return 0;
 }
@@ -45,6 +53,17 @@ int store(void)
     memc = memcached(config_string, strlen(config_string));
     if (!memc)
         return -1;
+
+    { // store info_key describing graph
+        Json::Value v;
+        v["max"] = std::to_string(max_key);
+        Json::StyledWriter w;
+        std::string val = w.write(v);
+        mret = memcached_set(memc, info_key, strlen(info_key),
+                val.c_str(), val.length(), 0, 0);
+        if (mret != MEMCACHED_SUCCESS)
+            return -1;
+    }
 
     for (auto &key : graph) { // k is a pair<>
         char keystr[64];
