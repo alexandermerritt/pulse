@@ -5,7 +5,7 @@ set -u
 # add others as necessary, colon-separated
 JARS=/home/merrital/local/storm/lib/storm-core-0.9.1-incubating.jar
 
-killall -s 1 stormstitcher
+killall -s 1 stormstitcher || true
 
 echo Compiling ...
 javac -cp $JARS StitcherTopology.java

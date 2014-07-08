@@ -82,6 +82,6 @@ env.Append(CCFLAGS = ccflags)
 env.Append(CPPPATH = cpath)
 env.Append(CPPPATH = ['/usr/include/jsoncpp/'])
 env.Append(LIBPATH = libpath)
-env.Append(LIBS = ['jsoncpp'])
+env.Append(LIBS = ['jsoncpp', 'memcached'])
 env.Program('stormstitcher', storm_files)
 
