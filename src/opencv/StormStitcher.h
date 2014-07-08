@@ -33,7 +33,7 @@ class StitcherSpout : public storm::Spout
         void Initialize(Json::Value conf, Json::Value context);
         void NextTuple(void);
 
-    //private:
+    private:
         int initmemc(void);
         int graph_max(void)
         {
@@ -44,6 +44,7 @@ class StitcherSpout : public storm::Spout
         memcached_st *memc;
         unsigned long group_id;
         unsigned int seed;
+        unsigned int max_depth;
         Json::Value graph_info;
 
 };

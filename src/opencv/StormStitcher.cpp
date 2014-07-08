@@ -74,7 +74,7 @@ void FeatureBolt::Process(storm::Tuple &tuple)
  */
 
 StitcherSpout::StitcherSpout(void)
-    : memc(NULL), group_id(0)
+    : memc(NULL), group_id(0), max_depth(1)
 {
     if (init_log("spout"))
         abort();
@@ -93,21 +93,15 @@ int StitcherSpout::initmemc(void)
         LOG("Error connecting to memcached: %s", strerror(errno));
         LOG("    config: %s", memc_config);
         return -1;
-    } else {
-        const char *err = memcached_last_error_message(memc);
-        if (err) {
-            LOG("Error connecting to memcached: %s", err);
-            LOG("    config: %s", memc_config);
-            return -1;
-        }
     }
+    // FIXME sometimes memc was allocated despite errors connecting
 
     mret = memcached_exist(memc, info_key, strlen(info_key));
     if (MEMCACHED_SUCCESS != mret) {
         if (MEMCACHED_NOTFOUND == mret)
-            LOG("'%s' not found", info_key);
+            LOG("'%s' not found in memcached", info_key);
         else
-            LOG("error querying existence: %s",
+            LOG("error querying memcached for %s : %s", info_key,
                     memcached_strerror(memc, mret));
         return -1;
     }
@@ -156,7 +150,8 @@ void StitcherSpout::NextTuple(void)
     key = rand_r(&seed) % num_nodes;
     snprintf(keystr, 64, "%d", key);
 
-    for (int i = 0; i < 1; i++) {
+    int depth = 1 + (rand_r(&seed) % max_depth);
+    for (int i = 0; i < depth; i++) {
 
         mret = memcached_exist(memc, keystr, strlen(keystr));
         if (MEMCACHED_SUCCESS != mret) {
@@ -179,8 +174,6 @@ void StitcherSpout::NextTuple(void)
         free(keyval);
         keyval = NULL;
 
-        // vertices will always have > 0 edges as otherwise the graph
-        // would be disconnected... just might loop back and forth
         Json::Reader r;
         if (!r.parse(valstr, v, false)) {
             LOG("error parsing");
@@ -191,15 +184,18 @@ void StitcherSpout::NextTuple(void)
             continue;
         }
 
-        // iterate
-        key = atoi(v[0].asCString());
-        snprintf(keystr, 64, "%d", key);
+        // emit all neighbors of node
+        for (unsigned int i = 0; i < v.size(); i++) {
+            Json::Value next;
+            next[0] = "group_id";
+            next[1] = v[i];
+            storm::Tuple tup(next);
+            storm::EmitSpout(tup, std::string(), -1, std::string());
+        }
 
-        Json::Value next;
-        next[0] = "group_id";
-        next[1] = v[0];
-        storm::Tuple tup(next);
-        storm::EmitSpout(tup, std::string(), -1, std::string());
+        // iterate
+        key = atoi(v[0].asCString()); // TODO this is not BFS
+        snprintf(keystr, 64, "%d", key);
     }
 }
 
