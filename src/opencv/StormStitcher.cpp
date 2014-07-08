@@ -24,27 +24,28 @@
 // Local headers
 #include "StormWrapper.h"       // unofficial 'storm' namespace
 #include "StormStitcher.h"
+#include "stitcher.hpp"
 
-FILE *log;
+FILE *logfp;
 
 // TODO add pid, machine name, to filename
-#define LOG(str, ...) \
+#define L(str, ...) \
     do { \
-        fprintf(log, ">> " str "\n", ##__VA_ARGS__); \
-        fflush(log); \
+        fprintf(logfp, ">> " str "\n", ##__VA_ARGS__); \
+        fflush(logfp); \
     } while (0)
 
 // duplicate stdout/stderr into a log file
 int init_log(const char *prefix)
 {
     char name[256];
-    if (log)
+    if (logfp)
         return 0;
     if (!prefix)
         return -1;
     snprintf(name, 256, "/tmp/%s.log", prefix);
-    log = fopen(name, "w");
-    if (!log)
+    logfp = fopen(name, "w");
+    if (!logfp)
         return -1;
     return 0;
 }
@@ -59,8 +60,8 @@ FeatureBolt::FeatureBolt(void)
     errno = 0;
     memc = memcached(memc_config, strlen(memc_config));
     if (!memc) {
-        LOG("Error connecting to memcached: %s", strerror(errno));
-        LOG("    config: %s", memc_config);
+        L("Error connecting to memcached: %s", strerror(errno));
+        L("    config: %s", memc_config);
         abort();
     }
 }
@@ -73,9 +74,9 @@ void FeatureBolt::Initialize(Json::Value conf, Json::Value context)
 
 void FeatureBolt::Process(storm::Tuple &tuple)
 {
-    Json::Value v(tuple.GetValues());
-    LOG("v0 %s", v[0].asCString());
-    LOG("v1 %s", v[1].asCString());
+    Json::Value tup(tuple.GetValues());
+    PStitcher ps = PStitcher::createDefault();
+    cv::Mat image;
 }
 
 /*
@@ -104,8 +105,8 @@ int StitcherSpout::initmemc(void)
     errno = 0;
     memc = memcached(memc_config, strlen(memc_config));
     if (!memc) {
-        LOG("Error connecting to memcached: %s", strerror(errno));
-        LOG("    config: %s", memc_config);
+        L("Error connecting to memcached: %s", strerror(errno));
+        L("    config: %s", memc_config);
         return -1;
     }
     // FIXME sometimes memc was allocated despite errors connecting
@@ -113,9 +114,9 @@ int StitcherSpout::initmemc(void)
     mret = memcached_exist(memc, info_key, strlen(info_key));
     if (MEMCACHED_SUCCESS != mret) {
         if (MEMCACHED_NOTFOUND == mret)
-            LOG("'%s' not found in memcached", info_key);
+            L("'%s' not found in memcached", info_key);
         else
-            LOG("error querying memcached for %s : %s", info_key,
+            L("error querying memcached for %s : %s", info_key,
                     memcached_strerror(memc, mret));
         return -1;
     }
@@ -123,7 +124,7 @@ int StitcherSpout::initmemc(void)
     keyval = memcached_get(memc, info_key, strlen(info_key),
             &len, &flags, &mret);
     if (!keyval) {
-        LOG("could not get '%s': %s", info_key,
+        L("could not get '%s': %s", info_key,
                 memcached_strerror(memc, mret));
         return -1;
     }
@@ -131,10 +132,10 @@ int StitcherSpout::initmemc(void)
     std::string valstr((char*)keyval);
     Json::Reader r;
     if (!r.parse(valstr, graph_info, false)) {
-        LOG("error parsing json for '%s'", info_key);
+        L("error parsing json for '%s'", info_key);
         return -1;
     }
-    LOG("max from '%s': %s", info_key, graph_info["max"].asCString());
+    L("max from '%s': %s", info_key, graph_info["max"].asCString());
 
     seed = time(NULL) + getpid();
     srand(seed);
@@ -171,9 +172,9 @@ void StitcherSpout::NextTuple(void)
         mret = memcached_exist(memc, keystr, strlen(keystr));
         if (MEMCACHED_SUCCESS != mret) {
             if (MEMCACHED_NOTFOUND == mret)
-                LOG("'%s' not found", info_key);
+                L("'%s' not found", info_key);
             else
-                LOG("error querying existence: %s",
+                L("error querying existence: %s",
                         memcached_strerror(memc, mret));
             abort();
         }
@@ -181,7 +182,7 @@ void StitcherSpout::NextTuple(void)
         keyval = memcached_get(memc, keystr, strlen(keystr),
                 &len, &flags, &mret);
         if (!keyval) {
-            LOG("could not retreive %s: %s", keystr,
+            L("could not retreive %s: %s", keystr,
                     memcached_strerror(memc, mret));
             abort();
         }
@@ -191,11 +192,11 @@ void StitcherSpout::NextTuple(void)
 
         Json::Reader r;
         if (!r.parse(valstr, v, false)) {
-            LOG("error parsing");
+            L("error parsing");
             abort();
         }
         if (v.empty()) {
-            LOG("idx %d is empty!", key);
+            L("idx %d is empty!", key);
             continue;
         }
 

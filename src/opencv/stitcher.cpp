@@ -111,15 +111,19 @@ int PStitcher::findFeatures(const images_t &images, features_t &features,
 
     num_threads = std::min(images.size(), (unsigned long)num_threads);
 
+#if defined(_OPENMP)
 #pragma omp parallel \
     private(finder) \
     num_threads(num_threads)
+#endif  /* _OPENMP */
     {
         #define SURF_PARAMS 4000., 1, 6
         finder = new detail::SurfFeaturesFinder(SURF_PARAMS);
         #undef SURF_PARAMS
 
+#if defined(_OPENMP)
 #pragma omp for
+#endif  /* _OPENMP */
         for (size_t i = 0; i < images.size(); ++i) {
             Mat img; // TODO put outside loop?
             resize(images[i], img, Size(), work_scale, work_scale);
@@ -243,19 +247,23 @@ void PStitcher::bestOf2NearestMatcher(const features_t &features,
 
     // ---------------------------------------- MatchPairsBody
     // Replaced MatchPairsBody class with its operator() directly
+#if defined(_OPENMP)
 #pragma omp parallel \
     private(matcher) \
     num_threads(num_threads)
+#endif  /* _OPENMP */
     {
         matcher = new CpuMatcher(match_conf);
+#if defined(_OPENMP)
 #pragma omp for
+#endif  /* _OPENMP */
         for (size_t i = 0; i < near_pairs.size(); ++i)
         {
             int from = near_pairs[i].first;
             int to = near_pairs[i].second;
             int pair_idx = from*num_images + to;
 
-            progress_bar(i, near_pairs.size());
+            //progress_bar(i, near_pairs.size());
 
             // Calls match() on subclass, which is probably
             // PBestOf2NearestMatcher::match().
@@ -278,7 +286,7 @@ void PStitcher::bestOf2NearestMatcher(const features_t &features,
                         matches[dual_pair_idx].matches[j].trainIdx);
         }
     }
-    progress_clear();
+    //progress_clear();
     std::cout << std::endl;
 }
 
