@@ -51,7 +51,42 @@ int init_log(const char *prefix)
 }
 
 /*
+ * UserBolt
+ *
+ * Retrieve and emit list of images associated with "user" (nodeID).
+ */
+
+UserBolt::UserBolt(void)
+    : memc(NULL)
+{
+    errno = 0;
+    memc = memcached(memc_config, strlen(memc_config));
+    if (!memc) {
+        L("Error connecting to memcached: %s", strerror(errno));
+        L("    config: %s", memc_config);
+        abort();
+    }
+}
+
+void UserBolt::Initialize(Json::Value conf, Json::Value context)
+{
+    if (init_log("userbolt"))
+        abort();
+}
+
+void UserBolt::Process(storm::Tuple &tuple)
+{
+    Json::Value tup(tuple.GetValues());
+    PStitcher ps = PStitcher::createDefault();
+    cv::Mat image;
+}
+
+/*
  * FeatureBolt
+ *
+ * Given the image, retrieve from object store and find features.
+ * Store features into object store.
+ * Emit imageID to indicate completion.
  */
 
 FeatureBolt::FeatureBolt(void)
@@ -68,22 +103,24 @@ FeatureBolt::FeatureBolt(void)
 
 void FeatureBolt::Initialize(Json::Value conf, Json::Value context)
 {
-    if (init_log("bolt"))
+    if (init_log("featurebolt"))
         abort();
 }
 
 void FeatureBolt::Process(storm::Tuple &tuple)
 {
     Json::Value tup(tuple.GetValues());
-    PStitcher ps = PStitcher::createDefault();
-    cv::Mat image;
 }
 
 /*
- * StitcherSpout
+ * GraphSpout
+ *
+ * Pick random "person" (nodeID in graph).
+ *      Emit all neighbor nodes.
+ *      If depth >0, set a neighbor as current "person" and repeat.
  */
 
-StitcherSpout::StitcherSpout(void)
+GraphSpout::GraphSpout(void)
     : memc(NULL),
     // XXX To handle multiple spouts, we provide each with a namespace of
     // group_id:    <pid>0000000000..00
@@ -95,7 +132,7 @@ StitcherSpout::StitcherSpout(void)
         abort();
 }
 
-int StitcherSpout::initmemc(void)
+int GraphSpout::initmemc(void)
 {
     memcached_return_t mret;
     size_t len;
@@ -143,14 +180,14 @@ int StitcherSpout::initmemc(void)
     return 0;
 }
 
-void StitcherSpout::Initialize(Json::Value conf, Json::Value context)
+void GraphSpout::Initialize(Json::Value conf, Json::Value context)
 {
     if (initmemc())
         abort();
 }
 
 // Pick random key, emit nodes while walking some steps.
-void StitcherSpout::NextTuple(void)
+void GraphSpout::NextTuple(void)
 {
     Json::Value v;
     memcached_return_t mret;
@@ -238,7 +275,7 @@ int main(int argc, char *argv[])
 
     arg = strtok_r(argv[1], CMD_ARG_DELIM, &save);
     if (0 == strncmp(arg, CMD_ARG_SPOUT, strlen(CMD_ARG_SPOUT))) {
-        StitcherSpout spout;
+        GraphSpout spout;
         spout.Run();
     } else {
         if (0 != strncmp(arg, CMD_ARG_BOLT, strlen(CMD_ARG_BOLT)))

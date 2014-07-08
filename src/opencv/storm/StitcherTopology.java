@@ -34,10 +34,10 @@ import java.util.Map;
 
 public class StitcherTopology {
 
-    public static class StitcherSpout
+    public static class GraphSpout
             extends ShellSpout implements IRichSpout
         {
-            public StitcherSpout()
+            public GraphSpout()
             {
                 super("stormstitcher", "--spout");
             }
@@ -51,7 +51,29 @@ public class StitcherTopology {
             @Override
             public void declareOutputFields(OutputFieldsDeclarer declarer)
             {
-                declarer.declare(new Fields("cmd", "args"));
+                // nodeID == graph node
+                declarer.declare(new Fields("requestID", "nodeID"));
+            }
+        }
+
+    public static class UserBolt
+            extends ShellBolt implements IRichBolt
+        {
+            public UserBolt()
+            {
+                super("stormstitcher", "--bolt=user");
+            }
+
+            @Override
+            public Map<String, Object> getComponentConfiguration()
+            {
+                return null;
+            }
+
+            @Override
+            public void declareOutputFields(OutputFieldsDeclarer declarer)
+            {
+                declarer.declare(new Fields("requestID", "imageID"));
             }
         }
 
@@ -74,17 +96,18 @@ public class StitcherTopology {
             @Override
             public void declareOutputFields(OutputFieldsDeclarer declarer)
             {
-                declarer.declare(new Fields("cmd", "args"));
+                declarer.declare(new Fields("requestID", "??"));
             }
         }
 
     public static void main(String[] args)
         throws Exception
     {
+        // [spout] -> [user] -> [feature] -> x
         TopologyBuilder builder = new TopologyBuilder();
-        // [spout] -> x
-        builder.setSpout("spout", new StitcherSpout(), 1);
-        // [spout] -> [feature] -> x
+        builder.setSpout("spout", new GraphSpout(), 1);
+        builder.setBolt("user", new UserBolt(), 1)
+            .shuffleGrouping("spout");
         builder.setBolt("feature", new FeatureBolt(), 1)
             .shuffleGrouping("spout");
 

@@ -26,10 +26,10 @@ const char memc_config[] =
 const char info_key[] = "graph_info";
 const char graph_max_key[] = "max";
 
-class StitcherSpout : public storm::Spout
+class GraphSpout : public storm::Spout
 {
     public:
-        StitcherSpout(void);
+        GraphSpout(void);
         void Initialize(Json::Value conf, Json::Value context);
         void NextTuple(void);
 
@@ -47,6 +47,17 @@ class StitcherSpout : public storm::Spout
         unsigned int max_depth;
         Json::Value graph_info;
 
+};
+
+class UserBolt : public storm::BasicBolt
+{
+    public:
+        UserBolt(void);
+        void Process(storm::Tuple &tuple);
+        void Initialize(Json::Value conf, Json::Value context);
+
+    private:
+        memcached_st *memc;
 };
 
 class FeatureBolt : public storm::BasicBolt
