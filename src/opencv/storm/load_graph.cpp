@@ -57,7 +57,7 @@ int store(void)
     { // store info_key describing graph
         Json::Value v;
         v["max"] = std::to_string(max_key);
-        Json::StyledWriter w;
+        Json::FastWriter w;
         std::string val = w.write(v);
         mret = memcached_set(memc, info_key, strlen(info_key),
                 val.c_str(), val.length(), 0, 0);
