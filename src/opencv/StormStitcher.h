@@ -52,7 +52,7 @@ class StitcherSpout : public storm::Spout
 class FeatureBolt : public storm::BasicBolt
 {
     public:
-        FeatureBolt(void) { }
+        FeatureBolt(void);
         void Process(storm::Tuple &tuple);
         void Initialize(Json::Value conf, Json::Value context);
 

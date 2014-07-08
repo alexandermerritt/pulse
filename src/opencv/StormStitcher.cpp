@@ -53,12 +53,21 @@ int init_log(const char *prefix)
  * FeatureBolt
  */
 
+FeatureBolt::FeatureBolt(void)
+    : memc(NULL)
+{
+    errno = 0;
+    memc = memcached(memc_config, strlen(memc_config));
+    if (!memc) {
+        LOG("Error connecting to memcached: %s", strerror(errno));
+        LOG("    config: %s", memc_config);
+        abort();
+    }
+}
+
 void FeatureBolt::Initialize(Json::Value conf, Json::Value context)
 {
     if (init_log("bolt"))
-        abort();
-    memc = memcached(memc_config, strlen(memc_config));
-    if (!memc)
         abort();
 }
 
@@ -74,7 +83,12 @@ void FeatureBolt::Process(storm::Tuple &tuple)
  */
 
 StitcherSpout::StitcherSpout(void)
-    : memc(NULL), group_id(0), max_depth(1)
+    : memc(NULL),
+    // XXX To handle multiple spouts, we provide each with a namespace of
+    // group_id:    <pid>0000000000..00
+    // Each iteration increments in that space
+    group_id(getpid() << 20),
+    max_depth(1)
 {
     if (init_log("spout"))
         abort();
@@ -145,6 +159,7 @@ void StitcherSpout::NextTuple(void)
     char keystr[64];
     void *keyval = NULL;
     int num_nodes = graph_max() + 1;
+    std::string groupstr = std::to_string(group_id++);
 
     // FIXME query some key to provide configuration
     key = rand_r(&seed) % num_nodes;
@@ -187,7 +202,7 @@ void StitcherSpout::NextTuple(void)
         // emit all neighbors of node
         for (unsigned int i = 0; i < v.size(); i++) {
             Json::Value next;
-            next[0] = "group_id";
+            next[0] = groupstr;
             next[1] = v[i];
             storm::Tuple tup(next);
             storm::EmitSpout(tup, std::string(), -1, std::string());
