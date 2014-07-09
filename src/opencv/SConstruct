@@ -75,6 +75,8 @@ sources = ['stitcher.cpp', 'matchers.cpp', 'motion_estimators.cpp']
 sources.extend(['StormStitcher.cpp', 'StormWrapper.cpp'])
 env.Program('stormstitcher', sources)
 
+env.Program('load_graph', ['load_graph.cpp'])
+
 #sources = ['io.cpp', 'stitcher.cpp', 'matchers.cpp', 'motion_estimators.cpp']
 #sources.extend(['memcached.cpp'])
 
