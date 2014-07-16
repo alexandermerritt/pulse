@@ -16,8 +16,13 @@
  *      ["images"    : "<name>.jpg", ...]
  *
  * <name>.jpg   image container (metadata)
- *      ["data"     : "<name>.jpg__d" ]
- *      ["features" : "<name>.jpg__f" ]
+ *      ["data_key"     : "<name>.jpg__d" ]
+ *      ["features_key" : "<name>.jpg__f" ]
+ *      ["cols"         : int ]
+ *      ["rows"         : int ]
+ *      ["type"         : int ]
+ *      ["pxsz"         : int ]
+ *      ["flags"        : int ]
  *
  * <name>.jpg__d    image file as stored on disk (not JSON)
  *
@@ -38,9 +43,9 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-const char config_string[] = "--SERVER=192.168.1.221"; // --SERVER=192.168.1.222";
+const char config_string[] = "--SERVER=192.168.1.221:11211 --SERVER=192.168.1.222:11211";
 const char info_key[] = "graph_info";
-const int max_imgs_per_node = 16;
+const int max_imgs_per_node = 8;
 
 // node and edge set
 std::map< unsigned int, std::list< unsigned int > > graph;
@@ -76,12 +81,13 @@ int load_images(std::string &path)
             return -1;
 
         std::string imgdata_key = std::string(l + "__d");
-        v["features_key"] = std::string(); // bolt will create this
+        std::string feature_key = std::string(l + "__f");
+        v["features_key"] = feature_key; // created by bolt
         v["data_key"] = imgdata_key;
         v["cols"] = img.cols;
         v["rows"] = img.rows;
         v["type"] = img.type();
-        v["pxsz"] = (int)img.elemSize();
+        v["pxsz"] = static_cast<int>(img.elemSize());
         v["flags"] = img.flags;
 
         Json::FastWriter w;
@@ -139,6 +145,7 @@ int load_graph(std::string &path)
                 val.c_str(), val.length(), 0, 0);
         if (mret != MEMCACHED_SUCCESS)
             return -1;
+        printf(">> %s: %s\n", info_key, val.c_str());
     }
 
     for (auto &key : graph) { // k is a pair<>

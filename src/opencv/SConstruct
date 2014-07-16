@@ -56,14 +56,14 @@ libs.extend(['-lopencv_calib3d',
     '-lopencv_legacy',
     '-lopencv_ml',
     '-lopencv_objdetect',
-    '-lopencv_ocl',
+    #'-lopencv_ocl',
     '-lopencv_photo',
     '-lopencv_stitching',
     '-lopencv_superres',
     '-lopencv_ts',
     '-lopencv_video',
     '-lopencv_videostab'])
-libs.extend(['jsoncpp', 'memcached'])
+libs.extend(['jsoncpp', 'memcached', 'uuid'])
 
 env = Environment(CC = cc, CXX = cxx)
 env.Append(CCFLAGS = ccflags)

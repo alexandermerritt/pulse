@@ -13,10 +13,11 @@ javac -cp $JARS StitcherTopology.java
 [ ! -e ../stormstitcher ] && \
 	echo "Compile stormstitcher first" && exit 1
 [ ! -d resources ] && mkdir resources
+touch resources/empty # resources/ shouldn't be empty
 #cp ../stormstitcher resources/
 sudo cp ../stormstitcher /usr/local/bin/
 
 echo Creating jar ...
-jar cf stitcher.jar Stitcher*.class resources
+jar cf stitcher.jar Stitcher*.class resources/
 rm -f *.class
 echo Done.

@@ -52,7 +52,7 @@ public class StitcherTopology {
             public void declareOutputFields(OutputFieldsDeclarer declarer)
             {
                 // nodeID == graph node
-                declarer.declare(new Fields("requestID", "nodeID"));
+                declarer.declare(new Fields("requestID", "userID"));
             }
         }
 
@@ -109,7 +109,7 @@ public class StitcherTopology {
         builder.setBolt("user", new UserBolt(), 1)
             .shuffleGrouping("spout");
         builder.setBolt("feature", new FeatureBolt(), 1)
-            .shuffleGrouping("spout");
+            .shuffleGrouping("user");
 
         Config conf = new Config();
         conf.setDebug(true);

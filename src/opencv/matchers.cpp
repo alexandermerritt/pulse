@@ -132,6 +132,7 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
     LOG("1->2 & 2->1 matches: " << matches_info.matches.size() << endl);
 }
 
+#if 0
 #ifdef HAVE_OPENCV_GPU
 void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
 {
@@ -188,5 +189,7 @@ void GpuMatcher::collectGarbage()
     all_dist_.release();
     vector< vector<DMatch> >().swap(pair_matches);
 }
+#endif
+
 #endif
 
