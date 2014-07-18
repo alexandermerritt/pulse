@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-# scons clang=1 ocl=1 -jN [-debug=1]
+# scons clang=1 -jN [debug=1]
 
 import os
 
@@ -29,9 +29,9 @@ if ARGUMENTS.get('debug', 0):
 else:
     ccflags.append('-O3')
 
-if ARGUMENTS.get('omp', 0):
-    ccflags.append('-fopenmp')
-    libs.append('gomp')
+#if ARGUMENTS.get('omp', 0):
+#    ccflags.append('-fopenmp')
+#    libs.append('gomp')
 
 if cc == 'clang' or cxx == 'clang++':
     ccflags.append('-fcolor-diagnostics')
@@ -40,9 +40,6 @@ cpath = ['/usr/local/include', '../include']
 cpath.append('/usr/include/jsoncpp')
 
 libpath = []
-
-if ARGUMENTS.get('ocl', 0):
-    libs.append('amdocl64')
 
 # libs acquired from 'pkg-config --libs opencv'
 libs.extend(['-lopencv_calib3d',
@@ -71,12 +68,11 @@ env.Append(CPPPATH = cpath)
 env.Append(LIBPATH = libpath)
 env.Append(LIBS = libs)
 
-sources = ['stitcher.cpp', 'matchers.cpp', 'motion_estimators.cpp']
-sources.extend(['StormStitcher.cpp', 'StormWrapper.cpp'])
+sources = ['StormStitcher.cpp', 'StormWrapper.cpp']
 env.Program('stormstitcher', sources)
-
 env.Program('load_graph', ['load_graph.cpp'])
 
+# OLD STUFF
 #sources = ['io.cpp', 'stitcher.cpp', 'matchers.cpp', 'motion_estimators.cpp']
 #sources.extend(['memcached.cpp'])
 

@@ -10,12 +10,15 @@ import backtype.storm.StormSubmitter;
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.ShellBolt;
 import backtype.storm.task.TopologyContext;
+import backtype.storm.coordination.IBatchBolt;
+import backtype.storm.coordination.BatchOutputCollector;
 import backtype.storm.topology.base.BaseBasicBolt;
 import backtype.storm.topology.base.BaseRichSpout;
 import backtype.storm.topology.IRichBolt;
 import backtype.storm.topology.IRichSpout;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.TopologyBuilder;
+import backtype.storm.topology.BasicOutputCollector;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
 import backtype.storm.tuple.Values;
@@ -73,15 +76,16 @@ public class StitcherTopology {
             @Override
             public void declareOutputFields(OutputFieldsDeclarer declarer)
             {
-                declarer.declare(new Fields("requestID", "imageID"));
+                declarer.declareStream("toFeature", // to FeatureBolt
+                        new Fields("requestID", "imageID"));
+                declarer.declareStream("toStats", // to ReqStatBolt
+                        new Fields("requestID", "userID", "numImages"));
             }
         }
 
     public static class FeatureBolt
             extends ShellBolt implements IRichBolt
         {
-            private OutputCollector _collector;
-
             public FeatureBolt()
             {
                 super("stormstitcher", "--bolt=feature");
@@ -96,20 +100,66 @@ public class StitcherTopology {
             @Override
             public void declareOutputFields(OutputFieldsDeclarer declarer)
             {
-                declarer.declare(new Fields("requestID", "??"));
+                declarer.declare(new Fields("requestID", "imageID"));
+            }
+        }
+
+    public static class ReqStatBolt
+            extends ShellBolt implements IRichBolt
+        {
+            public ReqStatBolt()
+            {
+                super("stormstitcher", "--bolt=reqstat");
+            }
+
+            @Override
+            public Map<String, Object> getComponentConfiguration()
+            {
+                return null;
+            }
+
+            @Override
+            public void declareOutputFields(OutputFieldsDeclarer declarer)
+            {
+                // emits nothing
+            }
+        }
+
+    public static class MontageBolt
+            extends ShellBolt implements IRichBolt
+        {
+            public MontageBolt()
+            {
+                super("stormstitcher", "--bolt=montage");
+            }
+
+            @Override
+            public Map<String, Object> getComponentConfiguration()
+            {
+                return null;
+            }
+
+            @Override
+            public void declareOutputFields(OutputFieldsDeclarer declarer)
+            {
+                // emits nothing
             }
         }
 
     public static void main(String[] args)
         throws Exception
     {
-        // [spout] -> [user] -> [feature] -> x
         TopologyBuilder builder = new TopologyBuilder();
         builder.setSpout("spout", new GraphSpout(), 1);
         builder.setBolt("user", new UserBolt(), 1)
             .shuffleGrouping("spout");
         builder.setBolt("feature", new FeatureBolt(), 1)
-            .shuffleGrouping("user");
+            .shuffleGrouping("user", "toFeature");
+        builder.setBolt("montage", new MontageBolt(), 1)
+            .fieldsGrouping("feature", new Fields("requestID"));
+
+        builder.setBolt("reqstat", new ReqStatBolt(), 1)
+            .fieldsGrouping("user", "toStats", new Fields("requestID"));
 
         Config conf = new Config();
         conf.setDebug(true);

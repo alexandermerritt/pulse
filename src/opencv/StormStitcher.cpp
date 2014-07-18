@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <libmemcached/memcached.h>
 #include <uuid/uuid.h>
+#include <signal.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -55,6 +56,15 @@ int init_log(const char *prefix)
     return 0;
 }
 
+static void make_uuid(std::string &uuid_str)
+{
+    uuid_t uuid;
+    uuid_generate(uuid);
+    char _uuid[64];
+    uuid_unparse(uuid, _uuid);
+    uuid_str = std::string(_uuid);
+}
+
 /*
  * JSONImageFeature
  */
@@ -82,11 +92,9 @@ JSONImageFeature::JSONImageFeature(cv::detail::ImageFeatures &f)
     (*this)["keypoints"] = keypoints;
 
     Json::Value desc;
-    uuid_t uuid;
-    uuid_generate(uuid);
-    char _uuid[64];
-    uuid_unparse(uuid, _uuid);
-    desc["data_key"] = std::string(_uuid); // cannot put matrix into JSON
+    std::string uuid;
+    make_uuid(uuid);
+    desc["data_key"] = uuid; // cannot put matrix into JSON
     desc["cols"]     = f.descriptors.cols;
     desc["rows"]     = f.descriptors.rows;
     desc["type"]     = f.descriptors.type();
@@ -99,7 +107,7 @@ JSONImageFeature::JSONImageFeature(cv::detail::ImageFeatures &f)
 
 JSONImageFeature::JSONImageFeature(Json::Value &v)
 {
-    abort();
+    abort(); // TODO
 }
 
 void JSONImageFeature::GetDescKey(std::string &key)
@@ -115,7 +123,7 @@ void* JSONImageFeature::GetDescData(void)
 void JSONImageFeature::GetImageFeatures(cv::detail::ImageFeatures &features,
         const void *descData)
 {
-    abort();
+    abort(); // TODO
 }
 
 /*
@@ -132,7 +140,10 @@ UserBolt::UserBolt(void)
 
 void UserBolt::Initialize(Json::Value conf, Json::Value context)
 {
-    if (init_log("userbolt"))
+    char fname[64];
+    snprintf(fname, 64, "userbolt-%d", getpid());
+
+    if (init_log(fname))
         abort();
 
     errno = 0;
@@ -146,45 +157,124 @@ void UserBolt::Initialize(Json::Value conf, Json::Value context)
     L("UserBolt initialized");
 }
 
+// Update metadata in memc to indicate more work has been added
+// to this request ID. Used by montagebolt to figure out
+// how many images to process.
+void UserBolt::emitToReqStats(std::string &requestID,
+        std::string &userID, unsigned int numImages)
+{
+    Json::Value v;
+    v[0] = requestID;
+    v[1] = userID;
+    v[2] = numImages;
+    storm::Tuple tup(v);
+    L("    emitting info to ReqStatBolt : %s, %s, %u",
+            requestID.c_str(), userID.c_str(), numImages);
+    storm::Emit(tup, std::string("toStats"), -1);
+}
+
 void UserBolt::Process(storm::Tuple &tuple)
 {
-    memcached_return_t mret;
     Json::Value v(tuple.GetValues());
-    size_t len;
-    uint32_t flags;
 
-    std::string nodeID = v[1].asString();
-    L("Process() got %s", nodeID.c_str());
+    std::string requestID = v[0].asString();
+    std::string userID    = v[1].asString();
+    L("Process() got user %s", userID.c_str());
 
     // value is metadata describing node/user
-    void *keyval = memcached_get(memc, nodeID.c_str(), nodeID.length(),
-            &len, &flags, &mret);
-    if (!keyval || (mret != MEMCACHED_SUCCESS)) {
-        L("Error retrieving %s from memc", nodeID.c_str());
+    Json::Value userInfo;
+    if (memc_get_json(memc, userID, userInfo))
         abort();
-    }
-    std::string valstr((char*)keyval);
-    free(keyval);
-    Json::Reader r;
-    Json::Value nodeInfo;
-    if (!r.parse(valstr, nodeInfo, false)) {
-        L("error parsing json for '%s'", nodeID.c_str());
-        abort();
-    }
-    L("parsed %s", nodeID.c_str());
+    L("parsed %s", userID.c_str());
 
-    // emit all images
-    Json::Value images = nodeInfo["images"];
-    L("nodeInfo['images'] has %d entries", images.size());
+    // emit all user's images
+    Json::Value images = userInfo["images"];
+    L("userInfo['images'] has %d entries", images.size());
+    emitToReqStats(requestID, userID, images.size());
     for (unsigned int i = 0; i < images.size(); i++) {
         Json::Value next;
-        next[0] = v[0]; // group ID
+        next[0] = requestID;
         next[1] = images[i];
         storm::Tuple tup(next);
-        L("    emitting %s", next[1].asCString());
-        storm::EmitSpout(tup, std::string(), -1, std::string());
+        L("    emitting imageID %s to FeatureBolt", next[1].asCString());
+        storm::Emit(tup, std::string("toFeature"), -1);
     }
-    L("done parsing nodeInfo['images']");
+    L("done parsing userInfo['images']");
+}
+
+/*
+ * ReqStatBolt
+ */
+
+ReqStatBolt::ReqStatBolt(void)
+    : memc(NULL)
+{
+}
+
+void ReqStatBolt::Process(storm::Tuple &tuple)
+{
+    Json::Value v(tuple.GetValues());
+    struct stat *stat = NULL;
+
+    std::string reqID = v[0].asString();
+    //std::string userID = v[1].asString(); // ignored for now
+    int numImages = v[2].asInt();
+
+    L("Process() with ( %s , %d )",
+            reqID.c_str(), numImages);
+
+    // check if new reqID
+    auto search = cache.find(reqID);
+    if (search == cache.end()) {
+        L("    this is new request");
+        Json::Value v;
+        if (memc_get_json(memc, reqID, v))
+            abort();
+        struct stat s;
+        s.complete    = 0; // == false
+        s.totalImages = 0;
+        s.updatesRem  = v[ ReqStatBolt::updatesRem_str() ].asInt();
+        s.numUsers    = v[ ReqStatBolt::numUsers_str() ].asInt();
+        cache.emplace(reqID, s);
+    }
+
+    stat = &cache.at(reqID);
+    stat->updatesRem--;
+    stat->totalImages += numImages;
+
+    assert(stat->updatesRem >= 0);
+
+    // this tells MontageBolt to do its work
+    if (stat->updatesRem == 0) {
+        L("    request image list known: %d with %d users",
+                stat->totalImages, stat->numUsers);
+        Json::Value v;
+        v[ ReqStatBolt::updatesRem_str() ] = 0;
+        v[ ReqStatBolt::numUsers_str() ]   = stat->numUsers;
+        v[ ReqStatBolt::totImg_str() ]     = stat->totalImages;
+        v[ ReqStatBolt::complete_str() ]   = 1; // == true
+        if (memc_set_json(memc, reqID, v))
+            abort();
+    }
+}
+
+void ReqStatBolt::Initialize(Json::Value conf, Json::Value context)
+{
+    char fname[64];
+    snprintf(fname, 64, "reqstatbolt-%d", getpid());
+
+    if (init_log(fname))
+        abort();
+
+    errno = 0;
+    memc = memcached(memc_config, strlen(memc_config));
+    if (!memc) {
+        L("Error connecting to memcached: %s", strerror(errno));
+        L("    config: %s", memc_config);
+        abort();
+    }
+
+    L("UserBolt initialized");
 }
 
 /*
@@ -198,7 +288,10 @@ void UserBolt::Process(storm::Tuple &tuple)
 FeatureBolt::FeatureBolt(void)
     : memc(NULL)
 {
-    if (init_log("featurebolt"))
+    char fname[64];
+    snprintf(fname, 64, "featurebolt-%d", getpid());
+
+    if (init_log(fname))
         abort();
 
     errno = 0;
@@ -219,62 +312,26 @@ void FeatureBolt::Initialize(Json::Value conf, Json::Value context)
 // separate function to allow for isolated debugging
 void FeatureBolt::doProcess(std::string &imageID)
 {
-    memcached_return_t mret;
-    size_t len;
-    uint32_t flags;
-
-    // keyval is JSON metadata describing image
-    void *keyval = memcached_get(memc, imageID.c_str(), imageID.length(),
-            &len, &flags, &mret);
-    if (!keyval || (mret != MEMCACHED_SUCCESS)) {
-        L("Error retrieving %s from memc", imageID.c_str());
-        abort();
-    }
-    std::string valstr((char*)keyval);
-    free(keyval);
-    Json::Reader r;
+    cv::Mat img;
     Json::Value imageInfo;
-    if (!r.parse(valstr, imageInfo, false)) {
-        L("error parsing json for '%s'", imageID.c_str());
+
+    L("doProcess on %s", imageID.c_str());
+
+    if (memc_get_json(memc, imageID, imageInfo))
         abort();
-    }
 
-    // 1. construct opencv image
-    // 2. run feature detection on it
-    // 3. store feature set back into memcached
-    std::string rawkey = imageInfo["data_key"].asString();
-    int cols, rows, type, pxsz, iflags;
-    cols = imageInfo["cols"].asInt();
-    rows = imageInfo["rows"].asInt();
-    type = imageInfo["type"].asInt();
-    pxsz = imageInfo["pxsz"].asInt();
-    iflags = imageInfo["flags"].asInt();
-
-    // fetch raw image data
-    L("fetching raw image data at %s", rawkey.c_str());
-    keyval = memcached_get(memc, rawkey.c_str(), rawkey.length(),
-            &len, &flags, &mret);
-    if (!keyval || (mret != MEMCACHED_SUCCESS)) {
-        L("Error retrieving %s from memc", rawkey.c_str());
+    if (memc_get_cvmat(memc, imageID, img))
         abort();
-    }
-    // copy over data to object XXX bad for large objects...
-    L("copying raw data to new cv::Mat");
-    cv::Mat cvimg(rows, cols, type);
-    assert(cvimg.data);
-    memcpy(cvimg.data, keyval, len);
-    free(keyval);
 
-    // execute feature detection on image
-    L("executing feature detection");
-    cv::Ptr<cv::detail::FeaturesFinder> finder; // TODO make into class state
+    L("    executing feature detection");
+    cv::Ptr<cv::detail::FeaturesFinder> finder;
     cv::detail::ImageFeatures features;
-    // TODO resize image before detection
-    // TODO change params of orb to alter intensity of search, or use SURF
-    // (sometimes not compiled into libraries)
+    // TODO resize image
+    // TODO change params
     finder = new detail::OrbFeaturesFinder();
     try {
-        (*finder)(cvimg, features);
+        // may segfart. if so, remove offending images from input
+        (*finder)(img, features);
     } catch (Exception &e) {
         L("    EXCEPTION caught");
         return;
@@ -282,43 +339,20 @@ void FeatureBolt::doProcess(std::string &imageID)
     finder->collectGarbage();
     // TODO measure time taken for computation & store in memc?
 
-    // store features into memcached
-    // first store the json metadata
-    L("serializing keypoints");
-    JSONImageFeature ji(features);
-    Json::FastWriter w;
-    std::string s = w.write(ji);
-    std::string fkey = imageInfo["features_key"].asString();
-    L("writing keypoints to memc at %s with size %lu",
-            fkey.c_str(), s.size());
-    mret = memcached_set(memc, fkey.c_str(), fkey.length(),
-            s.c_str(), s.length(), 0, 0);
-    if (MEMCACHED_SUCCESS != mret) {
-        L("Error storing %s to memc", fkey.c_str());
+    if (memc_set_features(memc, imageID, features))
         abort();
-    }
-
-    // second, store the raw descriptor matrix
-    std::string desckey;
-    ji.GetDescKey(desckey);
-    L("writing keypoint descriptor matrix to memc at %s", desckey.c_str());
-    mret = memcached_set(memc, desckey.c_str(), desckey.length(),
-            (char*)ji.GetDescData(), ji.GetDescLen(), 0, 0);
-    if (MEMCACHED_SUCCESS != mret) {
-        L("Error storing %s to memc", rawkey.c_str());
-        abort();
-    }
-
 }
 
 void FeatureBolt::Process(storm::Tuple &tuple)
 {
     Json::Value v(tuple.GetValues());
+
     std::string imageID = v[1].asString();
     L("Process() got %s", imageID.c_str());
     doProcess(imageID);
-    // TODO emit something
-    L("not emitting. done.");
+
+    L("    emitting %s, %s", v[0].asString().c_str(), imageID.c_str());
+    storm::Emit(tuple, std::string(), -1);
 }
 
 /*
@@ -337,18 +371,20 @@ GraphSpout::GraphSpout(void)
     group_id(getpid() << 20),
     max_depth(4)
 {
-    if (init_log("spout"))
+    char fname[64];
+    snprintf(fname, 64, "spout-%d", getpid());
+
+    if (init_log(fname))
         abort();
+
+    if (initmemc())
+        abort();
+
     assert(max_depth > 0);
 }
 
 int GraphSpout::initmemc(void)
 {
-    memcached_return_t mret;
-    size_t len;
-    uint32_t flags;
-    char *keyval = NULL;
-
     errno = 0;
     memc = memcached(memc_config, strlen(memc_config));
     if (!memc) {
@@ -358,30 +394,10 @@ int GraphSpout::initmemc(void)
     }
     // FIXME sometimes memc was allocated despite errors connecting
 
-    mret = memcached_exist(memc, info_key, strlen(info_key));
-    if (MEMCACHED_SUCCESS != mret) {
-        if (MEMCACHED_NOTFOUND == mret)
-            L("'%s' not found in memcached", info_key);
-        else
-            L("error querying memcached for %s : %s", info_key,
-                    memcached_strerror(memc, mret));
-        return -1;
-    }
-
-    keyval = memcached_get(memc, info_key, strlen(info_key),
-            &len, &flags, &mret);
-    if (!keyval) {
-        L("could not get '%s': %s", info_key,
-                memcached_strerror(memc, mret));
-        return -1;
-    }
-
-    std::string valstr((char*)keyval);
-    Json::Reader r;
-    if (!r.parse(valstr, graph_info, false)) {
-        L("error parsing json for '%s'", info_key);
-        return -1;
-    }
+    if (!memc_exists(memc, info_key))
+        abort();
+    if (memc_get_json(memc, info_key, graph_info))
+        abort();
     L("max from '%s': %s", info_key, graph_info["max"].asCString());
 
     seed = time(NULL) + getpid();
@@ -392,7 +408,22 @@ int GraphSpout::initmemc(void)
 
 void GraphSpout::Initialize(Json::Value conf, Json::Value context)
 {
-    if (initmemc())
+    // nothing
+}
+
+void GraphSpout::initReqStats(std::string &requestID,
+        unsigned int numUsers)
+{
+    Json::Value v;
+
+    v[ ReqStatBolt::numUsers_str() ]   = numUsers;
+    v[ ReqStatBolt::updatesRem_str() ] = numUsers;
+    v[ ReqStatBolt::totImg_str() ]     = 0;
+    v[ ReqStatBolt::complete_str() ]   = 0; // == false
+
+    L("    adding new request stats for %s, %d users",
+            requestID.c_str(), numUsers);
+    if (memc_set_json(memc, requestID, v))
         abort();
 }
 
@@ -400,74 +431,181 @@ void GraphSpout::Initialize(Json::Value conf, Json::Value context)
 void GraphSpout::NextTuple(void)
 {
     Json::Value v;
-    memcached_return_t mret;
-    uint32_t flags;
-    size_t len;
     int key;
     std::string keystr;
-    void *keyval = NULL;
     int num_nodes = graph_max() + 1;
-    std::string groupstr = std::to_string(group_id++);
+    std::string requestID = "req-" + std::to_string(group_id++);
 
-    L("NextTuple called");
+    L("NextTuple called - request %s", requestID.c_str());
 
     key = rand_r(&seed) % num_nodes;
     keystr = std::to_string(key);
 
+    int req_num_users = 0;
+    std::list< storm::Tuple > toEmit;
+
     int depth = 1 + (rand_r(&seed) % max_depth);
     L("depth %d", depth);
     for (int i = 0; i < depth; i++) {
-
         L("picked %d", key);
-        mret = memcached_exist(memc, keystr.c_str(), keystr.length());
-        if (MEMCACHED_SUCCESS != mret) {
-            if (MEMCACHED_NOTFOUND == mret)
-                L("'%s' not found", info_key);
-            else
-                L("error querying existence: %s",
-                        memcached_strerror(memc, mret));
+        if (!memc_exists(memc, keystr))
             abort();
-        }
-
-        keyval = memcached_get(memc, keystr.c_str(), keystr.length(),
-                &len, &flags, &mret);
-        if (!keyval) {
-            L("could not retreive %s: %s", keystr.c_str(),
-                    memcached_strerror(memc, mret));
+        if (memc_get_json(memc, keystr, v))
             abort();
-        }
-        std::string valstr((char*)keyval);
-        free(keyval);
-        keyval = NULL;
-
-        Json::Reader r;
-        if (!r.parse(valstr, v, false)) {
-            L("error parsing");
-            abort();
-        }
-        if (v.empty()) {
-            L("idx %d is empty!", key);
-            continue;
-        }
-
         // emit all neighbors
         Json::Value neighbors = v["neighbors"];
         L("%d has %d neighbors, emitting", key, neighbors.size());
+        // TODO emit images of self too?
         for (unsigned int i = 0; i < neighbors.size(); i++) {
             Json::Value next;
-            next[0] = groupstr;
+            next[0] = requestID;
             next[1] = neighbors[i];
-            L("    emitting %s", neighbors[i].asCString());
+            L("    buffering for emit: %s", neighbors[i].asCString());
             storm::Tuple tup(next);
-            storm::EmitSpout(tup, std::string(), -1, std::string());
+            toEmit.push_back(tup);
         }
+        req_num_users += neighbors.size();
 
         // iterate
         key = atoi(neighbors[0].asCString()); // TODO this is not BFS
         keystr = std::to_string(key);
     }
-    L("sleeping 5");
-    sleep(5); // XXX hack
+
+    // avoidance of race condition: emitting a new tuple may trigger ReqStatBolt
+    // to query memc for requestID key before we are able to add it. So we
+    // buffer all tuples first, then write request ID to memc, then emit all
+    // tuples.
+    initReqStats(requestID, req_num_users);
+    L("    emitting all tuples");
+    for (auto &tup : toEmit)
+        storm::EmitSpout(tup, std::string(), -1, std::string());
+
+    int sleeptime = 2;
+    L("sleeping %d", sleeptime);
+    sleep(sleeptime); // XXX hack
+}
+
+/*
+ * MontageBolt
+ *
+ * Put images together
+ */
+
+MontageBolt::MontageBolt(void)
+    : memc(NULL)
+{
+    char fname[64];
+    snprintf(fname, 64, "montagebolt-%d", getpid());
+
+    if (init_log(fname))
+        abort();
+
+    errno = 0;
+    memc = memcached(memc_config, strlen(memc_config));
+    if (!memc) {
+        L("Error connecting to memcached: %s", strerror(errno));
+        L("    config: %s", memc_config);
+        abort();
+    }
+
+    L("MontageBolt initialized");
+}
+
+void MontageBolt::doProcess(std::string &reqID)
+{
+    L("    (todo) request %s completed; making montage", reqID.c_str());
+    std::list<   std::string > &imageIDList(pending[reqID]);
+    int num_images = imageIDList.size();
+    std::vector< cv::Mat > images(num_images);
+    int dim = 512;
+
+    L("    pulling in images");
+    size_t idx = 0;
+    for (std::string &id : imageIDList) {
+        if (memc_get_cvmat(memc, id, images[idx]))
+            abort();
+        resize_image(images[idx], dim);
+        idx++;
+    }
+
+    assert(images[0].rows == dim);
+    assert(images[0].cols == dim);
+
+    // create one unified image with each pasted into it
+    int b = (int)(std::ceil(num_images * (9./16.))); // images per row
+    int h = (int)std::ceil((float)num_images / b);   // images per col
+    int cols = (int)(b * dim); // pixels per row
+    int rows = (int)(h * dim); // pixels per col
+    L("    montage template (%d, %d, type=0x%x", rows, cols, CV_8UC1);
+    cv::Mat montage(rows, cols, CV_8UC1);
+    int row = 0, col = 0;
+    for (int i = 0; i < num_images; i++) {
+        cv::Rect roi(col * dim, row * dim, dim, dim);
+        L("    roi(%d, %d, %d, %d)", col*dim, row*dim, dim, dim);
+        cv::Mat view = montage(roi);
+        images[i].copyTo(view);
+        col++;
+        if (i == (b - 1)) {
+            row++;
+            col = 0;
+        }
+    }
+
+    // stuff montage into object store and link with reqID
+    // XXX ideally should write image json, too
+    std::string uuid;
+    make_uuid(uuid);
+    if (memc_set(memc, uuid, montage.data,
+                montage.elemSize() * montage.total()))
+        abort();
+    Json::Value v;
+    if (memc_get_json(memc, reqID, v))
+        abort();
+    v["montage"] = uuid;
+    if (memc_set_json(memc, reqID, v))
+        abort();
+}
+
+void MontageBolt::checkAllPending(void)
+{
+    std::list<std::string> torm;
+
+    for (auto &p : pending) {
+        std::string reqID(p.first);
+        std::list< std::string > &images(p.second);
+        
+        Json::Value v;
+        if (memc_get_json(memc, reqID, v))
+            abort();
+
+        int totImgs = v[ ReqStatBolt::totImg_str() ] .asInt();
+        int completed = v[ ReqStatBolt::complete_str() ].asInt();
+        if (completed && ((int)images.size() == totImgs)) {
+            doProcess(reqID);
+            torm.push_back(reqID);
+        }
+    }
+
+    L("    erasing completed items from pending list");
+    for (std::string &id : torm)
+        pending.erase(pending.find(id));
+}
+
+void MontageBolt::Process(storm::Tuple &tuple)
+{
+    Json::Value v(tuple.GetValues());
+    std::string reqID   = v[0].asString();
+    std::string imageID = v[1].asString();
+
+    L("Process() got ( %s , %s )", reqID.c_str(), imageID.c_str());
+    pending[reqID].push_back(imageID);
+
+    checkAllPending();
+}
+
+void MontageBolt::Initialize(Json::Value conf, Json::Value context)
+{
+    // nothing
 }
 
 /*
@@ -476,25 +614,194 @@ void GraphSpout::NextTuple(void)
 
 void badusage(int argc, char *argv[])
 {
+    std::cerr << "Error: invalid command arguments:";
+    for (int i = 0; i < argc; i++)
+        std::cerr << " " << argv[i];
+    std::cerr << std::endl;
     std::cerr << "Usage: "
         << std::endl << "    " << *argv << " " << CMD_ARG_SPOUT
-        << std::endl << "    " << *argv << " " << CMD_ARG_BOLT << "=[user|feature]"
+        << std::endl << "    " << *argv << " " << CMD_ARG_BOLT << "=[user|feature|montage]"
         << std::endl;
     exit(-1);
 }
 
-#include <sys/ptrace.h>
+int memc_get(memcached_st *memc, const std::string &key,
+        void **val, size_t &len)
+{
+    memcached_return_t mret;
+    uint32_t flags;
+    if (!memc || !val) return -1;
+    *val = memcached_get(memc, key.c_str(), key.length(),
+            &len, &flags, &mret);
+    if (!*val || (mret != MEMCACHED_SUCCESS))
+        return -1;
+    return 0;
+}
+
+int memc_get_json(memcached_st *memc,
+        const std::string &key, Json::Value &val)
+{
+    size_t len;
+    void *_val;
+    int ret;
+
+    assert(memc);
+
+    if (memc_get(memc, key, &_val, len))
+        return -1;
+
+    std::string valstr((char*)_val);
+    Json::Reader r;
+    ret = !r.parse(valstr, val, false);
+    free(_val);
+
+    return ret;
+}
+
+int memc_set(memcached_st *memc, const std::string &key,
+        void *val, size_t len)
+{
+    memcached_return_t mret;
+    if (!memc || !val) return -1;
+    mret = memcached_set(memc, key.c_str(), key.length(),
+            (char*)val, len, 0, 0);
+    return !(mret == MEMCACHED_SUCCESS);
+}
+
+int memc_set_json(memcached_st *memc,
+        const std::string &key, Json::Value &val)
+{
+    assert(memc);
+
+    Json::FastWriter w;
+    std::string valstr = w.write(val);
+    if (memc_set(memc, key, (void*)valstr.c_str(), valstr.length()))
+        return -1;
+
+    return 0;
+}
+
+int memc_exists(memcached_st *memc,
+        const std::string &key)
+{
+    memcached_return_t mret;
+
+    assert(memc);
+
+    mret = memcached_exist(memc, info_key, strlen(info_key));
+    if (MEMCACHED_SUCCESS != mret) {
+        if (MEMCACHED_NOTFOUND == mret)
+            L("'%s' not found in memcached", info_key);
+        else
+            L("error querying memcached for %s : %s", info_key,
+                    memcached_strerror(memc, mret));
+        return false;
+    }
+
+    return true;
+}
+
+int memc_get_cvmat(memcached_st *memc, const std::string &imageID,
+        cv::Mat &mat)
+{
+    memcached_return_t mret;
+    Json::Value imageInfo;
+    uint32_t flags;
+    size_t len;
+    int cols, rows, type, iflags;
+
+    if (!memc)
+        return -1;
+
+    // keyval is JSON metadata describing image
+    if (memc_get_json(memc, imageID, imageInfo))
+        return -1;
+
+    std::string data_key = imageInfo["data_key"].asString();
+    cols = imageInfo["cols"].asInt();
+    rows = imageInfo["rows"].asInt();
+    type = imageInfo["type"].asInt();
+    iflags = imageInfo["flags"].asInt();
+
+    // now we fetch raw image data
+    void *keyval = memcached_get(memc, data_key.c_str(), data_key.length(),
+            &len, &flags, &mret);
+    if (!keyval || (mret != MEMCACHED_SUCCESS))
+        return -1;
+
+    // copy over data to object XXX bad for large objects...
+    mat = cv::Mat(rows, cols, type);
+    if (!mat.data)
+        return -1;
+    memcpy(mat.data, keyval, len);
+    free(keyval);
+    mat.flags = iflags;
+
+    return 0;
+}
+
+int memc_set_features(memcached_st *memc, const std::string &imageID,
+        cv::detail::ImageFeatures &features)
+{
+    Json::Value imageInfo;
+    memcached_return_t mret;
+
+    if (!memc)
+        return -1;
+
+    if (memc_get_json(memc, imageID, imageInfo))
+        return -1;
+
+    // store features json
+    std::string fkey = imageInfo["features_key"].asString();
+    JSONImageFeature ji(features);
+    if (memc_set_json(memc, fkey, ji))
+        abort();
+
+    // store feature desc matrix (raw data)
+    std::string desckey;
+    ji.GetDescKey(desckey);
+    mret = memcached_set(memc, desckey.c_str(), desckey.length(),
+            (char*)ji.GetDescData(), ji.GetDescLen(), 0, 0);
+    if (MEMCACHED_SUCCESS != mret)
+        return -1;
+
+    return 0;
+}
+
+int memc_get_features(memcached_st *memc, const std::string &imageID,
+        cv::detail::ImageFeatures &features)
+{
+    return -1;
+}
+
+void resize_image(cv::Mat &img, unsigned int dim)
+{
+    cv::Mat copy(img), scaled(img);
+    float scaleby =  (float)dim / std::min(img.rows, img.cols);
+    cv::cvtColor(img, copy, CV_BGR2GRAY);
+    cv::resize(copy, scaled, cv::Size(), scaleby, scaleby);
+    cv::Rect roi(0, 0, dim, dim);
+    img = scaled(roi);
+}
 
 // We are instantiated by ShellSpout or ShellBolt constructors from Java.
 int main(int argc, char *argv[])
 {
     std::string arg, sub;
 
-    // test if we are inside debugger; avoid all the other setup stuff
-    if (ptrace(PTRACE_TRACEME, 0, NULL, NULL)) {
-        std::string imageID; // initialize in debugger
-        FeatureBolt bolt;
-        bolt.doProcess(imageID);
+    // modify in debugger
+    volatile bool debug = false;
+    if (debug) {
+        volatile int cmd = 0;
+        if (cmd == 0) {
+            GraphSpout s;
+            s.NextTuple();
+        } else if (cmd == 1) {
+            MontageBolt bolt;
+            std::string input("bull");
+            bolt.doProcess(input);
+        }
         return 0;
     }
 
@@ -516,6 +823,12 @@ int main(int argc, char *argv[])
             bolt.Run();
         } else if (sub == CMD_ARG_USER) {
             UserBolt bolt;
+            bolt.Run();
+        } else if (sub == CMD_ARG_MONTAGE) {
+            MontageBolt bolt;
+            bolt.Run();
+        } else if (sub == CMD_ARG_REQSTAT) {
+            ReqStatBolt bolt;
             bolt.Run();
         } else {
             badusage(argc, argv);
