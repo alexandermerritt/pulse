@@ -67,8 +67,11 @@ int load_images(std::string &path)
     file.open(path);
     if (!file.is_open())
         return -1;
-    while (std::getline(file, line))
-            imagelist.push_back(line);
+    while (std::getline(file, line)) {
+        if (line[0] == '#')
+            continue;
+        imagelist.push_back(line);
+    }
     file.close();
 
     for (auto &l : imagelist) {
