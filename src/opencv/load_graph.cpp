@@ -79,9 +79,15 @@ int load_images(std::string &path)
         Json::Value v;
 
         cv::Mat img;
-        img = cv::imread(l, 0);
+        img = cv::imread(l, CV_LOAD_IMAGE_COLOR);
         if (!img.data)
             return -1;
+
+        (void)img.channels();
+        (void)img.depth();
+        (void)img.type();
+        (void)img.total();
+        (void)img.elemSize();
 
         std::string imgdata_key = std::string(l + "__d");
         std::string feature_key = std::string(l + "__f");
@@ -95,6 +101,8 @@ int load_images(std::string &path)
 
         Json::FastWriter w;
         std::string _v = w.write(v);
+
+        std::cout << _v << std::endl;
 
         mret = memcached_set(memc, l.c_str(), l.length(),
                 _v.c_str(), _v.length(), 0, 0);
