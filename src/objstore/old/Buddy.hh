@@ -18,10 +18,13 @@
 namespace objstore
 {
 
+class CacheAllocator;
+
 class Buddy
 {
-    //friend Slab;
+    friend CacheAllocator;
 
+    constexpr static size_t MinPower = 4UL; // TODO integrate
     constexpr static size_t MaxPower = 30UL;
     constexpr static size_t MaxBlockSize = (1UL << MaxPower);
 
@@ -33,7 +36,7 @@ class Buddy
     typedef size_t offset_t;
 
     void *region;
-    size_t region_len;
+    size_t region_len; // should be power of two
     pthread_mutex_t lock;
 
     // array of lists; each [] contains blocks of that pow of 2
@@ -58,14 +61,15 @@ class Buddy
 
     public:
 
+    Buddy();
+
     int init(size_t pow = 20UL);
     void *alloc(size_t len);
     void free(void *addr);
     void reset(void);
+    inline size_t maxPowAlloc(void) { return region_len; }
 
     void dumpStats(void);
-
-    Buddy();
 };
 
 };
