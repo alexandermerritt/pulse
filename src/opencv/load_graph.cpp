@@ -43,9 +43,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-const char config_string[] = "--SERVER=192.168.1.221:11211 --SERVER=192.168.1.222:11211";
-const char info_key[] = "graph_info";
-const int max_imgs_per_node = 8;
+#include "Config.hpp"
 
 // node and edge set
 std::map< unsigned int, std::list< unsigned int > > graph;
@@ -55,6 +53,27 @@ std::vector< std::string > imagelist;
 
 memcached_st *memc = NULL;
 
+int memc_exists(memcached_st *memc,
+        const std::string &key)
+{
+    memcached_return_t mret;
+
+    assert(memc);
+
+    mret = memcached_exist(memc, key.c_str(), key.length());
+    if (MEMCACHED_SUCCESS == mret)
+        return true;
+    if (MEMCACHED_NOTFOUND == mret)
+        return false;
+
+    fprintf(stderr, "error querying memcached for %s : %s\n",
+            config->graph.infoKey.c_str(),
+            memcached_strerror(memc, mret));
+    abort();
+    return false;
+}
+
+// full path to image per line
 int load_images(std::string &path)
 {
     memcached_return_t mret;
@@ -65,8 +84,10 @@ int load_images(std::string &path)
 
     std::ifstream file;
     file.open(path);
-    if (!file.is_open())
+    if (!file.is_open()) {
+        perror("open image file");
         return -1;
+    }
     while (std::getline(file, line)) {
         if (line[0] == '#')
             continue;
@@ -78,16 +99,17 @@ int load_images(std::string &path)
         std::cout << l << std::endl;
         Json::Value v;
 
-        cv::Mat img;
-        img = cv::imread(l, CV_LOAD_IMAGE_COLOR);
-        if (!img.data)
-            return -1;
+        if (memc_exists(memc, l)) {
+            printf("exists, not loading %s\n", l.c_str());
+            continue;
+        }
 
-        (void)img.channels();
-        (void)img.depth();
-        (void)img.type();
-        (void)img.total();
-        (void)img.elemSize();
+        cv::Mat img;
+        img = cv::imread(l, 1);
+        if (!img.data) {
+            fprintf(stderr, "failed to read %s\n", l.c_str());
+            return -1;
+        }
 
         std::string imgdata_key = std::string(l + "__d");
         std::string feature_key = std::string(l + "__f");
@@ -106,13 +128,17 @@ int load_images(std::string &path)
 
         mret = memcached_set(memc, l.c_str(), l.length(),
                 _v.c_str(), _v.length(), 0, 0);
-        if (mret != MEMCACHED_SUCCESS)
+        if (mret != MEMCACHED_SUCCESS) {
+            fprintf(stderr, "memc error: %s", memcached_strerror(memc, mret));
             return -1;
+        }
 
         mret = memcached_set(memc, imgdata_key.c_str(), imgdata_key.length(),
                 (const char*)img.data, img.elemSize() * img.total(), 0, 0);
-        if (mret != MEMCACHED_SUCCESS)
+        if (mret != MEMCACHED_SUCCESS) {
+            fprintf(stderr, "memc error: %s", memcached_strerror(memc, mret));
             return -1;
+        }
     }
 
     return 0;
@@ -136,6 +162,9 @@ int __load(std::string &path)
     return 0;
 }
 
+// one edge per line, 'vertex vertex'
+// vertices should be numbered from 0 through some max; all values should be
+// accounted for (ie all contiguous)
 int load_graph(std::string &path)
 {
     memcached_return_t mret;
@@ -147,16 +176,18 @@ int load_graph(std::string &path)
 
     printf(">> Writing to memcached...\n");
 
-    { // store info_key describing graph
+    { // store graph metadata
         Json::Value v;
-        v["max"] = std::to_string(max_key);
+        v[config->graph.infoKey_fieldMax] = std::to_string(max_key);
         Json::FastWriter w;
         std::string val = w.write(v);
-        mret = memcached_set(memc, info_key, strlen(info_key),
+        mret = memcached_set(memc, config->graph.infoKey.c_str(),
+                config->graph.infoKey.length(),
                 val.c_str(), val.length(), 0, 0);
         if (mret != MEMCACHED_SUCCESS)
             return -1;
-        printf(">> %s: %s\n", info_key, val.c_str());
+        printf(">> %s: %s\n", config->graph.infoKey.c_str(),
+                val.c_str());
     }
 
     for (auto &key : graph) { // k is a pair<>
@@ -170,7 +201,7 @@ int load_graph(std::string &path)
         v["neighbors"] = arr;
 
         arr.clear();
-        int num = rand_r(&seed) % (max_imgs_per_node + 1);
+        int num = rand_r(&seed) % (config->load.maxImagesPerNode + 1);
         for (int n = 0; n < num; n++)
             arr.append(imagelist[rand_r(&seed) % imagelist.size()]);
         v["images"] = arr;
@@ -188,7 +219,8 @@ int load_graph(std::string &path)
 
 int init_memc(void)
 {
-    memc = memcached(config_string, strlen(config_string));
+    memc = memcached(config->memc.servers.c_str(),
+            config->memc.servers.length());
     if (!memc)
         return -1;
     return 0;
@@ -197,12 +229,16 @@ int init_memc(void)
 int
 main(int argc, char *argv[])
 {
-    if (argc != 3) {
-        fprintf(stderr, "Usage: %s graphlist imagelist\n", *argv);
+    if (argc != 4) {
+        fprintf(stderr, "Usage: %s graphlist imagelist config\n", *argv);
         return 1;
     }
     std::string g(argv[1]);
     std::string i(argv[2]);
+    std::string c(argv[3]);
+
+    if (init_config(c))
+        return 1;
 
     if (init_memc())
         return 1;

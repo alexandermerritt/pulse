@@ -31,6 +31,7 @@
 #include "StormWrapper.h"       // unofficial 'storm' namespace
 #include "StormStitcher.h"
 #include "stitcher.hpp"
+#include "Config.hpp"
 
 FILE *logfp;
 
@@ -147,10 +148,11 @@ void UserBolt::Initialize(Json::Value conf, Json::Value context)
         abort();
 
     errno = 0;
-    memc = memcached(memc_config, strlen(memc_config));
+    memc = memcached(config->memc.servers.c_str(),
+            config->memc.servers.length());
     if (!memc) {
         L("Error connecting to memcached: %s", strerror(errno));
-        L("    config: %s", memc_config);
+        L("    config: %s", config->memc.servers.c_str());
         abort();
     }
 
@@ -267,10 +269,11 @@ void ReqStatBolt::Initialize(Json::Value conf, Json::Value context)
         abort();
 
     errno = 0;
-    memc = memcached(memc_config, strlen(memc_config));
+    memc = memcached(config->memc.servers.c_str(),
+            config->memc.servers.length());
     if (!memc) {
         L("Error connecting to memcached: %s", strerror(errno));
-        L("    config: %s", memc_config);
+        L("    config: %s", config->memc.servers.c_str());
         abort();
     }
 
@@ -295,10 +298,11 @@ FeatureBolt::FeatureBolt(void)
         abort();
 
     errno = 0;
-    memc = memcached(memc_config, strlen(memc_config));
+    memc = memcached(config->memc.servers.c_str(),
+            config->memc.servers.length());
     if (!memc) {
         L("Error connecting to memcached: %s", strerror(errno));
-        L("    config: %s", memc_config);
+        L("    config: %s", config->memc.servers.c_str());
         abort();
     }
 
@@ -368,8 +372,7 @@ GraphSpout::GraphSpout(void)
     // XXX To handle multiple spouts, we provide each with a namespace of
     // group_id:    <pid>0000000000..00
     // Each iteration increments in that space
-    group_id(getpid() << 20),
-    max_depth(4)
+    group_id(getpid() << 20)
 {
     char fname[64];
     snprintf(fname, 64, "spout-%d", getpid());
@@ -379,26 +382,26 @@ GraphSpout::GraphSpout(void)
 
     if (initmemc())
         abort();
-
-    assert(max_depth > 0);
 }
 
 int GraphSpout::initmemc(void)
 {
     errno = 0;
-    memc = memcached(memc_config, strlen(memc_config));
+    memc = memcached(config->memc.servers.c_str(),
+            config->memc.servers.length());
     if (!memc) {
         L("Error connecting to memcached: %s", strerror(errno));
-        L("    config: %s", memc_config);
+        L("    config: %s", config->memc.servers.c_str());
         return -1;
     }
     // FIXME sometimes memc was allocated despite errors connecting
 
-    if (!memc_exists(memc, info_key))
+    if (!memc_exists(memc, config->graph.infoKey))
         abort();
-    if (memc_get_json(memc, info_key, graph_info))
+    if (memc_get_json(memc, config->graph.infoKey, graph_info))
         abort();
-    L("max from '%s': %s", info_key, graph_info["max"].asCString());
+    L("max from '%s': %s", config->graph.infoKey.c_str(),
+            graph_info["max"].asCString());
 
     seed = time(NULL) + getpid();
     srand(seed);
@@ -444,7 +447,7 @@ void GraphSpout::NextTuple(void)
     int req_num_users = 0;
     std::list< storm::Tuple > toEmit;
 
-    int depth = 1 + (rand_r(&seed) % max_depth);
+    int depth = 1 + (rand_r(&seed) % config->storm.maxDepth);
     L("depth %d", depth);
     for (int i = 0; i < depth; i++) {
         L("picked %d", key);
@@ -480,9 +483,7 @@ void GraphSpout::NextTuple(void)
     for (auto &tup : toEmit)
         storm::EmitSpout(tup, std::string(), -1, std::string());
 
-    int sleeptime = 2;
-    L("sleeping %d", sleeptime);
-    sleep(sleeptime); // XXX hack
+    usleep(config->storm.usleepTime); // XXX hack
 }
 
 /*
@@ -501,10 +502,11 @@ MontageBolt::MontageBolt(void)
         abort();
 
     errno = 0;
-    memc = memcached(memc_config, strlen(memc_config));
+    memc = memcached(config->memc.servers.c_str(),
+            config->memc.servers.length());
     if (!memc) {
         L("Error connecting to memcached: %s", strerror(errno));
-        L("    config: %s", memc_config);
+        L("    config: %s", config->memc.servers.c_str());
         abort();
     }
 
@@ -586,7 +588,6 @@ void MontageBolt::checkAllPending(void)
         }
     }
 
-    L("    erasing completed items from pending list");
     for (std::string &id : torm)
         pending.erase(pending.find(id));
 }
@@ -611,19 +612,6 @@ void MontageBolt::Initialize(Json::Value conf, Json::Value context)
 /*
  * Executable functions
  */
-
-void badusage(int argc, char *argv[])
-{
-    std::cerr << "Error: invalid command arguments:";
-    for (int i = 0; i < argc; i++)
-        std::cerr << " " << argv[i];
-    std::cerr << std::endl;
-    std::cerr << "Usage: "
-        << std::endl << "    " << *argv << " " << CMD_ARG_SPOUT
-        << std::endl << "    " << *argv << " " << CMD_ARG_BOLT << "=[user|feature|montage]"
-        << std::endl;
-    exit(-1);
-}
 
 int memc_get(memcached_st *memc, const std::string &key,
         void **val, size_t &len)
@@ -688,12 +676,14 @@ int memc_exists(memcached_st *memc,
 
     assert(memc);
 
-    mret = memcached_exist(memc, info_key, strlen(info_key));
+    mret = memcached_exist(memc, key.c_str(), key.length());
     if (MEMCACHED_SUCCESS != mret) {
         if (MEMCACHED_NOTFOUND == mret)
-            L("'%s' not found in memcached", info_key);
+            L("'%s' not found in memcached",
+                    config->graph.infoKey.c_str());
         else
-            L("error querying memcached for %s : %s", info_key,
+            L("error querying memcached for %s : %s",
+                    config->graph.infoKey.c_str(),
                     memcached_strerror(memc, mret));
         return false;
     }
@@ -785,11 +775,24 @@ void resize_image(cv::Mat &img, unsigned int dim)
     img = scaled(roi);
 }
 
+void badusage(int argc, char *argv[])
+{
+    std::cerr << "Error: invalid command arguments:";
+    for (int i = 0; i < argc; i++)
+        std::cerr << " " << argv[i];
+    std::cerr << std::endl;
+    std::cerr << "Usage: "
+        << std::endl << "    " << *argv << " --conf=/path/to/conf "
+                                << CMD_ARG_SPOUT
+        << std::endl << "    " << *argv << " --conf=/path/to/conf "
+                                << CMD_ARG_BOLT << "=[user|feature|montage]"
+        << std::endl;
+    exit(-1);
+}
+
 // We are instantiated by ShellSpout or ShellBolt constructors from Java.
 int main(int argc, char *argv[])
 {
-    std::string arg, sub;
-
     // modify in debugger
     volatile bool debug = false;
     if (debug) {
@@ -805,36 +808,54 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    if (argc != 2)
+    if (argc != 3)
         badusage(argc, argv);
-    arg = std::string(argv[1]);
 
-    auto pos = arg.find_first_of('=');
-    if ((pos == std::string::npos) && arg == CMD_ARG_SPOUT) {
-        GraphSpout spout;
-        spout.Run();
-    } else if (pos != std::string::npos) {
-        sub = arg.substr(0, pos);
-        if (sub != CMD_ARG_BOLT)
+    {
+        std::string confarg = std::string(argv[1]);
+        auto pos = confarg.find_first_of('=');
+        if (pos == std::string::npos)
             badusage(argc, argv);
-        sub = arg.substr(pos + 1);
-        if (sub == CMD_ARG_FEATURE) {
-            FeatureBolt bolt;
-            bolt.Run();
-        } else if (sub == CMD_ARG_USER) {
-            UserBolt bolt;
-            bolt.Run();
-        } else if (sub == CMD_ARG_MONTAGE) {
-            MontageBolt bolt;
-            bolt.Run();
-        } else if (sub == CMD_ARG_REQSTAT) {
-            ReqStatBolt bolt;
-            bolt.Run();
+        std::string sub = confarg.substr(0, pos);
+        if (sub != CMD_ARG_CONF)
+            badusage(argc, argv);
+        sub = confarg.substr(pos + 1);
+        if (init_config(sub)) {
+            fprintf(stderr, "Error: cannot find config file: %s\n",
+                    confarg.c_str());
+            exit(-1);
+        }
+    }
+
+    {
+        std::string arg = std::string(argv[2]);
+        auto pos = arg.find_first_of('=');
+        if ((pos == std::string::npos) && arg == CMD_ARG_SPOUT) {
+            GraphSpout spout;
+            spout.Run();
+        } else if (pos != std::string::npos) {
+            std::string sub = arg.substr(0, pos);
+            if (sub != CMD_ARG_BOLT)
+                badusage(argc, argv);
+            sub = arg.substr(pos + 1);
+            if (sub == CMD_ARG_FEATURE) {
+                FeatureBolt bolt;
+                bolt.Run();
+            } else if (sub == CMD_ARG_USER) {
+                UserBolt bolt;
+                bolt.Run();
+            } else if (sub == CMD_ARG_MONTAGE) {
+                MontageBolt bolt;
+                bolt.Run();
+            } else if (sub == CMD_ARG_REQSTAT) {
+                ReqStatBolt bolt;
+                bolt.Run();
+            } else {
+                badusage(argc, argv);
+            }
         } else {
             badusage(argc, argv);
         }
-    } else {
-        badusage(argc, argv);
     }
 
     return 0;

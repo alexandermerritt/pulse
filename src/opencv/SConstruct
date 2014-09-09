@@ -38,6 +38,7 @@ if cc == 'clang' or cxx == 'clang++':
 
 cpath = ['/usr/local/include', '../include']
 cpath.append('/usr/include/jsoncpp')
+#cpath.append('/usr/include/ImageMagick')
 
 libpath = []
 
@@ -61,6 +62,7 @@ libs.extend(['-lopencv_calib3d',
     '-lopencv_video',
     '-lopencv_videostab'])
 libs.extend(['jsoncpp', 'memcached', 'uuid'])
+#libs.append('Magick++')
 
 env = Environment(CC = cc, CXX = cxx)
 env.Append(CCFLAGS = ccflags)
@@ -68,9 +70,12 @@ env.Append(CPPPATH = cpath)
 env.Append(LIBPATH = libpath)
 env.Append(LIBS = libs)
 
-sources = ['StormStitcher.cpp', 'StormWrapper.cpp']
+sources = ['StormStitcher.cpp', 'StormWrapper.cpp', 'Config.cpp']
 env.Program('stormstitcher', sources)
-env.Program('load_graph', ['load_graph.cpp'])
+
+env.Program('load_graph', ['load_graph.cpp', 'Config.cpp'])
+
+#env.Program('testimage', ['test-image.cpp'])
 
 # OLD STUFF
 #sources = ['io.cpp', 'stitcher.cpp', 'matchers.cpp', 'motion_estimators.cpp']

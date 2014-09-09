@@ -18,7 +18,7 @@ cuda_root = '/usr/local/cuda'
 
 flags = [
 # tell ycm the type of code we have
-'-std=c++11',
+'-std=c++1y',
 '-x', 'c++',
 # compilation flags
 '-Wall',
@@ -33,6 +33,7 @@ flags = [
 '-isystem', '/usr/lib/gcc/x86_64-redhat-linux/4.4.7/include/',
 '-isystem', '/usr/include/',
 '-isystem', '/usr/include/jsoncpp/',
+'-isystem', '/usr/include/ImageMagick/',
 '-isystem', cuda_root + '/include/',
 '-I', os.getcwd() + '/../include/',
 '-I', os.getcwd() + '/',

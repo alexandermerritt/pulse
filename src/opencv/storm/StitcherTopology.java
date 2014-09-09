@@ -27,6 +27,11 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.lang.IllegalArgumentException;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 
 // Helpful Notes.
 //
@@ -42,7 +47,7 @@ public class StitcherTopology {
         {
             public GraphSpout()
             {
-                super("stormstitcher", "--spout");
+                super("/bin/sh", "run", "--spout");
             }
 
             @Override
@@ -64,7 +69,7 @@ public class StitcherTopology {
         {
             public UserBolt()
             {
-                super("stormstitcher", "--bolt=user");
+                super("/bin/sh", "run", "--bolt=user");
             }
 
             @Override
@@ -88,7 +93,7 @@ public class StitcherTopology {
         {
             public FeatureBolt()
             {
-                super("stormstitcher", "--bolt=feature");
+                super("/bin/sh", "run", "--bolt=feature");
             }
 
             @Override
@@ -109,7 +114,7 @@ public class StitcherTopology {
         {
             public ReqStatBolt()
             {
-                super("stormstitcher", "--bolt=reqstat");
+                super("/bin/sh", "run", "--bolt=reqstat");
             }
 
             @Override
@@ -130,7 +135,7 @@ public class StitcherTopology {
         {
             public MontageBolt()
             {
-                super("stormstitcher", "--bolt=montage");
+                super("/bin/sh", "run", "--bolt=montage");
             }
 
             @Override
@@ -146,32 +151,104 @@ public class StitcherTopology {
             }
         }
 
+    public static class StitcherConfig
+    {
+        public StitcherConfig() { }
+
+        public int spoutTasks;
+        public int featureTasks;
+        public int userTasks;
+        public int montageTasks;
+        public int reqstatTasks;
+
+        public int maxTaskParallel;
+        public int numWorkers;
+        public int localSleep;
+
+        private void parseLine(String line)
+            throws IllegalArgumentException
+        {
+            String[] cols = line.split(" ");
+
+            if (line.charAt(0) == '#')
+                return;
+            if (!cols[0].equals("storm"))
+                return;
+            if (cols.length != 3)
+                throw new IllegalArgumentException(
+                        "Invalid columns: " + line);
+
+            if (cols[1].equals("spout"))
+                spoutTasks = Integer.parseInt(cols[2]);
+            else if (cols[1].equals("feature"))
+                featureTasks = Integer.parseInt(cols[2]);
+            else if (cols[1].equals("user"))
+                userTasks = Integer.parseInt(cols[2]);
+            else if (cols[1].equals("montage"))
+                montageTasks = Integer.parseInt(cols[2]);
+            else if (cols[1].equals("reqstat"))
+                reqstatTasks = Integer.parseInt(cols[2]);
+            else if (cols[1].equals("maxparallel"))
+                maxTaskParallel = Integer.parseInt(cols[2]);
+            else if (cols[1].equals("localsleep"))
+                localSleep = Integer.parseInt(cols[2]);
+            else if (cols[1].equals("workers"))
+                numWorkers = Integer.parseInt(cols[2]);
+            else
+                throw new IllegalArgumentException(
+                        "Invalid identifier for storm: " + cols[1]);
+        }
+
+        public void readConfig(String path)
+            throws IllegalArgumentException, FileNotFoundException, IOException
+        {
+            BufferedReader r;
+            String line;
+
+            r = new BufferedReader(new FileReader(path));
+            line = r.readLine();
+            while (null != line) {
+                parseLine(line);
+                line = r.readLine();
+            }
+
+            r.close();
+        }
+
+    }
+
     public static void main(String[] args)
         throws Exception
     {
+        if (args.length < 1)
+            throw new IllegalArgumentException("Specify path to config file");
+
+        StitcherConfig sc = new StitcherConfig();
+        sc.readConfig(args[0]);
+
         TopologyBuilder builder = new TopologyBuilder();
-        builder.setSpout("spout", new GraphSpout(), 1);
-        builder.setBolt("user", new UserBolt(), 1)
+        builder.setSpout("spout", new GraphSpout(), sc.spoutTasks);
+        builder.setBolt("user", new UserBolt(), sc.userTasks)
             .shuffleGrouping("spout");
-        builder.setBolt("feature", new FeatureBolt(), 1)
+        builder.setBolt("feature", new FeatureBolt(), sc.featureTasks)
             .shuffleGrouping("user", "toFeature");
-        builder.setBolt("montage", new MontageBolt(), 1)
+        builder.setBolt("montage", new MontageBolt(), sc.montageTasks)
             .fieldsGrouping("feature", new Fields("requestID"));
 
-        builder.setBolt("reqstat", new ReqStatBolt(), 1)
+        builder.setBolt("reqstat", new ReqStatBolt(), sc.reqstatTasks)
             .fieldsGrouping("user", "toStats", new Fields("requestID"));
 
         Config conf = new Config();
         conf.setDebug(true);
 
-        if(args!=null && args.length > 0) {
-            conf.setNumWorkers(3);
+        if (args.length > 1) {
+            conf.setNumWorkers(sc.numWorkers);
             StormSubmitter.submitTopology(args[0], conf, builder.createTopology());
         } else {
-            conf.setMaxTaskParallelism(4);
+            conf.setMaxTaskParallelism(sc.maxTaskParallel);
             LocalCluster cluster = new LocalCluster();
             cluster.submitTopology("stitcher", conf, builder.createTopology());
-            Thread.sleep(30 * 1000); // ms
+            Thread.sleep(sc.localSleep * 1000); // ms
             cluster.shutdown();
         }
     }

@@ -12,10 +12,11 @@ javac -cp $JARS StitcherTopology.java
 
 [ ! -e ../stormstitcher ] && \
 	echo "Compile stormstitcher first" && exit 1
+[ ! -e ../pulse.conf ] && \
+	echo "../pulse.conf missing" && exit 1
 [ ! -d resources ] && mkdir resources
-touch resources/empty # resources/ shouldn't be empty
-#cp ../stormstitcher resources/
-sudo cp ../stormstitcher /usr/local/bin/
+cp ../stormstitcher resources/
+cp ../pulse.conf resources/
 
 echo Creating jar ...
 jar cf stitcher.jar Stitcher*.class resources/
