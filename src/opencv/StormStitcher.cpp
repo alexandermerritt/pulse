@@ -237,7 +237,7 @@ void ReqStatBolt::Process(storm::Tuple &tuple)
         s.totalImages = 0;
         s.updatesRem  = v[ ReqStatBolt::updatesRem_str() ].asInt();
         s.numUsers    = v[ ReqStatBolt::numUsers_str() ].asInt();
-        cache.emplace(reqID, s);
+        cache.emplace(make_pair(reqID, s));
     }
 
     stat = &cache.at(reqID);
