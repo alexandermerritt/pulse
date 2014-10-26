@@ -1,1 +1,4 @@
 From http://vision.stanford.edu/projects/objectbank/#software
+
+Does NOT do processing on the GPU.
+
