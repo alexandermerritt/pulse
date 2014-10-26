@@ -1,0 +1,14 @@
+Contour Detection and Image Segmentation Resources
+
+http://www.eecs.berkeley.edu/Research/Projects/CS/vision/grouping/resources.html
+
+The download files are huge (lots of included images) thus not including them
+in the repository. Get them from the link above.
+
+Does NOT run on the GPU. However, they point to another projcet which does:
+
+    http://parlab.eecs.berkeley.edu/research/damascene
+    https://github.com/bryancatanzaro/damascene
+
+Seems to be old... 2009
+
