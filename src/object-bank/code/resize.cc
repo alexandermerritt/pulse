@@ -3,6 +3,7 @@
 #include <string.h>
 #include "mymex.h"
 #include "matlabwrapper.h"
+#include <stdio.h>
 
 /*
  * Fast image subsampling.

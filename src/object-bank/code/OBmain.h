@@ -1,7 +1,7 @@
 #include "global.h"
 #include "detect.h" //_with_responsemap.h"
 #include "MaxGetSpatialPyramid_single.h"
-#include "matlabwrapper.cpp"
+#include "matlabwrapper.cc"
 #include "LSVMModel.h"
 #include <jpeglib.h>
 #include <stdlib.h>

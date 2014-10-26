@@ -10,8 +10,8 @@
 #define AssertStringEqual(x1, x2) do {assert(strcmp(x1, x2) == 0);} while(0);
 #define AssertNumEqual(x1, x2) do {assert(x1 == x2);} while(0);
 
-template int* Read1DArray<int>(int & nelem, MyStringBuffer * sb, char * & token, int & iTokenType, vector<int> * vecDims = NULL);
-template double* Read1DArray<double>(int & nelem, MyStringBuffer * sb, char * & token, int & iTokenType, vector<int> * vecDims = NULL);
+template int* Read1DArray<int>(int & nelem, MyStringBuffer * sb, char * & token, int & iTokenType, vector<int> * vecDims);
+template double* Read1DArray<double>(int & nelem, MyStringBuffer * sb, char * & token, int & iTokenType, vector<int> * vecDims);
 template int ReadNumber<int>(MyStringBuffer * sb, char * & token, int & iTokenType);
 template double ReadNumber<double>(MyStringBuffer * sb, char * & token, int & iTokenType);
 template void push_vector<int>(vector<int> & vecDst, int * arraySrc, int nelem);
@@ -165,7 +165,7 @@ T ReadNumber(MyStringBuffer * sb, char * & token, int & iTokenType)
 }
 
 template <class T>
-T* Read1DArray(int & nelem, MyStringBuffer * sb, char * & token, int & iTokenType, vector<int> * vecDims = NULL)
+T* Read1DArray(int & nelem, MyStringBuffer * sb, char * & token, int & iTokenType, vector<int> * vecDims)
 {
     bool flag = false;
     if (vecDims == NULL)

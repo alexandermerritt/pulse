@@ -2,6 +2,7 @@
 #include <time.h>
 #include"mymex.h"
 #include <setjmp.h>
+#include <getopt.h>
 
 using namespace std;
 
@@ -301,6 +302,7 @@ int extractOBFeature(mxArray * input, vector<CModel> &modelList, bool saveMap, s
         }
 
     } //End loop over detectors 
+    return 0;
 }
 
 

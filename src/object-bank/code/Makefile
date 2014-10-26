@@ -1,5 +1,22 @@
-OBmain:  OBmain.cpp parserUtil.cc MaxGetSpatialPyramid.cc MaxGetSpatialPyramid_single.cc LSVMModel.cc mymex.cc myfeatures.cc dt.cc fconv.cc resize.cc detect.cpp
-	g++ -O3 -o OBmain parserUtil.cc MaxGetSpatialPyramid.cc MaxGetSpatialPyramid_single.cc LSVMModel.cc mymex.cc myfeatures.cc dt.cc fconv.cc resize.cc detect.cpp OBmain.cpp -ljpeg -I.
+all:	OBmain
+.PHONY:	all
+
+CXX = clang++
+CXXFLAGS = -O3
+CPATH = -I.
+LDFLAGS = 
+LIBS = -ljpeg
+
+# exclude matlabwrapper.cc
+sources = detect.cc dt.cc fconv.cc LSVMModel.cc MaxGetSpatialPyramid.cc \
+		  MaxGetSpatialPyramid_single.cc myfeatures.cc mymex.cc OBmain.cc \
+		  parserUtil.cc resize.cc
+objects = $(patsubst %.cc,%.o,$(sources))
+
+OBmain:  $(objects)
+	$(CXX) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(LIBS)
 
 clean: 
-	rm OBmain;
+	rm -f OBmain *.o
+.PHONY:	clean
+
