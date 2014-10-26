@@ -1,0 +1,4 @@
+Makefile
+bin
+cudaHOG/Makefile
+cudaHOG/libcudaHOG.so*
