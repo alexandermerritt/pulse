@@ -1,0 +1,10 @@
+http://www.vision.rwth-aachen.de/projects/groundhog
+
+GroundHOG - GPU-based Object Detection with Geometric Constraints
+
+OpenCV apparently also implements this for the GPGPU.
+
+Original training data the authors used is from
+
+http://pascal.inrialpes.fr/data/human/
+
