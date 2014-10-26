@@ -2,7 +2,7 @@ all:	OBmain
 .PHONY:	all
 
 CXX = clang++
-CXXFLAGS = -O3
+CXXFLAGS = -g -std=c++11
 CPATH = -I.
 LDFLAGS = 
 LIBS = -ljpeg

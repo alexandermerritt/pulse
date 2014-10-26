@@ -3,6 +3,8 @@
 #include"mymex.h"
 #include <setjmp.h>
 #include <getopt.h>
+#include <list>
+#include <vector>
 
 using namespace std;
 
@@ -12,8 +14,8 @@ string OUTPUTDIR;
 const int g_MIN_EDGE_LEN = 400;
 
 //-------------------GET DIRECTORY--------------------------------------------------------------//
-//For a given directory, reads all filenames and outputs the values in a vector
-int getdir (string dir, vector<string> &files)
+//For a given directory, reads all filenames and outputs the values in a list
+int getdir (string dir, list<string> &files)
 {
     DIR *dp;
     struct dirent *dirp;
@@ -22,12 +24,22 @@ int getdir (string dir, vector<string> &files)
         return errno;
     }
 
-    while ((dirp = readdir(dp)) != NULL)
-        files.push_back(string(dirp->d_name));
+    while ((dirp = readdir(dp)) != NULL) {
+        string s(dirp->d_name);
+        string::size_type idx = s.find('/');
+        if (idx != string::npos)
+            s = s.substr(idx);
+        if (s != "." && s != "..")
+            files.push_back(string(dirp->d_name));
+    }
     closedir(dp);
 
+    // some idiot thought this was a portable way to remove . and .. from the
+    // directory listing
+#if 0
     /* Remove the first two entries in the vector*/
     files.erase(files.begin(),files.begin()+2);
+#endif
 
     return 0;
 }
@@ -36,12 +48,12 @@ int getdir (string dir, vector<string> &files)
 //Takes a filename, loads the jpeg using libjpeg, then returns an mxarray filled with the 8-bit values
 //current cast as doubles. This will likely take some debugging
 int loadModelFiles(string dir, vector<CModel>& models, string mvalue){
-    vector<string> modelfiles;
+    list<string> modelfiles;
 
     if(mvalue.size()==0) {
         getdir ("./models/", modelfiles);
 	int sz=modelfiles.size();
-	for (int i=0; i<sz; i++) modelfiles[i] = "./models/" + modelfiles[i];
+	for (string &name : modelfiles) name = "./models/" + name;
     } else {
 	ifstream fin(mvalue.c_str());
 	string curr;
@@ -51,9 +63,9 @@ int loadModelFiles(string dir, vector<CModel>& models, string mvalue){
     string filename;
     size_t found;
 
-    for (int i = 0; i < modelfiles.size(); i++)  {
-        filename = modelfiles[i];
-        cout << "Model " << i+1 << ": " <<filename<<endl;
+    for (string &name : modelfiles) {
+        filename = name;
+        //cout << "Model " << i+1 << ": " <<filename<<endl;
         found = filename.find("text");
 
         if(found>0 && found<filename.length() ){
@@ -364,7 +376,7 @@ int main(int argc, char *argv[]){
     }
 
     vector <CModel> modelList;  	//list of all models in the models/ dir are stored here
-    vector <string> fileNames; 		//list of all images to process are stored here
+    list <string> fileNames; 		//list of all images to process are stored here
 
     vector<mxArray *> responsemap;	//outputs of detect() are stored here
     mxArray * input_resized;
@@ -388,9 +400,9 @@ int main(int argc, char *argv[]){
     cout << " Done!" << endl;
 
     //LOAD EACH IMAGE-----------------------------------------------------------------------------
-    for (int i = 0; i < fileNames.size(); i++) 
+    for (std::string &name : fileNames)
     {
-        imgName = INPUTDIR + fileNames[i]; 
+        imgName = INPUTDIR + name;
         cout << "Loading image "<< imgName << " ... " <<  flush;
         //continue;
         try {
@@ -404,14 +416,14 @@ int main(int argc, char *argv[]){
 
             //Check if output file for this file already exists:
 
-            FILE * ifile = fopen((OUTPUTDIR + fileNames[i] + ".feat").c_str(), "r");;
+            FILE * ifile = fopen((OUTPUTDIR + name + ".feat").c_str(), "r");;
             if( ifile==0)
             {
                 //******************THE CORE FUNCTION CALL********************************//
-                extractOBFeature(input_resized, modelList, rflag, fileNames[i], outputFeature, responsemap,numComponents, numLevels);
+                extractOBFeature(input_resized, modelList, rflag, name, outputFeature, responsemap,numComponents, numLevels);
                                 //************************************************************************//
                 if (fflag)
-                    WriteFeatVec(outputFeature, OUTPUTDIR + fileNames[i] + ".feat");
+                    WriteFeatVec(outputFeature, OUTPUTDIR + name + ".feat");
             }
             else
             {
