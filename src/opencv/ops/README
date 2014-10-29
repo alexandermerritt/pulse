@@ -1,0 +1,14 @@
+what if i had categories of images... 
+    sets of faces
+    sets of buildings
+    sets of other stuff
+
+show that algorithms in search of something specific have different runtimes?
+    face detection
+    object classification
+    other stuff
+
+but what to do regarding image scaling? maybe not a problem
+
+make
+./feature [surf|hog] directory/of/jpegs
