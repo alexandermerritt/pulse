@@ -26,6 +26,8 @@
 using namespace std;
 using namespace cv;
 
+#define PREFIX "app "
+
 #define expand(p) \
     (p).hess, (p).nocts, (p).nlayers, (p).noctdesc, (p).nlayerdesc
 
@@ -72,30 +74,41 @@ void summary(vector<T> &v, double &mean, double &median)
 
 int hog(dir_t &dir, bool ongpu = true, bool doscale = false)
 {
-    vector<unsigned long> times(ITERS);
     paths_t imagepaths;
     struct timer t;
 
-    gpu::HOGDescriptor hog;
-    gpu::GpuMat gm;
     double hoghit = 0.;
 
     if (listdir(dir, imagepaths))
         return 1;
 
-    hog.setSVMDetector(gpu::HOGDescriptor::getDefaultPeopleDetector());
-
     cout << "imgid width height depth "
         "hit " // HOG params
         "ongpu scaled "
-        "locs hog_mean hog_med" << endl;
+        "locs hog_time" << endl;
 
     for (string &path : imagepaths) {
-        Mat scaled, gray, img = imread(path);
+        Mat img = imread(path);
         if (!img.data)
             return -1;
 
-        cv::cvtColor(img, gray, CV_BGR2BGRA);
+        printf(PREFIX "loop start\n");
+
+        printf(PREFIX "making hog\n");
+        gpu::HOGDescriptor hog;
+        gpu::GpuMat gm;
+        printf(PREFIX "setting hog detector\n");
+        hog.setSVMDetector(gpu::HOGDescriptor::getDefaultPeopleDetector());
+
+        printf(PREFIX "uploading img\n");
+        gm.upload(img);
+
+        printf(PREFIX "new gpumat 'gray'\n");
+        gpu::GpuMat gray;
+
+        printf(PREFIX "convert to grayscale gpu2gpu\n");
+        gpu::cvtColor(gm, gray, CV_BGR2BGRA);
+#if 0
         if (doscale) {
             double work_scale = min(1.0, sqrt(1e6 / img.size().area()));
             if (work_scale < 0.95) {
@@ -104,40 +117,43 @@ int hog(dir_t &dir, bool ongpu = true, bool doscale = false)
         } else {
             scaled = gray;
         }
-
-        gm.upload(scaled);
+#endif
 
         timer_init(CLOCK_REALTIME, &t);
         vector<Rect> loc;
 
+        unsigned long hogt = 0UL;
         try {
-            //hog.detectMultiScale(gm, loc, hoghit); // burn-in
-            for (size_t i = 0; i < times.size(); i++) {
-                timer_start(&t);
-                hog.detectMultiScale(gm, loc, hoghit);
-                times[i] = timer_end(&t, MICROSECONDS);
-            }
+            printf(PREFIX "hog begin\n");
+            timer_start(&t);
+            hog.detectMultiScale(gray, loc, hoghit);
+            hogt = timer_end(&t, MICROSECONDS);
+            printf(PREFIX "hog end\n");
         } catch (cv::Exception &e) {
             return -1;
         }
-        double mean, median;
-        summary(times, mean, median);
+        //double mean, median;
+        //summary(times, mean, median);
 
         stringstream ss;
         ss << basename(path) << " ";
-        ss << scaled.cols << " " << scaled.rows << " ";
-        ss << scaled.elemSize() << " ";
+        ss << gray.cols << " " << gray.rows << " ";
+        ss << gray.elemSize() << " ";
         ss << hoghit << " ";
         ss << (ongpu ? "1" : "0") << " ";
         ss << (doscale ? "1" : "0") << " ";
         ss << loc.size() << " ";
-        ss << mean << " " << median << " ";
+        ss << hogt << " ";
+        //ss << mean << " " << median << " ";
         cout << ss.str() << endl;
+
+        printf(PREFIX "loop end\n");
     }
 
     return 0;
 }
 
+// XXX needs updating to match hog
 int surf(dir_t &dir, bool ongpu = true, bool doscale = false)
 {
     vector<unsigned long> times(ITERS);
@@ -233,6 +249,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    cv::gpu::setDevice(1);
+
     switch (which) {
         case SURF: {
             if (surf(dir, true, false))
@@ -247,3 +265,4 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+

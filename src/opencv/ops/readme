@@ -1,0 +1,15 @@
+feature.cpp has a library destructor function that dumps /proc/*/maps
+which allows you to see where dynamic libraries have been loaded
+
+use ltrace to capture the dyanmic cuda calls made
+
+    (ltrace -T -C -e '*cuda*' ./feature [args..] 2>&1) > ltrace.cuda
+
+when you see an address in a cuda call:
+i) look at which range of mapped memory it belongs to
+ii) calculate the offset into that range
+iii) do reverse lookup to find symbol:
+    readelf -s --wide /path/to/lib | grep <offset>
+
+note: you can demangle c++ symbols yourself with c++filt
+

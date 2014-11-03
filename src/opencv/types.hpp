@@ -22,6 +22,7 @@
 
 typedef std::string path_t;
 typedef std::list< std::string > paths_t;
+typedef std::string dir_t;
 
 typedef std::vector< cv::detail::ImageFeatures > features_t;
 typedef std::vector< cv::detail::MatchesInfo > matches_t;
@@ -38,6 +39,14 @@ typedef cv::Mat image_t;
 typedef std::vector< image_t > images_t;
 
 typedef std::vector< cv::Rect > rois_t;
+
+struct surf_params
+{
+    double hess; // lower value means more features
+    int nocts; // larger to detect larger blobs; 1 -> filters 9x9, 15x15, ..
+    int nlayers; // number of scale levels (filters) used per octave; >=3 req
+    int noctdesc, nlayerdesc;
+};
 
 #endif /* TYPES_HPP_INCLUDED */
 

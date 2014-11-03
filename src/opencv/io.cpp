@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <strings.h>
 #include <getopt.h>
+#include <dirent.h>
 
 /* C++ includes */
 #include <iostream>
@@ -94,7 +95,7 @@ void read_stdin(paths_t &paths)
 }
 
 // you should santize paths before calling this
-int load_image(image_t &img, const path_t &path)
+int load_image(image_t &img, path_t &path)
 {
     if (file_bad(path)) {
         cerr << "!! '" << path << "' not readable" << endl;
@@ -109,7 +110,7 @@ int load_image(image_t &img, const path_t &path)
 }
 
 // you should santize paths before calling this
-int load_images(images_t &imgs, const paths_t &_paths)
+int load_images(images_t &imgs, paths_t &_paths)
 {
     list<string> paths(_paths);
     vector<bool> bad;
@@ -119,7 +120,7 @@ int load_images(images_t &imgs, const paths_t &_paths)
     if (files_bad(paths, bad)) {
         size_t item = 0;
         for (const string &path : paths) {
-            if (!bad[item++]) {
+            if (bad[item++]) {
                 cerr << "!! '" << path << "' not readable" << endl;
             }
         }
@@ -133,6 +134,32 @@ int load_images(images_t &imgs, const paths_t &_paths)
             return -EINVAL;
         imgs.push_back(mat);
     }
+
+    return 0;
+}
+
+int load_images(images_t &imgs, dir_t &dir, paths_t &outpaths)
+{
+    if (listdir(dir, outpaths))
+        return -1;
+    return load_images(imgs, outpaths);
+}
+
+int listdir(dir_t &dir, paths_t &entries)
+{
+    struct dirent *dirent;
+    DIR *dirp;
+
+    dirp = opendir(dir.c_str());
+    if (!dirp)
+        return -1;
+
+    while ((dirent = readdir(dirp))) {
+        if (dirent->d_type != DT_REG) // XXX ignores symlinks to files
+            continue;
+        entries.push_back(dir + "/" + string(dirent->d_name));
+    }
+    closedir(dirp);
 
     return 0;
 }

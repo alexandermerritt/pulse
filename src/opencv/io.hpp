@@ -13,11 +13,9 @@ void read_stdin(paths_t &paths);
 void progress_bar(int i, int max);
 void progress_clear(void);
 
-/*
- * dirlist  path to file containing list of directories to scan for files
- * mats     container into which to read files found on disk
- */
-int load_images(images_t &imgs, const paths_t &_paths);
+int load_images(images_t &imgs, dir_t &dir, paths_t &outpaths);
+int load_images(images_t &imgs, paths_t &_paths);
+int listdir(dir_t &dir, paths_t &entries);
 int load_image(image_t &img, const path_t &path);
 
 /* XXX this writes many images, so first arg is diretory path */
