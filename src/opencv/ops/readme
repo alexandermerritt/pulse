@@ -13,3 +13,7 @@ iii) do reverse lookup to find symbol:
 
 note: you can demangle c++ symbols yourself with c++filt
 
+
+Examples:
+    ./feature hog /home/alex/nfs/benchmarks/image-data/images/phototour/notredame/images/orig
+    ./feature surf /home/alex/nfs/benchmarks/image-data/images/flickr/oxbuildings/jpegs

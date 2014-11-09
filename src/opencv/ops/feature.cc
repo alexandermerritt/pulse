@@ -14,6 +14,8 @@
 #include <opencv2/stitching/stitcher.hpp>
 #include <opencv2/stitching/warpers.hpp>
 
+#include <cuda_runtime_api.h>
+
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -38,6 +40,8 @@ struct surf_params params = {
     .noctdesc = 4, .nlayerdesc = 4,
 };
 
+string gpuname;
+
 #define ITERS 1
 
 // for simplicity we assume a relative or absolute path to some image file
@@ -54,6 +58,19 @@ string basename(string &path)
         j = j-i;
     }
     return path.substr(i,j);
+}
+
+char * fixname(char *name)
+{
+    char *c = name;
+    while (*c != '\0') {
+        if (*c == ' ')
+            *c = '_';
+        if (*c >= 'A' && *c <= 'Z')
+            *c = (*c - 'A') + 'a';
+        c++;
+    }
+    return name;
 }
 
 template<typename T>
@@ -85,28 +102,28 @@ int hog(dir_t &dir, bool ongpu = true, bool doscale = false)
     cout << "imgid width height depth "
         "hit " // HOG params
         "ongpu scaled "
-        "locs hog_time" << endl;
+        "locs hog_time gpuname" << endl;
 
     for (string &path : imagepaths) {
         Mat img = imread(path);
         if (!img.data)
             return -1;
 
-        printf(PREFIX "loop start\n");
+        fprintf(stderr,PREFIX "loop start\n");
 
-        printf(PREFIX "making hog\n");
+        fprintf(stderr,PREFIX "making hog\n");
         gpu::HOGDescriptor hog;
         gpu::GpuMat gm;
-        printf(PREFIX "setting hog detector\n");
+        fprintf(stderr,PREFIX "setting hog detector\n");
         hog.setSVMDetector(gpu::HOGDescriptor::getDefaultPeopleDetector());
 
-        printf(PREFIX "uploading img\n");
+        fprintf(stderr,PREFIX "uploading img\n");
         gm.upload(img);
 
-        printf(PREFIX "new gpumat 'gray'\n");
+        fprintf(stderr,PREFIX "new gpumat 'gray'\n");
         gpu::GpuMat gray;
 
-        printf(PREFIX "convert to grayscale gpu2gpu\n");
+        fprintf(stderr,PREFIX "convert to grayscale gpu2gpu\n");
         gpu::cvtColor(gm, gray, CV_BGR2BGRA);
 #if 0
         if (doscale) {
@@ -124,11 +141,11 @@ int hog(dir_t &dir, bool ongpu = true, bool doscale = false)
 
         unsigned long hogt = 0UL;
         try {
-            printf(PREFIX "hog begin\n");
+            fprintf(stderr,PREFIX "hog begin\n");
             timer_start(&t);
             hog.detectMultiScale(gray, loc, hoghit);
             hogt = timer_end(&t, MICROSECONDS);
-            printf(PREFIX "hog end\n");
+            fprintf(stderr,PREFIX "hog end\n");
         } catch (cv::Exception &e) {
             return -1;
         }
@@ -144,10 +161,11 @@ int hog(dir_t &dir, bool ongpu = true, bool doscale = false)
         ss << (doscale ? "1" : "0") << " ";
         ss << loc.size() << " ";
         ss << hogt << " ";
+        ss << gpuname << " ";
         //ss << mean << " " << median << " ";
         cout << ss.str() << endl;
 
-        printf(PREFIX "loop end\n");
+        fprintf(stderr,PREFIX "loop end\n");
     }
 
     return 0;
@@ -228,10 +246,13 @@ enum which
     INVALID, SURF, HOG,
 };
 
+// ./feature alg n dir/
+// you can omit all the extra info printed by sending stderr to /dev/null
+// when preloading lib.so, set iter to 1
 int main(int argc, char *argv[])
 {
-    if (argc != 3) {
-        cerr << "Usage: ./feature alg dir/"
+    if (argc != 4) {
+        cerr << "Usage: ./feature alg iters dir/"
             << endl;
         return 1;
     }
@@ -239,7 +260,8 @@ int main(int argc, char *argv[])
     enum which which;
 
     string alg(argv[1]);
-    dir_t dir(argv[2]);
+    int iters = atoi(argv[2]);
+    dir_t dir(argv[3]);
 
     if (alg == "surf") {
         which = SURF;
@@ -249,7 +271,11 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    cv::gpu::setDevice(1);
+    int devID = 1;
+    cv::gpu::setDevice(devID);
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, devID);
+    gpuname = string(fixname(prop.name));
 
     switch (which) {
         case SURF: {
@@ -257,8 +283,9 @@ int main(int argc, char *argv[])
                 return 1;
         } break;
         case HOG: {
-            if (hog(dir, true, false))
-                return 1;
+            while (iters--)
+                if (hog(dir, true, false))
+                    return 1;
         } break;
         default: return 1;
     }
