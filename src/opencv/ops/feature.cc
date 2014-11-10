@@ -73,6 +73,16 @@ char * fixname(char *name)
     return name;
 }
 
+size_t featureSize(const cv::detail::ImageFeatures &f)
+{
+    size_t bytes = 0UL;
+    bytes += sizeof(cv::detail::ImageFeatures);
+    bytes += f.descriptors.total() * f.descriptors.elemSize();
+    // estimate - lower bound
+    bytes += f.keypoints.capacity() * sizeof(cv::KeyPoint);
+    return bytes;
+}
+
 template<typename T>
 void summary(vector<T> &v, double &mean, double &median)
 {
@@ -113,11 +123,11 @@ int hog(dir_t &dir, bool ongpu = true, bool doscale = false)
 
         fprintf(stderr,PREFIX "making hog\n");
         gpu::HOGDescriptor hog;
-        gpu::GpuMat gm;
         fprintf(stderr,PREFIX "setting hog detector\n");
         hog.setSVMDetector(gpu::HOGDescriptor::getDefaultPeopleDetector());
 
         fprintf(stderr,PREFIX "uploading img\n");
+        gpu::GpuMat gm;
         gm.upload(img);
 
         fprintf(stderr,PREFIX "new gpumat 'gray'\n");
@@ -161,8 +171,7 @@ int hog(dir_t &dir, bool ongpu = true, bool doscale = false)
         ss << (doscale ? "1" : "0") << " ";
         ss << loc.size() << " ";
         ss << hogt << " ";
-        ss << gpuname << " ";
-        //ss << mean << " " << median << " ";
+        ss << gpuname;
         cout << ss.str() << endl;
 
         fprintf(stderr,PREFIX "loop end\n");
@@ -171,16 +180,15 @@ int hog(dir_t &dir, bool ongpu = true, bool doscale = false)
     return 0;
 }
 
-// XXX needs updating to match hog
 int surf(dir_t &dir, bool ongpu = true, bool doscale = false)
 {
-    vector<unsigned long> times(ITERS);
     paths_t imagepaths;
     struct timer t;
 
     if (listdir(dir, imagepaths))
         return 1;
 
+    fprintf(stderr,PREFIX "making finder\n");
     unique_ptr<detail::FeaturesFinder> finder;
     if (ongpu)
         finder.reset(new detail::SurfFeaturesFinderGpu(expand(params)));
@@ -192,7 +200,7 @@ int surf(dir_t &dir, bool ongpu = true, bool doscale = false)
     cout << "imgid width height depth "
         "hess nocts nlay noctdesc nlayerdesc " // SURF params
         "ongpu scaled "
-        "surf_mean surf_med feat_n feat_bytes" << endl;
+        "feats feats_sz surf_time gpuname" << endl;
 
     for (string &path : imagepaths) {
         Mat scaled, img = imread(path);
@@ -200,27 +208,29 @@ int surf(dir_t &dir, bool ongpu = true, bool doscale = false)
             return -1;
         scaled = img;
 
+        fprintf(stderr,PREFIX "loop start\n");
+
+#if 0
         if (doscale) {
             double work_scale = min(1.0, sqrt(1e6 / img.size().area()));
             if (work_scale < 0.95) {
                 resize(img, scaled, Size(), work_scale, work_scale);
             }
         }
+#endif
 
+        unsigned long surft = 0UL;
         timer_init(CLOCK_REALTIME, &t);
         detail::ImageFeatures feature;
         try {
-            finder->operator()(scaled, feature); // burn-in
-            for (size_t i = 0; i < times.size(); i++) {
-                timer_start(&t);
-                finder->operator()(scaled, feature);
-                times[i] = timer_end(&t, MICROSECONDS);
-            }
+            timer_start(&t);
+            finder->operator()(scaled, feature);
+            surft = timer_end(&t, MICROSECONDS);
         } catch (cv::Exception &e) {
             return -1;
         }
-        double mean, median;
-        summary(times, mean, median);
+        //double mean, median;
+        //summary(times, mean, median);
 
         stringstream ss;
         ss << basename(path) << " ";
@@ -233,11 +243,13 @@ int surf(dir_t &dir, bool ongpu = true, bool doscale = false)
         ss << params.nlayerdesc << " ";
         ss << (ongpu ? "1" : "0") << " ";
         ss << (doscale ? "1" : "0") << " ";
-        ss << mean << " " << median << " ";
         ss << feature.keypoints.size() << " ";
-        ss << feature.keypoints.size() * sizeof(detail::ImageFeatures) << " ";
+        ss << featureSize(feature) << " ";
+        ss << surft << " ";
+        ss << gpuname;
         cout << ss.str() << endl;
     }
+    fprintf(stderr,PREFIX "loop end\n");
     return 0;
 }
 
@@ -251,8 +263,8 @@ enum which
 // when preloading lib.so, set iter to 1
 int main(int argc, char *argv[])
 {
-    if (argc != 4) {
-        cerr << "Usage: ./feature alg iters dir/"
+    if (argc != 5) {
+        cerr << "Usage: ./feature alg iters gpuid dir/"
             << endl;
         return 1;
     }
@@ -261,7 +273,7 @@ int main(int argc, char *argv[])
 
     string alg(argv[1]);
     int iters = atoi(argv[2]);
-    dir_t dir(argv[3]);
+    dir_t dir(argv[4]);
 
     if (alg == "surf") {
         which = SURF;
@@ -271,7 +283,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    int devID = 1;
+    int devID = atoi(argv[3]);
+    if (devID < 0 || devID > 3)
+        return 1;
     cv::gpu::setDevice(devID);
     cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, devID);
@@ -279,8 +293,9 @@ int main(int argc, char *argv[])
 
     switch (which) {
         case SURF: {
-            if (surf(dir, true, false))
-                return 1;
+            while (iters--)
+                if (surf(dir, true, false))
+                    return 1;
         } break;
         case HOG: {
             while (iters--)
