@@ -180,7 +180,7 @@ int hog(dir_t &dir, bool ongpu = true, bool doscale = false)
     return 0;
 }
 
-int surf(dir_t &dir, bool ongpu = true, bool doscale = false)
+int fast(dir_t &dir)
 {
     paths_t imagepaths;
     struct timer t;
@@ -188,14 +188,63 @@ int surf(dir_t &dir, bool ongpu = true, bool doscale = false)
     if (listdir(dir, imagepaths))
         return 1;
 
-    fprintf(stderr,PREFIX "making finder\n");
-    unique_ptr<detail::FeaturesFinder> finder;
-    if (ongpu)
-        finder.reset(new detail::SurfFeaturesFinderGpu(expand(params)));
-    else
-        finder.reset(new detail::SurfFeaturesFinder(expand(params)));
-    if (!finder)
-        return -1;
+    int thresh = 1;
+    double kpRatio = 0.05;
+
+    cout << "imgid width height depth "
+        "thresh kpRatio " // fast params
+        "ongpu scaled "
+        "feats alg_time gpuname" << endl;
+
+    for (string &path : imagepaths) {
+        Mat img = imread(path);
+        if (!img.data)
+            return -1;
+
+        RNG rng(0);
+
+        vector<KeyPoint> kp;
+        unsigned long tim = 0UL;
+        timer_init(CLOCK_REALTIME, &t);
+        try {
+            timer_start(&t);
+            Mat gray, mask;
+            cvtColor(img, gray, CV_BGR2GRAY);
+            rng.fill(mask, RNG::UNIFORM, 0, 1);
+            gpu::GpuMat image(gray), maskg(mask);
+            gpu::FAST_GPU fast(thresh, true, kpRatio);
+            fast(image, maskg, kp);
+            tim = timer_end(&t, MICROSECONDS);
+        } catch (cv::Exception &e) {
+            cerr << "Error: " << path << " caused opencv to crash" << endl;
+            return -1;
+        }
+
+        stringstream ss;
+
+        ss << basename(path) << " ";
+        ss << img.cols << " " << img.rows << " ";
+        ss << img.elemSize() << " ";
+        ss << thresh << " ";
+        ss << kpRatio << " ";
+        ss << "1 "; // on gpu
+        ss << "0 "; // not scaled
+        ss << kp.size() << " ";
+        ss << tim << " ";
+        ss << gpuname;
+        cout << ss.str() << endl;
+    }
+
+    return 0;
+}
+
+int surf(dir_t &dir, bool ongpu = true, bool doscale = false)
+{
+    paths_t imagepaths;
+    struct timer t;
+
+    if (listdir(dir, imagepaths))
+        return 1;
 
     cout << "imgid width height depth "
         "hess nocts nlay noctdesc nlayerdesc " // SURF params
@@ -207,6 +256,15 @@ int surf(dir_t &dir, bool ongpu = true, bool doscale = false)
         if (!img.data)
             return -1;
         scaled = img;
+
+        fprintf(stderr,PREFIX "making finder\n");
+        unique_ptr<detail::FeaturesFinder> finder;
+        if (ongpu)
+            finder.reset(new detail::SurfFeaturesFinderGpu(expand(params)));
+        else
+            finder.reset(new detail::SurfFeaturesFinder(expand(params)));
+        if (!finder)
+            return -1;
 
         fprintf(stderr,PREFIX "loop start\n");
 
@@ -227,6 +285,7 @@ int surf(dir_t &dir, bool ongpu = true, bool doscale = false)
             finder->operator()(scaled, feature);
             surft = timer_end(&t, MICROSECONDS);
         } catch (cv::Exception &e) {
+            cerr << "Error: " << path << " cause opencv to crash" << endl;
             return -1;
         }
         //double mean, median;
@@ -253,9 +312,160 @@ int surf(dir_t &dir, bool ongpu = true, bool doscale = false)
     return 0;
 }
 
+int orb(dir_t &dir, bool doscale = false)
+{
+    paths_t imagepaths;
+    struct timer t;
+
+    if (listdir(dir, imagepaths))
+        return 1;
+
+    cout << "imgid width height depth "
+        "" // orb params
+        "ongpu scaled " // config
+        "feats alg_time gpuname" << endl;
+
+    for (string &path : imagepaths) {
+        Mat img2 = imread(path);
+        if (!img2.data)
+            return -1;
+        Mat img;
+        cvtColor(img2, img, CV_BGR2GRAY); // to CV_8UC3
+
+        vector<KeyPoint> kp;
+        unsigned long tim = 0UL;
+        timer_init(CLOCK_REALTIME, &t);
+        try {
+            timer_start(&t);
+            gpu::GpuMat image(img);
+            gpu::GpuMat mask(Mat::zeros(img.rows, img.cols, CV_8UC1));
+            gpu::ORB_GPU orb(   1000,   // nFeatures
+                                1.2f,   // scaleFactor
+                                8,      // nLevels
+                                31,     // edgeThreshold
+                                0,      // firstLevel
+                                2,      // WTA_K
+                                0,      // scoreType
+                                31      // patchSize
+                            );
+            orb(image, mask, kp);
+            tim = timer_end(&t, MICROSECONDS);
+        } catch (cv::Exception &e) {
+            cerr << "Error: " << path << " caused opencv to crash" << endl;
+            return -1;
+        }
+
+        stringstream ss;
+
+        ss << basename(path) << " ";
+        ss << img.cols << " " << img.rows << " ";
+        ss << img.elemSize() << " ";
+        ss << "1 "; // on gpu
+        ss << (doscale ? "1" : "0") << " ";
+        ss << kp.size() << " ";
+        ss << tim << " ";
+        ss << gpuname;
+        cout << ss.str() << endl;
+    }
+    return 0;
+}
+
+int blur(dir_t &dir, bool doscale = false)
+{
+    paths_t imagepaths;
+    struct timer t;
+
+    if (listdir(dir, imagepaths))
+        return 1;
+
+    cout << "imgid width height depth "
+        "" // blur params
+        "ongpu scaled " // config
+        "alg_time gpuname" << endl;
+
+    for (string &path : imagepaths) {
+        Mat img = imread(path);
+        if (!img.data)
+            return -1;
+
+        unsigned long tim = 0UL;
+        timer_init(CLOCK_REALTIME, &t);
+        try {
+            timer_start(&t);
+            gpu::GpuMat src(img), dest;
+            // ksize must be < 32 and an odd value
+            gpu::GaussianBlur(src, dest, Size(9,9), 9);
+            dest.upload(img);
+            tim = timer_end(&t, MICROSECONDS);
+        } catch (cv::Exception &e) {
+            cerr << "Error: " << path << " caused opencv to crash" << endl;
+            return -1;
+        }
+
+        stringstream ss;
+
+        ss << basename(path) << " ";
+        ss << img.cols << " " << img.rows << " ";
+        ss << img.elemSize() << " ";
+        ss << "1 "; // on gpu
+        ss << (doscale ? "1" : "0") << " ";
+        ss << tim << " ";
+        ss << gpuname;
+        cout << ss.str() << endl;
+    }
+    return 0;
+}
+
+int convolve(dir_t &dir, bool doscale = false)
+{
+    paths_t imagepaths;
+    struct timer t;
+
+    if (listdir(dir, imagepaths))
+        return 1;
+
+    cout << "imgid width height depth "
+        "" // no convolve params
+        "ongpu scaled " // config
+        "templW templH resW resH" // other img dims
+        "alg_time gpuname" << endl;
+
+    for (string &path : imagepaths) {
+        Mat img = imread(path);
+        if (!img.data)
+            return -1;
+        (void)img.channels();
+
+        unsigned long tim = 0UL;
+        timer_init(CLOCK_REALTIME, &t);
+        try {
+            timer_start(&t);
+            Mat chn4(img.rows, img.cols, CV_32F);
+            cout << img.type() << " cv_32f: " << CV_32F << endl;
+            //assert(chn4.depth() == img.depth());
+            //int from_to[] = {0,0,1,1,2,2,3,3};
+            //cv::mixChannels(&img, 1, &chn4, 1, from_to, 4);
+            //if (chn4.type() != CV_32F)
+                //return -1;
+            cvtColor(img, chn4, CV_BGR2BGRA);
+            cout << chn4.type() << " cv_32f: " << CV_32F << endl;
+
+            gpu::GpuMat image(chn4), templ, result;
+            gpu::resize(image, templ, Size(), 0.25, 0.25);
+            // XXX i dunno what is wrong with this retarded function
+            gpu::convolve(image, templ, result);
+            tim = timer_end(&t, MICROSECONDS);
+        } catch (cv::Exception &e) {
+            cerr << "Error: " << path << " caused opencv to crash" << endl;
+            return -1;
+        }
+    }
+    return 0;
+}
+
 enum which
 {
-    INVALID, SURF, HOG,
+    INVALID, SURF, HOG, CONVOLVE, BLUR, ORBALG, FASTALG,
 };
 
 // ./feature alg n dir/
@@ -279,6 +489,14 @@ int main(int argc, char *argv[])
         which = SURF;
     } else if (alg == "hog") {
         which = HOG;
+    } else if (alg == "convolve") {
+        which = CONVOLVE;
+    } else if (alg == "blur") {
+        which = BLUR;
+    } else if (alg == "orb") {
+        which = ORBALG;
+    } else if (alg == "fast") {
+        which = FASTALG;
     } else {
         return 1;
     }
@@ -300,6 +518,26 @@ int main(int argc, char *argv[])
         case HOG: {
             while (iters--)
                 if (hog(dir, true, false))
+                    return 1;
+        } break;
+        case CONVOLVE: {
+            while (iters--)
+                if (convolve(dir, false))
+                    return 1;
+        } break;
+        case BLUR: {
+            while (iters--)
+                if (blur(dir, false))
+                    return 1;
+        } break;
+        case ORBALG: {
+            while (iters--)
+                if (orb(dir, false))
+                    return 1;
+        } break;
+        case FASTALG: {
+            while (iters--)
+                if (fast(dir))
                     return 1;
         } break;
         default: return 1;
