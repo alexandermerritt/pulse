@@ -338,7 +338,9 @@ int orb(dir_t &dir, bool doscale = false)
         try {
             timer_start(&t);
             gpu::GpuMat image(img);
-            gpu::GpuMat mask(Mat::zeros(img.rows, img.cols, CV_8UC1));
+            Mat _mask(Mat::zeros(img.rows, img.cols, CV_8UC1));
+            cv::randu(_mask, Scalar::all(0), Scalar::all(255));
+            gpu::GpuMat mask(_mask);
             gpu::ORB_GPU orb(   1000,   // nFeatures
                                 1.2f,   // scaleFactor
                                 8,      // nLevels
@@ -463,9 +465,71 @@ int convolve(dir_t &dir, bool doscale = false)
     return 0;
 }
 
+int hcircles(dir_t &dir, bool doscale = false)
+{
+    paths_t imagepaths;
+    struct timer t;
+
+    if (listdir(dir, imagepaths))
+        return 1;
+
+    cout << "imgid width height depth"
+        " dp mindist canny votes minrad maxrad maxcirc"
+        " ongpu scaled" // config
+        " circs alg_time gpuname" << endl;
+
+    for (string &path : imagepaths) {
+        Mat img = imread(path);
+        if (!img.data)
+            return -1;
+
+        Mat _gray, circ, blur;
+
+        const int dp(1), canny(200), votes(50), maxCirc(4096);
+        const float minDist(100.), minRad(100.), maxRad(min(img.rows,img.cols)*0.75);
+
+        unsigned long tim = 0UL;
+        timer_init(CLOCK_REALTIME, &t);
+        try {
+            timer_start(&t);
+            cvtColor(img, _gray, CV_BGR2GRAY); // to CV_8UC3
+            gpu::GpuMat gray(_gray), circles, blur;
+            gpu::GaussianBlur(gray, blur, Size(9,9), 2, 2); // Size() must be odd
+            gpu::GpuMat image(blur);
+            gpu::HoughCircles(image, circles, CV_HOUGH_GRADIENT,
+                    dp, minDist, canny, votes, minRad, maxRad, maxCirc);
+            circles.download(circ);
+            tim = timer_end(&t, MICROSECONDS);
+        } catch (cv::Exception &e) {
+            cerr << "Error: " << path << " caused opencv to crash" << endl;
+            return -1;
+        }
+
+        stringstream ss;
+
+        ss << basename(path) << " ";
+        ss << img.cols << " " << img.rows << " ";
+        ss << img.elemSize() << " ";
+        ss << dp << " ";
+        ss << minDist << " ";
+        ss << canny << " ";
+        ss << votes << " ";
+        ss << minRad << " ";
+        ss << maxRad << " ";
+        ss << maxCirc << " ";
+        ss << "1 "; // on gpu
+        ss << (doscale ? "1" : "0") << " ";
+        ss << circ.rows << "x" << circ.cols << "x" << circ.elemSize() << " ";
+        ss << tim << " ";
+        ss << gpuname;
+        cout << ss.str() << endl;
+    }
+    return 0;
+}
+
 enum which
 {
-    INVALID, SURF, HOG, CONVOLVE, BLUR, ORBALG, FASTALG,
+    INVALID, SURF, HOG, CONVOLVE, BLUR, ORBALG, FASTALG, HCIRCLES,
 };
 
 // ./feature alg n dir/
@@ -497,6 +561,8 @@ int main(int argc, char *argv[])
         which = ORBALG;
     } else if (alg == "fast") {
         which = FASTALG;
+    } else if (alg == "hcircles") {
+        which = HCIRCLES;
     } else {
         return 1;
     }
@@ -538,6 +604,11 @@ int main(int argc, char *argv[])
         case FASTALG: {
             while (iters--)
                 if (fast(dir))
+                    return 1;
+        } break;
+        case HCIRCLES: {
+            while (iters--)
+                if (hcircles(dir))
                     return 1;
         } break;
         default: return 1;
