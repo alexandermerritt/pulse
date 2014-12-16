@@ -44,36 +44,48 @@ libpath = []
 
 # libs acquired from 'pkg-config --libs opencv'
 libs.extend(['-lopencv_calib3d',
-    '-lopencv_contrib',
-    '-lopencv_core',
-    '-lopencv_features2d',
-    '-lopencv_flann',
-    '-lopencv_gpu',
-    '-lopencv_highgui',
-    '-lopencv_imgproc',
-    '-lopencv_legacy',
-    '-lopencv_ml',
-    '-lopencv_objdetect',
-    #'-lopencv_ocl',
-    '-lopencv_photo',
-    '-lopencv_stitching',
-    '-lopencv_superres',
-    '-lopencv_ts',
-    '-lopencv_video',
-    '-lopencv_videostab'])
+    'opencv_contrib',
+    'opencv_core',
+    'opencv_features2d',
+    'opencv_flann',
+    'opencv_gpu',
+    'opencv_highgui',
+    'opencv_imgproc',
+    'opencv_legacy',
+    'opencv_ml',
+    'opencv_objdetect',
+    #'opencv_ocl',
+    'opencv_photo',
+    'opencv_stitching',
+    'opencv_superres',
+    'opencv_ts',
+    'opencv_video',
+    'opencv_videostab',
+    'protobuf', 'pthread' # req'd by protobuf
+    ])
 libs.extend(['jsoncpp', 'memcached', 'uuid'])
 #libs.append('Magick++')
 
-env = Environment(CC = cc, CXX = cxx)
+protonames = ['Objects']
+protogen = [fname + '.pb.cc' for fname in protonames]
+protosrc = [fname + '.proto' for fname in protonames]
+
+protobuild = Builder(action = 'protoc --cpp_out=. $SOURCE')
+
+env = Environment(CC = cc, CXX = cxx, BUILDERS={'Proto' : protobuild})
+env.Proto(protosrc)
 env.Append(CCFLAGS = ccflags)
 env.Append(CPPPATH = cpath)
 env.Append(LIBPATH = libpath)
 env.Append(LIBS = libs)
 
 sources = ['StormStitcher.cpp', 'StormWrapper.cpp', 'Config.cpp']
+sources.extend(protogen)
 env.Program('stormstitcher', sources)
 
-env.Program('load_graph', ['load_graph.cpp', 'Config.cpp'])
+loadsources = ['load_egonet.cc', 'Config.cpp']
+loadsources.extend(protogen)
+env.Program('load_egonet', loadsources)
 
 #env.Program('testimage', ['test-image.cpp'])
 

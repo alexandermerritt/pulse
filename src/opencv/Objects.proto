@@ -1,0 +1,42 @@
+package storm;
+
+message Vertex {
+    required string key = 1;
+    repeated string key_edges = 2;
+    // other info, like media keys, etc.
+    repeated string key_images = 6;
+    repeated string groups = 7;
+}
+
+// cv::Mat
+message Image {
+    // image properties
+    required uint32 width = 1;
+    required uint32 height = 2;
+    required uint32 depth = 3;
+    required int32 flags = 4;
+    required string key_id = 5;
+    // optional stuff I need
+    optional string key_features = 6;
+    // the image itself
+    optional bytes pixels = 16;
+}
+
+// cv::KeyPoint
+message KeyPoint {
+    required uint32 x = 1;
+    required uint32 y = 2;
+    required uint32 octave = 3;
+    required uint32 class = 4;
+    required float size = 5;
+    required float angle = 6;
+    required float resp = 7;
+}
+
+// cv::detail::ImageFeatures
+message ImageFeatures {
+    required uint32 img_idx = 1;
+    required uint32 width = 2;
+    required uint32 height = 3;
+    repeated KeyPoint keypoints = 16;
+}

@@ -1,5 +1,5 @@
 /*
- * clang++ --std=c++11 load_graph.cpp -o load_graph \
+ * clang++ --std=c++11 load_egonet.cc -o load_graph \
  *              -I/usr/include/jsoncpp -ljsoncpp -lmemcached \
  *              -lopencv_core -lopencv_highgui
  *
