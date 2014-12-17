@@ -2,4 +2,6 @@ stitcher
 .ycm_extra_conf.pyc
 *.class
 *.jar
+*.pb.cc
+*.pb.h
 stormstitcher
