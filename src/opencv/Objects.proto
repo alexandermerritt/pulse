@@ -2,24 +2,30 @@ package storm;
 
 message Vertex {
     required string key = 1;
-    repeated string key_edges = 2;
+    repeated string followers = 2;
+    repeated string following = 3;
     // other info, like media keys, etc.
-    repeated string key_images = 6;
-    repeated string groups = 7;
+    repeated string image = 6;
+    // gplus egonet features
+    repeated string circles = 7;
+    optional int32  gender = 8; 
+    repeated string inst = 9;
+    repeated string univ = 10;
+    repeated string name = 11;
+    repeated string place = 12;
+    repeated string jobtitle = 13;
 }
 
 // cv::Mat
 message Image {
     // image properties
-    required uint32 width = 1;
-    required uint32 height = 2;
-    required uint32 depth = 3;
-    required int32 flags = 4;
-    required string key_id = 5;
+    required string key_id = 1;
+    required uint32 width = 2;
+    required uint32 height = 3;
+    required uint32 depth = 4;
+    required string key_data = 7;
     // optional stuff I need
-    optional string key_features = 6;
-    // the image itself
-    optional bytes pixels = 16;
+    optional string key_features = 10;
 }
 
 // cv::KeyPoint
@@ -38,5 +44,6 @@ message ImageFeatures {
     required uint32 img_idx = 1;
     required uint32 width = 2;
     required uint32 height = 3;
+    optional string key_desc = 4;
     repeated KeyPoint keypoints = 16;
 }
