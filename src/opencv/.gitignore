@@ -5,3 +5,6 @@ stitcher
 *.pb.cc
 *.pb.h
 stormstitcher
+load_egonet
+cscope.files
+cscope.out
