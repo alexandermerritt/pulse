@@ -14,6 +14,9 @@
 #include <sys/types.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <google/protobuf/io/coded_stream.h>
+#include <google/protobuf/io/zero_copy_stream.h>
+#include <google/protobuf/io/zero_copy_stream_impl.h>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -23,7 +26,14 @@
 #include "Objects.pb.h" // generated
 #include "Config.hpp"
 
+#define MP_20   ((unsigned int)(20 * 1e6))
+enum {
+    IMG_TOO_BIG_THRESH = MP_20,
+    MAX_IMGS_PER_VERTEX = 20,
+};
+
 using namespace std;
+using namespace google::protobuf::io;
 
 struct EgoID
 {
@@ -39,14 +49,14 @@ struct EgoID
 };
 
 deque<EgoID> egoids;
+deque<storm::Image> images;
 
-vector< string > imagelist;
 typedef EgoID egoid_t;
 typedef string id;
 
 memcached_st *memc = NULL;
 
-int readfile(string &path, void **buf, size_t *len)
+int readfile(const string &path, void **buf, size_t *len)
 {
     struct stat st;
     uintptr_t ptr;
@@ -101,36 +111,42 @@ int memc_exists(memcached_st *memc,
 // full path to image per line
 int load_images(string &path)
 {
-    memcached_return_t mret;
     string line;
-    imagelist.clear();
+    vector< string > imagelist;
 
     printf(">> Loading images...\n");
 
-    ifstream file;
-    file.open(path);
-    if (!file.is_open()) {
+    ifstream ifile;
+    ifile.open(path);
+    if (!ifile.is_open()) {
         perror("open image file");
         return -1;
     }
-    while (getline(file, line)) {
+    while (getline(ifile, line)) {
         if (line[0] == '#')
             continue;
         imagelist.push_back(line);
     }
-    file.close();
+    ifile.close();
 
+    string pbname("imagelist.pb");
+    cout << "Writing image list to " << pbname << endl;
+
+    int fd = open(pbname.data(), O_WRONLY | O_CREAT,  S_IRUSR | S_IWUSR);
+    if (fd < 0) return -1;
+    unique_ptr<ZeroCopyOutputStream> raw_output(new FileOutputStream(fd));
+    CodedOutputStream coded_output(raw_output.get());
+
+    coded_output.WriteVarint32(imagelist.size());
+
+    void *buf(nullptr);
+    size_t buflen(0), len(0);
     for (auto &imgpath : imagelist) {
         auto idx = imgpath.rfind("/");
         string imgname(imgpath);
         if (idx != string::npos)
             imgname = imgpath.substr(idx + 1);
         cout << imgname << endl;
-
-        if (memc_exists(memc, imgname)) {
-            cout << "   skipping; already uploaded" << endl;
-            continue;
-        }
 
         cv::Mat img;
         img = cv::imread(imgpath, 1);
@@ -139,13 +155,10 @@ int load_images(string &path)
             return -1;
         }
 
-        if (img.total() > (20 * 1e6)) { // too big
+        if (img.total() > IMG_TOO_BIG_THRESH) {
             cout << "   skipping; too big" << endl;
             continue;
         }
-
-        void *buf;
-        size_t len;
 
         storm::Image image;
         string s; // serialized header
@@ -154,34 +167,19 @@ int load_images(string &path)
         image.set_height(img.rows);
         image.set_depth(img.elemSize());
         image.set_key_data(imgname + "::data");
+        image.set_path(imgpath);
+
+        images.push_back(image);
 
         len = image.ByteSize();
-        buf = malloc(len);
-        if (!buf)
-            return -1;
-        image.SerializeToArray(buf, len);
-
-        // save the header
-        mret = memcached_set(memc, imgname.c_str(), imgname.length(),
-                (char*)buf, len, 0, 0);
-        if (mret != MEMCACHED_SUCCESS) {
-            fprintf(stderr, "memc error: %s", memcached_strerror(memc, mret));
-            return -1;
-        }
-        free(buf);
-
-        // save the raw data
-        if (0 > readfile(imgpath,  &buf, &len))
-            return -1;
-        mret = memcached_set(memc, image.key_data().c_str(),
-                image.key_data().length(), (char*)buf, len, 0, 0);
-        if (mret != MEMCACHED_SUCCESS) {
-            fprintf(stderr, "memc error: %s", memcached_strerror(memc, mret));
-            return -1;
-        }
-        free(buf);
+        if (len > buflen)
+            if (!(buf = realloc(buf, (buflen = len))))
+                return -1;
+        coded_output.WriteVarint32(len);
+        image.SerializeToArray(buf, buflen);
+        coded_output.WriteRaw(buf, len);
     }
-
+    free(buf);
     return 0;
 }
 
@@ -317,7 +315,6 @@ int handle_ego(egoid_t &egoid)
 //      e.g. /path/to/files/egoid
 int load_graph(string &path)
 {
-    memcached_return_t mret;
     string line;
 
     deque<string> entries;
@@ -393,30 +390,49 @@ int load_graph(string &path)
             v->add_followers(f);
     }
 
-    // inject all into object store
-    cout << "Injecting to object store... (" << graph.size()
-        << " nodes)" << endl;
+    // choose images for each vertex
+    for (auto &g : graph) {
+        storm::Vertex *v = &g.second;
+        // arbitrarily but deterministically determine count
+        size_t n_to_assign =
+            v->followers_size() % MAX_IMGS_PER_VERTEX;
+        // pick n images at this place
+        size_t imgidx = (v->followers_size() + v->following_size() +
+                v->gender() * 10 + v->circles_size()) %
+                (images.size() - n_to_assign);
+        //cout << "    images " << v->key() << ": #" << n_to_assign
+            //<< " at " << imgidx << endl;
+        while (n_to_assign > 0) {
+            v->add_images(images.at(imgidx++).key_id());
+            n_to_assign--;
+        }
+    }
+
+    // -----------------------------------------------
+
+    string pbname("graph.pb");
+    cout << "Writing graph data to " << pbname << endl;
+
+    int fd = open(pbname.data(), O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
+    if (fd < 0) return -1;
+    unique_ptr<ZeroCopyOutputStream> raw_output(new FileOutputStream(fd));
+    CodedOutputStream coded_output(raw_output.get());
+
+    coded_output.WriteVarint32(graph.size());
+
     void *buf(nullptr);
-    int buflen(0), len(0);
+    size_t buflen(0), len(0);
     for (auto &g : graph) {
         storm::Vertex *v = &g.second;
         len = v->ByteSize();
-        if (len > buflen) {
-            buflen = len;
-            buf = realloc(buf, buflen);
-            if (!buf)
+        if (len > buflen)
+            if (!(buf = realloc(buf, (buflen = len))))
                 return -1;
-        }
+        coded_output.WriteVarint32(len);
         v->SerializeToArray(buf, buflen);
-
-        //cout << "    -> " << len << " bytes" << endl;
-        mret = memcached_set(memc, v->key().c_str(), v->key().length(),
-                (char*)buf, len, 0, 0);
-        if (mret != MEMCACHED_SUCCESS) {
-            fprintf(stderr, "memc error: %s", memcached_strerror(memc, mret));
-            return -1;
-        }
+        coded_output.WriteRaw(buf, len);
     }
+    free(buf);
 
     return 0;
 }
@@ -430,32 +446,169 @@ int init_memc(void)
     return 0;
 }
 
+// load all input files into protobuf files
+// save them to disk as snapshot
 int
-main(int argc, char *argv[])
+make_proto(string &egolist, string &images)
 {
-    if (argc != 4) {
-        fprintf(stderr, "Usage: %s graphlist imagelist config\n", *argv);
+    if (load_images(images))
         return 1;
-    }
-    string g(argv[1]);
-    string i(argv[2]);
-    string c(argv[3]);
 
-    if (init_config(c))
+    if (load_graph(egolist))
+        return 1;
+
+    return 0;
+}
+
+// load previously created protobuf files
+// insert them into object store
+int
+load_proto(string &graph, string &imagelist, string &config)
+{
+    if (init_config(config))
         return 1;
 
     if (init_memc())
         return 1;
 
-    //if (load_images(i))
-        //return 1;
+    // -------------------------------------------------
+    cout << "Loading graph data into object store..." << endl;
 
-    if (load_graph(g))
-        return 1;
+    int fd = open(graph.data(), O_RDONLY);
+    if (fd < 0) return -1;
+    unique_ptr<ZeroCopyInputStream> raw_input(new FileInputStream(fd));
+    unique_ptr<CodedInputStream> coded_input(new CodedInputStream(raw_input.get()));
 
-    // cout << "vertices: " << vertices.size() << endl;
-    // cout << "edges:    " << edges.size() << endl;
+    unsigned int count;
+    coded_input->ReadVarint32(&count);
+
+    void *buf(nullptr);
+    size_t buflen(0);
+    unsigned int len;
+    storm::Vertex vertex;
+    while (count-- > 0) {
+        coded_input->ReadVarint32(&len);
+        if (buflen < len) {
+            buflen = len;
+            if (!(buf = realloc(buf, buflen))) return -1;
+        }
+        coded_input->ReadRaw(buf, len);
+
+        vertex.ParseFromArray(buf, len);
+        if ((count % 1000) == 0)
+            cout << "."; cout.flush();
+
+        auto mret = memcached_set(memc, vertex.key().c_str(),
+                vertex.key().length(), (char*)buf, len, 0, 0);
+        if (mret != MEMCACHED_SUCCESS) {
+            fprintf(stderr, "memc error: %s", memcached_strerror(memc, mret));
+            return -1;
+        }
+    }
+    coded_input.release();
+    raw_input.release();
+    close(fd);
+    cout << endl;
+
+    // -------------------------------------------------
+    cout << "Loading image data into object store..." << endl;
+
+    fd = open(imagelist.data(), O_RDONLY);
+    if (fd < 0) return -1;
+    raw_input.reset(new FileInputStream(fd));
+    coded_input.reset(new CodedInputStream(raw_input.get()));
+
+    coded_input->ReadVarint32(&count);
+
+    // reuse buf and buflen from above
+
+    storm::Image image;
+    while (count-- > 0) {
+        coded_input->ReadVarint32(&len);
+        if (buflen < len) {
+            buflen = len;
+            if (!(buf = realloc(buf, buflen))) return -1;
+        }
+        coded_input->ReadRaw(buf, len);
+
+        image.ParseFromArray(buf, len);
+        if ((count % 1000) == 0)
+            cout << "."; cout.flush();
+
+        auto mret = memcached_set(memc, image.key_id().c_str(),
+                image.key_id().length(), (char*)buf, len, 0, 0);
+        if (mret != MEMCACHED_SUCCESS) {
+            fprintf(stderr, "memc error: %s", memcached_strerror(memc, mret));
+            return -1;
+        }
+
+        // now load the image from disk
+        void *imgbuf(nullptr);
+        size_t imglen(0);
+        if (0 > readfile(image.path(), &imgbuf, &imglen))
+            return -1;
+        mret = memcached_set(memc, image.key_data().c_str(),
+                image.key_data().length(), (char*)imgbuf, imglen, 0, 0);
+        if (mret != MEMCACHED_SUCCESS) {
+            fprintf(stderr, "memc error: %s", memcached_strerror(memc, mret));
+            return -1;
+        }
+        free(imgbuf);
+        //image.PrintDebugString();
+    }
+    close(fd);
+    cout << endl;
 
     return 0;
+}
+
+void usage(void)
+{
+    cerr << "Usage: cmd opts*" << endl;
+    cerr << "       proto egolist imagelist" << endl;
+    cerr << "       load graph.pb imagelist.pb conf" << endl;
+}
+
+int
+main(int argc, char *argv[])
+{
+    int ret(0);
+
+    if (argc < 2) {
+        usage();
+        return -1;
+    }
+
+    string cmd(argv[1]);
+    if (cmd == "proto") {
+        if (argc != 4) {
+            usage();
+            return -1;
+        }
+        // file with list of path to ego IDs
+        // e.g. ../stanford-snap/gplus/23534534514534
+        //      ../stanford-snap/gplus/09348573498842
+        string egolist(argv[2]);
+        // file with list of paths to JPG images
+        // e.g. ../images/23534534514534.jpg
+        string images(argv[3]);
+        ret = make_proto(egolist, images);
+    } else if (cmd == "load") {
+        if (argc != 5) {
+            usage();
+            return -1;
+        }
+        // path to file holding Vertex protobuf objects
+        string graph(argv[2]);
+        // path to file holding ImageList protobuf object
+        string images(argv[3]);
+        // path to config file
+        string config(argv[4]);
+        ret = load_proto(graph, images, config);
+    } else {
+        ret = -1;
+    }
+
+    return ret;
 }
 

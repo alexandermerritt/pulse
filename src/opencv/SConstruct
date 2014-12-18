@@ -14,7 +14,8 @@ if ARGUMENTS.get('clang', 0):
     cxx = 'clang++'
 
 ccflags = ['-std=c++1y']
-ccflags.extend(['-Wall', '-Wextra', '-Werror'])
+#ccflags.extend(['-Wall', '-Wextra', '-Werror'])
+ccflags.extend(['-Wall', '-Wextra'])
 ccflags.append('-Wno-unused-function')
 ccflags.append('-Wno-unused-parameter')
 

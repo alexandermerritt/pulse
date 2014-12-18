@@ -27,6 +27,7 @@ flags = [
 '-Winline',
 '-Wno-unused-parameter',
 '-Wno-unused-function',
+'-Wno-unused-variable',
 '-fopenmp',
 # include directories
 '-isystem', '/usr/local/include/',
