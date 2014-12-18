@@ -416,23 +416,29 @@ int load_graph(string &path)
     int fd = open(pbname.data(), O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
     if (fd < 0) return -1;
     unique_ptr<ZeroCopyOutputStream> raw_output(new FileOutputStream(fd));
-    CodedOutputStream coded_output(raw_output.get());
 
-    coded_output.WriteVarint32(graph.size());
+    {
+        CodedOutputStream coded_output(raw_output.get());
+        coded_output.WriteVarint32(graph.size());
+    }
 
     void *buf(nullptr);
     size_t buflen(0), len(0);
     for (auto &g : graph) {
+        // Must destroy and recreate CodedInputStream with each Protobuf...
+        // https://groups.google.com/forum/#!topic/protobuf/ZKB5EePJDNU
+        CodedOutputStream coded_output(raw_output.get());
         storm::Vertex *v = &g.second;
         len = v->ByteSize();
         if (len > buflen)
             if (!(buf = realloc(buf, (buflen = len))))
                 return -1;
         coded_output.WriteVarint32(len);
-        v->SerializeToArray(buf, buflen);
-        coded_output.WriteRaw(buf, len);
+        v->SerializeToCodedStream(&coded_output);
     }
     free(buf);
+    raw_output.release();
+    close(fd);
 
     return 0;
 }
@@ -477,26 +483,33 @@ load_proto(string &graph, string &imagelist, string &config)
     int fd = open(graph.data(), O_RDONLY);
     if (fd < 0) return -1;
     unique_ptr<ZeroCopyInputStream> raw_input(new FileInputStream(fd));
-    unique_ptr<CodedInputStream> coded_input(new CodedInputStream(raw_input.get()));
 
     unsigned int count;
-    coded_input->ReadVarint32(&count);
+    {
+        CodedInputStream coded_input(raw_input.get());
+        coded_input.ReadVarint32(&count);
+    }
 
     void *buf(nullptr);
     size_t buflen(0);
     unsigned int len;
-    storm::Vertex vertex;
-    while (count-- > 0) {
-        coded_input->ReadVarint32(&len);
-        if (buflen < len) {
-            buflen = len;
-            if (!(buf = realloc(buf, buflen))) return -1;
-        }
-        coded_input->ReadRaw(buf, len);
 
+    cout << count << " nodes to read" << endl;
+
+    while (count-- > 0) {
+        // Must destroy and recreate CodedInputStream with each Protobuf...
+        // https://groups.google.com/forum/#!topic/protobuf/ZKB5EePJDNU
+        CodedInputStream coded_input(raw_input.get());
+
+        coded_input.ReadVarint32(&len);
+        if (buflen < len)
+            if (!(buf = realloc(buf, (buflen = len))))
+                return -1;
+        // when reading, don't give protobuf the whole stream, as it will assume
+        // the entire stream belongs to a single message
+        coded_input.ReadRaw(buf, len);
+        storm::Vertex vertex;
         vertex.ParseFromArray(buf, len);
-        if ((count % 1000) == 0)
-            cout << "."; cout.flush();
 
         auto mret = memcached_set(memc, vertex.key().c_str(),
                 vertex.key().length(), (char*)buf, len, 0, 0);
@@ -505,10 +518,8 @@ load_proto(string &graph, string &imagelist, string &config)
             return -1;
         }
     }
-    coded_input.release();
     raw_input.release();
     close(fd);
-    cout << endl;
 
     // -------------------------------------------------
     cout << "Loading image data into object store..." << endl;
@@ -516,24 +527,27 @@ load_proto(string &graph, string &imagelist, string &config)
     fd = open(imagelist.data(), O_RDONLY);
     if (fd < 0) return -1;
     raw_input.reset(new FileInputStream(fd));
-    coded_input.reset(new CodedInputStream(raw_input.get()));
 
-    coded_input->ReadVarint32(&count);
+    {
+        CodedInputStream coded_input(raw_input.get());
+        coded_input.ReadVarint32(&count);
+    }
 
     // reuse buf and buflen from above
 
-    storm::Image image;
     while (count-- > 0) {
-        coded_input->ReadVarint32(&len);
+        // Must destroy and recreate CodedInputStream with each Protobuf...
+        // https://groups.google.com/forum/#!topic/protobuf/ZKB5EePJDNU
+        CodedInputStream coded_input(raw_input.get());
+
+        coded_input.ReadVarint32(&len);
         if (buflen < len) {
             buflen = len;
             if (!(buf = realloc(buf, buflen))) return -1;
         }
-        coded_input->ReadRaw(buf, len);
-
+        coded_input.ReadRaw(buf, len);
+        storm::Image image;
         image.ParseFromArray(buf, len);
-        if ((count % 1000) == 0)
-            cout << "."; cout.flush();
 
         auto mret = memcached_set(memc, image.key_id().c_str(),
                 image.key_id().length(), (char*)buf, len, 0, 0);
@@ -554,10 +568,8 @@ load_proto(string &graph, string &imagelist, string &config)
             return -1;
         }
         free(imgbuf);
-        //image.PrintDebugString();
     }
     close(fd);
-    cout << endl;
 
     return 0;
 }
@@ -606,6 +618,7 @@ main(int argc, char *argv[])
         string config(argv[4]);
         ret = load_proto(graph, images, config);
     } else {
+        usage();
         ret = -1;
     }
 

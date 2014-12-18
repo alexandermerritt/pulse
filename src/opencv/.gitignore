@@ -8,3 +8,4 @@ stormstitcher
 load_egonet
 cscope.files
 cscope.out
+inputs/*.pb
