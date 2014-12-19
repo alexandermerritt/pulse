@@ -1,7 +1,3 @@
-/**
- * StitcherTopology.java
- */
-
 import backtype.storm.Config;
 import backtype.storm.LocalCluster;
 import backtype.storm.spout.SpoutOutputCollector;
@@ -33,54 +29,45 @@ import java.lang.IllegalArgumentException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-// Helpful Notes.
-//
-// - ShellBolt constructor basically acts as a call to system(). See
-// StitcherTopology.h for the command line flags to use.
-//
-// - Each bolt/spout class in java is just a proxy for the C++ class equivalent
+// Each bolt/spout class in java is just a proxy for the C++ class equivalent
+public class SearchTopology {
 
-public class StitcherTopology {
-
-    public static class GraphSpout
-            extends ShellSpout implements IRichSpout
-        {
-            public GraphSpout()
-            {
-                super("/bin/sh", "run", "--spout");
-            }
-
+    public static class QuerySpout
+        extends ShellSpout implements IRichSpout {
+            public QuerySpout()
+            { super("/bin/sh", "run", "--spout=query"); }
             @Override
             public Map<String, Object> getComponentConfiguration()
-            {
-                return null;
-            }
-
+            { return null; }
             @Override
-            public void declareOutputFields(OutputFieldsDeclarer declarer)
-            {
+            public void declareOutputFields(OutputFieldsDeclarer declarer) {
                 // nodeID == graph node
                 declarer.declare(new Fields("requestID", "userID"));
             }
         }
 
-    public static class UserBolt
-            extends ShellBolt implements IRichBolt
-        {
-            public UserBolt()
-            {
-                super("/bin/sh", "run", "--bolt=user");
-            }
-
+    public static class BFSBolt
+        extends ShellBolt implements IRichBolt {
+            public BFSBolt()
+            { super("/bin/sh", "run", "--bolt=user"); }
             @Override
             public Map<String, Object> getComponentConfiguration()
-            {
-                return null;
-            }
-
+            { return null; }
             @Override
-            public void declareOutputFields(OutputFieldsDeclarer declarer)
-            {
+            public void declareOutputFields(OutputFieldsDeclarer declarer) {
+                declarer.declare(new Fields("requestID", "userID"));
+            }
+    }
+
+    public static class UserBolt
+        extends ShellBolt implements IRichBolt {
+            public UserBolt()
+            { super("/bin/sh", "run", "--bolt=user"); }
+            @Override
+            public Map<String, Object> getComponentConfiguration()
+            { return null; }
+            @Override
+            public void declareOutputFields(OutputFieldsDeclarer declarer) {
                 declarer.declareStream("toFeature", // to FeatureBolt
                         new Fields("requestID", "imageID"));
                 declarer.declareStream("toStats", // to ReqStatBolt
@@ -89,87 +76,51 @@ public class StitcherTopology {
         }
 
     public static class FeatureBolt
-            extends ShellBolt implements IRichBolt
-        {
+        extends ShellBolt implements IRichBolt {
             public FeatureBolt()
-            {
-                super("/bin/sh", "run", "--bolt=feature");
-            }
-
+            { super("/bin/sh", "run", "--bolt=feature"); }
             @Override
             public Map<String, Object> getComponentConfiguration()
-            {
-                return null;
-            }
-
+            { return null; }
             @Override
             public void declareOutputFields(OutputFieldsDeclarer declarer)
-            {
-                declarer.declare(new Fields("requestID", "imageID"));
-            }
+            { declarer.declare(new Fields("requestID", "imageID")); }
         }
 
     public static class ReqStatBolt
-            extends ShellBolt implements IRichBolt
-        {
+        extends ShellBolt implements IRichBolt {
             public ReqStatBolt()
-            {
-                super("/bin/sh", "run", "--bolt=reqstat");
-            }
-
+            { super("/bin/sh", "run", "--bolt=reqstat"); }
             @Override
             public Map<String, Object> getComponentConfiguration()
-            {
-                return null;
-            }
-
+            { return null; }
             @Override
             public void declareOutputFields(OutputFieldsDeclarer declarer)
-            {
-                // emits nothing
-            }
+            { }
         }
 
     public static class MontageBolt
-            extends ShellBolt implements IRichBolt
-        {
+        extends ShellBolt implements IRichBolt {
             public MontageBolt()
-            {
-                super("/bin/sh", "run", "--bolt=montage");
-            }
-
+            { super("/bin/sh", "run", "--bolt=montage"); }
             @Override
             public Map<String, Object> getComponentConfiguration()
-            {
-                return null;
-            }
-
+            { return null; }
             @Override
             public void declareOutputFields(OutputFieldsDeclarer declarer)
-            {
-                // emits nothing
-            }
+            { }
         }
 
-    public static class StitcherConfig
-    {
+    public static class StitcherConfig {
         public StitcherConfig() { }
 
-        public int spoutTasks;
-        public int featureTasks;
-        public int userTasks;
-        public int montageTasks;
-        public int reqstatTasks;
-
-        public int maxTaskParallel;
-        public int numWorkers;
-        public int localSleep;
+        public int spoutTasks, featureTasks;
+        public int userTasks, montageTasks, reqstatTasks;
+        public int maxTaskParallel, numWorkers, localSleep;
 
         private void parseLine(String line)
-            throws IllegalArgumentException
-        {
+            throws IllegalArgumentException {
             String[] cols = line.split(" ");
-
             if (line.charAt(0) == '#')
                 return;
             if (!cols[0].equals("storm"))
@@ -177,7 +128,6 @@ public class StitcherTopology {
             if (cols.length != 3)
                 throw new IllegalArgumentException(
                         "Invalid columns: " + line);
-
             if (cols[1].equals("spout"))
                 spoutTasks = Integer.parseInt(cols[2]);
             else if (cols[1].equals("feature"))
@@ -198,28 +148,22 @@ public class StitcherTopology {
                 throw new IllegalArgumentException(
                         "Invalid identifier for storm: " + cols[1]);
         }
-
         public void readConfig(String path)
             throws IllegalArgumentException, FileNotFoundException, IOException
         {
             BufferedReader r;
             String line;
-
             r = new BufferedReader(new FileReader(path));
             line = r.readLine();
             while (null != line) {
                 parseLine(line);
                 line = r.readLine();
             }
-
             r.close();
         }
-
     }
 
-    public static void main(String[] args)
-        throws Exception
-    {
+    public static void main(String[] args) throws Exception {
         if (args.length < 1)
             throw new IllegalArgumentException("Specify path to config file");
 
@@ -227,7 +171,7 @@ public class StitcherTopology {
         sc.readConfig(args[0]);
 
         TopologyBuilder builder = new TopologyBuilder();
-        builder.setSpout("spout", new GraphSpout(), sc.spoutTasks);
+        builder.setSpout("spout", new QuerySpout(), sc.spoutTasks);
         builder.setBolt("user", new UserBolt(), sc.userTasks)
             .shuffleGrouping("spout");
         builder.setBolt("feature", new FeatureBolt(), sc.featureTasks)
@@ -247,7 +191,7 @@ public class StitcherTopology {
         } else {
             conf.setMaxTaskParallelism(sc.maxTaskParallel);
             LocalCluster cluster = new LocalCluster();
-            cluster.submitTopology("stitcher", conf, builder.createTopology());
+            cluster.submitTopology("search", conf, builder.createTopology());
             Thread.sleep(sc.localSleep * 1000); // ms
             cluster.shutdown();
         }
