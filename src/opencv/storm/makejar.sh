@@ -4,12 +4,14 @@ set -u
 
 source /etc/profile.d/java.sh
 
+SOURCE=/usr/local/src/storm/latest
+
 # add others as necessary, colon-separated
-JARS=/usr/local/src/storm/latest/lib/storm-core-0.9.3.jar
+JARS=$(find $SOURCE/ -type f | grep 'storm-core')
 
 [[ ! -e "$JARS" ]] && echo "storm jar not found" && exit 1
 
-killall -s 1 stormfuncs || true
+killall -s SIGHUP stormfuncs || true
 
 echo Compiling ...
 javac -cp $JARS SearchTopology.java
@@ -20,13 +22,12 @@ javac -cp $JARS SearchTopology.java
 [[ ! -e ../pulse.conf ]] && \
 	echo "../pulse.conf missing" && exit 1
 
-[[ ! -d resources ]] && mkdir resources
-
-cp ../stormfuncs resources/
-cp ../pulse.conf resources/
+[[ ! -d resources ]] && mkdir -pv resources
+cp -v ../stormfuncs resources/
+cp -v ../pulse.conf resources/
 
 echo Creating jars ...
-jar cf search.jar Search*.class resources/
+jar cvf search.jar Search*.class resources
 
 rm -f *.class
 echo Done.

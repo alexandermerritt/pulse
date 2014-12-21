@@ -24,27 +24,17 @@ const char CMD_ARG_USER[]    = "user";
 const char CMD_ARG_MONTAGE[] = "montage";
 const char CMD_ARG_REQSTAT[] = "reqstat";
 
-class GraphSpout : public storm::Spout
+class BFS : public storm::Bolt
 {
     public:
-        GraphSpout(void);
-        void Initialize(Json::Value conf, Json::Value context);
-        void NextTuple(void);
-
-    private:
-        int initmemc(void);
-        int graph_max(void)
-        {
-            return atoi(graph_info[config->graph.infoKey_fieldMax].asCString());
-        }
-
-    private:
-        memcached_st *memc;
-        unsigned long group_id;
-        unsigned int seed;
-        Json::Value graph_info;
-        void initReqStats(std::string &requestID, unsigned int numUsers);
+    BFS(void);
+    void Initialize(Json::Value conf, Json::Value context);
+    void Process(storm::Tuple &tuple);
+    memcached_st *memc;
+    unsigned int seed;
 };
+
+#if 0
 
 class UserBolt : public storm::BasicBolt
 {
@@ -116,28 +106,7 @@ class MontageBolt : public storm::BasicBolt
         std::map< std::string, std::list< std::string > > pending;
 };
 
-class JSONImageFeature : public Json::Value
-{
-    public:
-        // serialize
-        JSONImageFeature(cv::detail::ImageFeatures &f);
-
-        // reconstitute
-        JSONImageFeature(Json::Value &v);
-        void GetImageFeatures(cv::detail::ImageFeatures &features,
-                const void *descData);
-
-        void GetDescKey(std::string &key);
-        void *GetDescData(void);
-        size_t GetDescLen(void)
-        {
-            return descriptors.elemSize() * descriptors.total();
-        }
-
-    private:
-        JSONImageFeature(void);
-        cv::Mat descriptors;
-};
+#endif
 
 int memc_get(memcached_st *memc, const std::string &key,
         /* output */ void **val, size_t &len);
@@ -145,23 +114,8 @@ int memc_get(memcached_st *memc, const std::string &key,
 int memc_set(memcached_st *memc, const std::string &key,
         void *val, size_t len);
 
-int memc_get_json(memcached_st *memc,
-        const std::string &key, Json::Value &val);
-
-int memc_set_json(memcached_st *memc,
-        const std::string &key, Json::Value &val);
-
 int memc_exists(memcached_st *memc,
         const std::string &key);
-
-int memc_get_cvmat(memcached_st *memc, const std::string &imageID,
-        cv::Mat &mat);
-
-int memc_set_features(memcached_st *memc, const std::string &imageID,
-        cv::detail::ImageFeatures &features);
-
-int memc_get_features(memcached_st *memc, const std::string &imageID,
-        cv::detail::ImageFeatures &features);
 
 void resize_image(cv::Mat &image, unsigned int dim);
 

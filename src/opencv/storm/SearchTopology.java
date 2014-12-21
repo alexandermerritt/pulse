@@ -19,14 +19,21 @@ public class SearchTopology {
         public void execute(Tuple tuple, BasicOutputCollector collector) {
             Object id = tuple.getValue(0);
             String vertex = tuple.getString(1);
-            // XXX walk the graph
-            for (int i = 0; i < 2; i++) {
-                collector.emit(new Values(id, vertex + "+0"));
-                collector.emit(new Values(id, vertex + "+1"));
-                collector.emit(new Values(id, vertex + "+2"));
-                collector.emit(new Values(id, vertex + "+3"));
-                collector.emit(new Values(id, vertex + "+4"));
-            }
+            collector.emit(new Values(id, vertex + "+0"));
+        }
+        @Override
+        public void declareOutputFields(OutputFieldsDeclarer declarer) {
+            declarer.declare(new Fields("id", "vertex"));
+        }
+    }
+
+    public static class BFSunix extends ShellBolt implements IRichBolt {
+        public BFSunix() {
+            super("/bin/sh", "run", "--bfs");
+        }
+        @Override
+        public Map<String, Object> getComponentConfiguration() {
+            return null;
         }
         @Override
         public void declareOutputFields(OutputFieldsDeclarer declarer) {
@@ -106,12 +113,24 @@ public class SearchTopology {
 
     // smush the images together into one, return the key of the image in the
     // object store
-    public static class Montage extends BaseBasicBolt {
+    public static class Montage extends BaseBatchBolt {
+        BatchOutputCollector _collector;
+        int count = 0;
+        Object _id;
         @Override
-        public void execute(Tuple tuple, BasicOutputCollector collector) {
-            Object id = tuple.getValue(0);
-            String vertex = tuple.getString(1);
-            collector.emit(new Values(id, "montagekeynigga"));
+        public void prepare(Map conf, TopologyContext context,
+                BatchOutputCollector c, Object id) {
+            _collector = c;
+            _id = id;
+        }
+        @Override
+        public void execute(Tuple tuple) {
+            count++;
+        }
+        @Override
+        public void finishBatch() {
+            String result = "MONTAGE-" + new Integer(count);
+            _collector.emit(new Values(_id, result));
         }
         @Override
         public void declareOutputFields(OutputFieldsDeclarer declarer) {
@@ -123,15 +142,13 @@ public class SearchTopology {
         LinearDRPCTopologyBuilder builder =
             new LinearDRPCTopologyBuilder("search");
 
-        builder.addBolt(new BFS(), 2);
-        builder.addBolt(new BFS(), 2).shuffleGrouping();
-        //builder.addBolt(new BFS(), 4).shuffleGrouping();
-        //builder.addBolt(new BFS(), 4).shuffleGrouping();
-        //builder.addBolt(new BFS(), 4).shuffleGrouping();
+        builder.addBolt(new BFSunix(), 2);
         builder.addBolt(new PartialUniquer(), 4).fieldsGrouping(new Fields("id", "vertex"));
-        builder.addBolt(new Filter(), 3).shuffleGrouping();
-        //builder.addBolt(new ImageList(), 4).shuffleGrouping();
+        //builder.addBolt(new Filter(), 3).shuffleGrouping();
+        ////builder.addBolt(new ImageList(), 4).shuffleGrouping();
         //builder.addBolt(new Hog(), 1).shuffleGrouping();
+
+        builder.addBolt(new Montage(), 4).shuffleGrouping();
 
         return builder;
     }
@@ -145,7 +162,7 @@ public class SearchTopology {
         conf.setMaxTaskParallelism(1);
         LocalDRPC drpc = new LocalDRPC();
         LocalCluster cluster = new LocalCluster();
-        cluster.submitTopology("search-drpc", conf,
+        cluster.submitTopology("search", conf,
                 builder.createLocalTopology(drpc));
 
         // XXX add some tags to guide the filter
@@ -153,8 +170,8 @@ public class SearchTopology {
         System.out.println("output: " + drpc.execute("search", vertex));
         // XXX have some loop that generates queries
 
-        cluster.shutdown();
         drpc.shutdown();
+        cluster.shutdown();
     }
 }
 

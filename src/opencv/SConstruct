@@ -13,7 +13,7 @@ if ARGUMENTS.get('clang', 0):
     cc = 'clang'
     cxx = 'clang++'
 
-ccflags = ['-std=c++1y']
+ccflags = ['-std=c++11']
 #ccflags.extend(['-Wall', '-Wextra', '-Werror'])
 ccflags.extend(['-Wall', '-Wextra'])
 ccflags.append('-Wno-unused-function')
@@ -80,9 +80,9 @@ env.Append(CPPPATH = cpath)
 env.Append(LIBPATH = libpath)
 env.Append(LIBS = libs)
 
-sources = ['StormStitcher.cpp', 'StormWrapper.cpp', 'Config.cpp']
+sources = ['StormFuncs.cpp', 'StormWrapper.cpp', 'Config.cpp']
 sources.extend(protogen)
-env.Program('stormstitcher', sources)
+env.Program('stormfuncs', sources)
 
 loadsources = ['load_egonet.cc', 'Config.cpp']
 loadsources.extend(protogen)
