@@ -1,5 +1,4 @@
 #! /usr/bin/env bash
-set -e
 set -u
 
 source /etc/profile.d/java.sh
@@ -7,11 +6,11 @@ source /etc/profile.d/java.sh
 SOURCE=/usr/local/src/storm/latest
 
 # add others as necessary, colon-separated
-JARS=$(find $SOURCE/ -type f | grep 'storm-core')
+JARS=$(find $SOURCE/ -type f | egrep 'storm-core')
 
 [[ ! -e "$JARS" ]] && echo "storm jar not found" && exit 1
 
-killall -s SIGHUP stormfuncs || true
+set -e
 
 echo Compiling ...
 javac -cp $JARS SearchTopology.java

@@ -1,23 +1,27 @@
 #! /usr/bin/env bash
-# Run locally:
-#   ./run_topology.sh
-# Run in Storm:
-# ./run_topology.sh <topology-name>
-
-set -e
 set -u
+ulimit -c unlimited
+
+source /etc/profile.d/java.sh
 
 SOURCE=/usr/local/src/storm/latest
 STORM=$SOURCE/bin/storm
 
-scons -C ..
+killall -q -s SIGHUP stormfuncs
+./cleanup.sh
 
+set -e
+
+# build the codes
+scons -C .. debug=1
 ./makejar.sh
 
-JARS="$(find $SOURCE/ -type f | egrep '\.jar$' | tr '\n' ':')"
+# this is read before storm puts everyone into the newly relocated resources/
+cp -v ../inputs/graph-ids.txt ./
 
 ($STORM jar search.jar SearchTopology ../pulse.conf $@ 2>&1 ) | tee storm.log
 
+# JARS="$(find $SOURCE/ -type f | egrep '\.jar$' | tr '\n' ':')"
 # java -client -Dstorm.options= \
 #     -Dstorm.home=$SOURCE \
 #     -Djava.library.path=/usr/local/lib:/opt/local/lib:/usr/lib \
@@ -26,5 +30,8 @@ JARS="$(find $SOURCE/ -type f | egrep '\.jar$' | tr '\n' ':')"
 #     SearchTopology \
 #     ../pulse.conf $@
 
-grep output storm.log
+echo ''
+echo 'results:'
+echo ''
+grep output: storm.log
 
