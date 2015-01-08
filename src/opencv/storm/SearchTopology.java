@@ -32,44 +32,18 @@ public class SearchTopology {
     // Common code
     // -------------------------------------------------------------------------
 
-    public static class Long2 {
-        public static long toLong(String val) {
-            return Long.decode(val).longValue();
+    // 0: request ID 1: action 2: action-specific 3: etc
+    public static class Labels {
+        // TODO vertex count -> request tuple count
+        // vertices may be converted to images or something else later
+        public static class Stream {
+            public static final String vertices = "stream_vertices";
+            public static final String counts = "stream_vertexCount";
         }
-    }
-
-    public static class Logger {
-        public PrintWriter out;
-        public String logPath;
-
-        public String uniqName() {
-            return ManagementFactory.getRuntimeMXBean().getName();
-        }
-        Logger(String name) {
-            logPath = new String("/tmp/" + name + "_" + uniqName() + "_.log");
-        }
-        public boolean error() { return (out != null && out.checkError()); }
-        public boolean open() {
-            try {
-                out = new PrintWriter(
-                        new BufferedWriter(
-                            new FileWriter(logPath)));
-            } catch (IOException e) {
-                return false;
-            }
-            return true;
-        }
-
-        // static methods to avoid having to write null checks everywhere
-        public static void println(Logger l, String s) {
-            if ((l != null) && !l.error())
-                l.out.println(s);
-        }
-
-        public static void close(Logger l) {
-            if (l != null)
-                l.out.close();
-        }
+        // Fields
+        public static final String reqID = "field_reqID";
+        public static final String vertex = "field_vertex";
+        public static final String vertexCount = "field_vertexCount";
     }
 
     // XXX instead of maintaining as array, covnert all vertices to 0-X values
@@ -188,38 +162,42 @@ public class SearchTopology {
     }
 
     public static class Generator extends SimpleSpout {
-        private int count;
         private Random rand;
-        private boolean submittedOne;
+        private int count;
 
         Generator() {
-            outputFields = new Fields("id", "vertex");
             name = "generator-spout";
-            submittedOne = false;
+            count = 0;
+        }
+
+        @Override // ignore superclass
+        public void declareOutputFields(OutputFieldsDeclarer d) {
+            Fields fields = new Fields(Labels.reqID, Labels.vertex);
+            d.declareStream(Labels.Stream.vertices, fields);
+            Logger.println(log, Labels.Stream.vertices
+                    + Labels.reqID + " " + Labels.vertex);
         }
 
         // TODO use a thread
         @Override
         public void nextTuple() {
-            if (submittedOne) {
-                try { Thread.sleep(1 * 1000); }
-                catch (InterruptedException e) { }
+            if (count > 0)
                 return;
-            }
+            String reqID = Long.toString(Math.abs(rand.nextLong()));
+            String vertex = Long.toString(Math.abs(rand.nextLong()));
+            Values values = new Values(reqID, vertex);
+            c.emit(Labels.Stream.vertices, values);
+            Logger.println(log, "emit " + reqID + " " + vertex);
 
-            String id = new String(
-                    Long.toString(
-                        Math.abs(rand.nextLong())));
-            Logger.println(log, "nextTuple " + id);
-            c.emit(new Values(id, "vertex-" + id));
-            submittedOne = true;
+            // TODO allow customization of the rate
+
+            count++;
         }
 
         public void open(Map conf, TopologyContext context,
                 SpoutOutputCollector collector) {
             super.open(conf, context, collector);
             rand = new Random();
-            Logger.println(log, "Generator:open()");
         }
     }
 
@@ -227,64 +205,133 @@ public class SearchTopology {
         private Random rand;
 
         Spitter() { 
-            outputFields = new Fields("id", "vertex-or-count", "null-or-count");
             name = "spitter-bolt";
         }
 
-        public void prepare(Map stormConf,
-                TopologyContext context,
-                OutputCollector collector) {
-            super.prepare(stormConf, context, collector);
+        @Override // ignore superclass implementation
+        public void declareOutputFields(OutputFieldsDeclarer d) {
+            Fields fields =
+                new Fields(Labels.reqID, Labels.vertex);
+            d.declareStream(Labels.Stream.vertices, fields);
+
+            fields =
+                new Fields(Labels.reqID, Labels.vertexCount);
+            d.declareStream(Labels.Stream.counts, fields);
         }
 
-        // TODO count per unique request ID
+        private boolean streamIsVertex(Tuple tuple) {
+            String stream = tuple.getSourceStreamId();
+            return (stream.compareTo(Labels.Stream.vertices) == 0);
+        }
+
         @Override
         public void execute(Tuple tuple) {
-            int count = 0;
-            for (int r = 0; r < 10; r++) {
-            for (int i = 0; i < 100; i++) {
-                String val = new String(tuple.getString(1)
-                        + "_haxx-" + Integer.toString(i));
-                c.emit(new Values(tuple.getString(0), val, "n/a"));
-                Logger.println(log, tuple.getString(1) + " execute "
-                        + tuple.getString(1) + " emit " + val );
-                count++;
+            String reqID = tuple.getString(0);
+            Logger.println(log, "execute: " + reqID);
+            Values values;
+
+            if (!streamIsVertex(tuple))
+                throw new RuntimeException("spitter got wrong stream");
+
+            int count;
+            for (count = 0; count < 10; count++) {
+                String vertex = Integer.toString(count);
+                values = new Values(reqID, vertex);
+                // does this go to both the next spitter, and the unique bolt?
+                c.emit(Labels.Stream.vertices, values);
+                Logger.println(log, "emit vertices ("
+                        + reqID + ", " + vertex + ")");
             }
-            }
-            c.emit(new Values(tuple.getString(0),
-                        Uniquer.fieldExpected, Integer.toString(count)));
+
+            values = new Values(reqID, Integer.toString(count));
+            c.emit(Labels.Stream.counts, values);
+            Logger.println(log, "emit count ("
+                    + reqID + ", " + Integer.toString(count) + ")");
+
             c.ack(tuple);
         }
     }
 
     // use with .fieldsGrouping() to see all tuples from same request
     public static class Uniquer extends SimpleBolt {
-        private HashSet<String> keys;
-        private long needed, received;
-        private String id;
-        public static final String fieldExpected = "__uniquer_expected";
-        Uniquer() {
-            outputFields = new Fields("id", "count");
-            name = "uniquer-bolt";
-            keys = new HashSet();
-            needed = received = 0;
+        class TrackingInfo {
+            long received, count;
+            HashSet<String> values; // vertices
+            public boolean complete() {
+                return ((count > 0) && (received >= count));
+            }
         }
+
+        // hashed by request ID
+        HashMap<String, TrackingInfo> keys;
+
+        Uniquer() {
+            name = "uniquer-bolt";
+            keys = new HashMap<String, TrackingInfo>();
+        }
+
+        @Override // ignore superclass implementation
+        public void declareOutputFields(OutputFieldsDeclarer d) {
+            // same as Spitter, as we only unique the entries
+            Fields fields =
+                new Fields(Labels.reqID, Labels.vertex);
+            d.declareStream(Labels.Stream.vertices, fields);
+
+            fields =
+                new Fields(Labels.reqID, Labels.vertexCount);
+            d.declareStream(Labels.Stream.counts, fields);
+        }
+
+        private void handleCount(Tuple tuple) {
+            String reqID = tuple.getString(0);
+            String count = tuple.getString(1);
+            TrackingInfo info = keys.get(reqID);
+            info.count += Long.decode(count).longValue();
+            Logger.println(log, "recv count ("
+                    + reqID + ", " + count + ")"
+                    + " total " + Long.toString(info.count)
+                    + " uniq " + Integer.toString(info.values.size()));
+        }
+
+        private void handleVertex(Tuple tuple) {
+            String reqID = tuple.getString(0);
+            TrackingInfo info = keys.get(reqID);
+            String vertex = tuple.getString(1);
+            info.values.add(vertex);
+            info.received++;
+            Logger.println(log, "recv vertex ("
+                    + reqID + ", " + vertex + ")");
+        }
+
+        private void addTracking(String reqID) {
+            TrackingInfo info = keys.get(reqID);
+            if (info != null)
+                return;
+            info = new TrackingInfo();
+            info.values = new HashSet<String>();
+            keys.put(reqID, info);
+        }
+
+        private boolean streamIsCount(Tuple tuple) {
+            String stream = tuple.getSourceStreamId();
+            return (stream.compareTo(Labels.Stream.counts) == 0);
+        }
+
+        private boolean streamIsVertex(Tuple tuple) {
+            String stream = tuple.getSourceStreamId();
+            return (stream.compareTo(Labels.Stream.vertices) == 0);
+        }
+
         @Override
         public void execute(Tuple tuple) {
-            if (0 == tuple.getString(1).compareTo(fieldExpected)) {
-                needed = Long2.toLong(tuple.getString(2));
-                Logger.println(log, "Expecting: " + tuple.getString(2));
-            } else {
-                received++;
-                keys.add(tuple.getString(1));
-                Logger.println(log, "execute " + tuple.getString(1));
-                id = new String(tuple.getString(0));
-            }
-            if ((needed > 0) && (received == needed)) {
-                Logger.println(log, "Got all expected tuples; emitting "
-                        + Integer.toString(keys.size()));
-                c.emit(new Values(id, Integer.toString(keys.size())));
-            }
+            String reqID = tuple.getString(0); // first for all streams
+            addTracking(reqID);
+            if (streamIsCount(tuple))
+                handleCount(tuple);
+            else if (streamIsVertex(tuple))
+                handleVertex(tuple);
+            else throw new RuntimeException("unknown stream");
+            c.ack(tuple);
         }
     }
 
@@ -312,7 +359,7 @@ public class SearchTopology {
         }
         @Override
         public void declareOutputFields(OutputFieldsDeclarer declarer) {
-            declarer.declare(new Fields("id", "vertex"));
+            declarer.declare(new Fields(Labels.reqID, Labels.vertex));
         }
     }
 
@@ -333,7 +380,7 @@ public class SearchTopology {
         }
         @Override
         public void declareOutputFields(OutputFieldsDeclarer declarer) {
-            declarer.declare(new Fields("id", "vertex"));
+            declarer.declare(new Fields(Labels.reqID, Labels.vertex));
         }
     }
 
@@ -383,7 +430,7 @@ public class SearchTopology {
         }
         @Override
         public void declareOutputFields(OutputFieldsDeclarer declarer) {
-            declarer.declare(new Fields("id", "vertex"));
+            declarer.declare(new Fields(Labels.reqID, Labels.vertex));
         }
     }
 
@@ -397,7 +444,7 @@ public class SearchTopology {
         }
         @Override
         public void declareOutputFields(OutputFieldsDeclarer declarer) {
-            declarer.declare(new Fields("id", "vertex"));
+            declarer.declare(new Fields(Labels.reqID, Labels.vertex));
         }
     }
 
@@ -413,7 +460,7 @@ public class SearchTopology {
         }
         @Override
         public void declareOutputFields(OutputFieldsDeclarer declarer) {
-            declarer.declare(new Fields("id", "vertex"));
+            declarer.declare(new Fields(Labels.reqID, Labels.vertex));
         }
     }
 
@@ -427,7 +474,7 @@ public class SearchTopology {
         }
         @Override
         public void declareOutputFields(OutputFieldsDeclarer declarer) {
-            declarer.declare(new Fields("id", "image"));
+            declarer.declare(new Fields(Labels.reqID, "image"));
         }
     }
 
@@ -442,7 +489,7 @@ public class SearchTopology {
         }
         @Override
         public void declareOutputFields(OutputFieldsDeclarer declarer) {
-            declarer.declare(new Fields("id", "result"));
+            declarer.declare(new Fields(Labels.reqID, "result"));
         }
     }
 
@@ -471,7 +518,7 @@ public class SearchTopology {
         }
         @Override
         public void declareOutputFields(OutputFieldsDeclarer declarer) {
-            declarer.declare(new Fields("id", "all-keys"));
+            declarer.declare(new Fields(Labels.reqID, "all-keys"));
         }
     }
 
@@ -486,7 +533,7 @@ public class SearchTopology {
         }
         @Override
         public void declareOutputFields(OutputFieldsDeclarer declarer) {
-            declarer.declare(new Fields("id", "montage-key"));
+            declarer.declare(new Fields(Labels.reqID, "montage-key"));
         }
     }
 
@@ -499,31 +546,37 @@ public class SearchTopology {
         System.out.println("Using regular Storm topology");
 
         TopologyBuilder builder = new TopologyBuilder();
-//        builder.setSpout("spout", new GraphSpout(), 1);
-//        builder.setBolt("user", new UserBolt(), 1)
-//            .shuffleGrouping("spout");
-//        builder.setBolt("feature", new FeatureBolt(), 1)
-//            .shuffleGrouping("user", "toFeature");
-//        builder.setBolt("montage", new MontageBolt(), 1)
-//            .fieldsGrouping("feature", new Fields("requestID"));
-//
-//        builder.setBolt("reqstat", new ReqStatBolt(), 1)
-//            .fieldsGrouping("user", "toStats", new Fields("requestID"));
 
-        builder.setSpout("generator", new Generator(), 1);
-        builder.setBolt("spitter1", new Spitter(), 1)
-            .shuffleGrouping("generator");
-        builder.setBolt("uniquer1", new KeyedFairBolt(new Uniquer()), 1)
-            .fieldsGrouping("spitter1", new Fields("id"));
+        SpoutDeclarer gen = builder.setSpout("gen", new Generator(), 1);
+        BoltDeclarer uniq = builder.setBolt("uniq0", new Uniquer(), 1);
 
+        int numSpit = 2;
+        Fields sortByID = new Fields(Labels.reqID);
+        String name = "spit0";
+        builder.setBolt(name, new Spitter(), 1)
+            .shuffleGrouping("gen", Labels.Stream.vertices);
+        uniq.fieldsGrouping(name, Labels.Stream.counts, sortByID);
+        uniq.fieldsGrouping(name, Labels.Stream.vertices, sortByID);
+        for (int s = 1; s < numSpit; s++) {
+            String prior = "spit" + Integer.toString(s-1);
+            name = "spit" + Integer.toString(s);
+            builder.setBolt(name, new Spitter(), 1)
+                .fieldsGrouping(prior, Labels.Stream.vertices, sortByID);
+            // XXX does this work? all tuples belonging to same reqID must
+            // arrive at same instance of uniquer
+            uniq.fieldsGrouping(name, Labels.Stream.counts, sortByID);
+            uniq.fieldsGrouping(name, Labels.Stream.vertices, sortByID);
+        }
+
+        StormTopology t = builder.createTopology();
         if (args.length > 1) {
             stormConf.setNumWorkers(1);
-            StormSubmitter.submitTopology(args[0], stormConf, builder.createTopology());
+            StormSubmitter.submitTopology(args[0], stormConf, t);
         } else {
             stormConf.setMaxTaskParallelism(1);
             LocalCluster cluster = new LocalCluster();
-            cluster.submitTopology("search", stormConf, builder.createTopology());
-            Thread.sleep(20 * 1000); // ms
+            cluster.submitTopology("search", stormConf, t);
+            Thread.sleep(5 * 1000); // ms
             cluster.shutdown();
         }
     }
@@ -540,7 +593,7 @@ public class SearchTopology {
         //builder.addBolt(new UnixGlue(), 1).shuffleGrouping();
         builder.addBolt(new PartialUniquer(), 1)
             .shuffleGrouping();
-            //.fieldsGrouping(new Fields("id", "vertex"));
+            //.fieldsGrouping(new Fields(Labels.reqID, "vertex"));
         //builder.addBolt(new ImageList(), 4).shuffleGrouping();
         //builder.addBolt(new Hog(), 1).shuffleGrouping();
 
@@ -613,7 +666,7 @@ public class SearchTopology {
         String s = new String("abc");
 
         String confPath = args[0];
-        readVertexList(confPath);
+        //readVertexList(confPath);
 
         Config stormConf = new Config();
         stormConf.setDebug(true);

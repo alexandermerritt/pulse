@@ -12,8 +12,10 @@ JARS=$(find $SOURCE/ -type f | egrep 'storm-core')
 
 set -e
 
+FILES="SearchTopology.java Logger.java"
+
 echo Compiling ...
-javac -cp $JARS SearchTopology.java
+javac -cp $JARS $FILES
 
 [[ ! -e ../stormfuncs ]] && \
 	echo "Compile stormfuncs first" && exit 1
@@ -26,7 +28,7 @@ cp -v ../stormfuncs resources/
 cp -v ../pulse.conf resources/
 
 echo Creating jars ...
-jar cvf search.jar Search*.class resources
+jar cvf search.jar Search*.class Logger*.class resources
 
 rm -f *.class
 echo Done.
