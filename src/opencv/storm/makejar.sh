@@ -12,9 +12,10 @@ JARS=$(find $SOURCE/ -type f | egrep 'storm-core')
 
 set -e
 
-FILES="SearchTopology.java Logger.java"
+FILES="SearchTopology.java Logger.java JNILinker.java"
 
 echo Compiling ...
+./cleanup.sh
 javac -cp $JARS $FILES
 
 [[ ! -e ../stormfuncs ]] && \
@@ -28,8 +29,10 @@ cp -v ../stormfuncs resources/
 cp -v ../pulse.conf resources/
 
 echo Creating jars ...
-jar cvf search.jar Search*.class Logger*.class resources
+jar cvf search.jar \
+    Search*.class \
+    Logger*.class \
+    resources
 
-rm -f *.class
 echo Done.
 

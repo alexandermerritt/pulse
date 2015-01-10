@@ -1,5 +1,6 @@
 import backtype.storm.*;
 import backtype.storm.coordination.*;
+import backtype.storm.coordination.CoordinatedBolt.*;
 import backtype.storm.drpc.*;
 import backtype.storm.spout.*;
 import backtype.storm.task.*;
@@ -56,8 +57,8 @@ public class SearchTopology {
         while (in.ready()) {
             String line = in.readLine();
             String[] tokens = line.split(" ");
-            if (0 == tokens[0].compareTo("graph"))
-                if (0 == tokens[1].compareTo("idsfile"))
+            if (tokens[0].equals("graph"))
+                if (tokens[1].equals("idsfile"))
                     idsPath = tokens[2];
         }
         if (idsPath.length() == 0)
@@ -166,7 +167,7 @@ public class SearchTopology {
         private int count;
 
         Generator() {
-            name = "generator-spout";
+            name = "gen-spout";
             count = 0;
         }
 
@@ -201,27 +202,27 @@ public class SearchTopology {
         }
     }
 
-    public static class Spitter extends SimpleBolt {
+    // TODO
+    //public static class ReqMgr extends SimpleBolt { }
+
+    public static class Neighbors extends SimpleBolt {
         private Random rand;
 
-        Spitter() { 
-            name = "spitter-bolt";
+        Neighbors() { 
+            name = "neighbors-bolt";
         }
 
         @Override // ignore superclass implementation
         public void declareOutputFields(OutputFieldsDeclarer d) {
-            Fields fields =
-                new Fields(Labels.reqID, Labels.vertex);
+            Fields fields = new Fields(Labels.reqID, Labels.vertex);
             d.declareStream(Labels.Stream.vertices, fields);
-
-            fields =
-                new Fields(Labels.reqID, Labels.vertexCount);
+            fields = new Fields(Labels.reqID, Labels.vertexCount);
             d.declareStream(Labels.Stream.counts, fields);
         }
 
         private boolean streamIsVertex(Tuple tuple) {
             String stream = tuple.getSourceStreamId();
-            return (stream.compareTo(Labels.Stream.vertices) == 0);
+            return (stream.equals(Labels.Stream.vertices));
         }
 
         @Override
@@ -231,22 +232,20 @@ public class SearchTopology {
             Values values;
 
             if (!streamIsVertex(tuple))
-                throw new RuntimeException("spitter got wrong stream");
+                throw new RuntimeException("neighbors got wrong stream");
+
+            values = new Values(reqID, Integer.toString(10));
+            c.emit(Labels.Stream.counts, values);
+            Logger.println(log, "emit count ("
+                    + reqID + ", " + Integer.toString(10) + ")");
 
             int count;
             for (count = 0; count < 10; count++) {
                 String vertex = Integer.toString(count);
                 values = new Values(reqID, vertex);
-                // does this go to both the next spitter, and the unique bolt?
+                // does this go to both the next neighbors, and the unique bolt?
                 c.emit(Labels.Stream.vertices, values);
-                Logger.println(log, "emit vertices ("
-                        + reqID + ", " + vertex + ")");
             }
-
-            values = new Values(reqID, Integer.toString(count));
-            c.emit(Labels.Stream.counts, values);
-            Logger.println(log, "emit count ("
-                    + reqID + ", " + Integer.toString(count) + ")");
 
             c.ack(tuple);
         }
@@ -255,285 +254,104 @@ public class SearchTopology {
     // use with .fieldsGrouping() to see all tuples from same request
     public static class Uniquer extends SimpleBolt {
         class TrackingInfo {
-            long received, count;
-            HashSet<String> values; // vertices
-            public boolean complete() {
-                return ((count > 0) && (received >= count));
+            long vertexRecv, vertexWait;
+            long countRecv, countWait;
+            HashSet<String> values; // TODO consider bloomfilter instead
+            public boolean done() {
+                boolean nonZero = (vertexRecv > 0) && (vertexWait > 0)
+                    && (countRecv > 0) && (countWait > 0);
+                return (nonZero && (vertexRecv >= vertexWait)
+                        && (countRecv >= countWait));
             }
         }
 
         // hashed by request ID
         HashMap<String, TrackingInfo> keys;
+        String lastID;
 
-        Uniquer() {
+        private Uniquer() { }
+        Uniquer(String lastID) {
             name = "uniquer-bolt";
             keys = new HashMap<String, TrackingInfo>();
+            this.lastID = lastID;
         }
 
         @Override // ignore superclass implementation
         public void declareOutputFields(OutputFieldsDeclarer d) {
-            // same as Spitter, as we only unique the entries
-            Fields fields =
-                new Fields(Labels.reqID, Labels.vertex);
+            Fields fields = new Fields(Labels.reqID, Labels.vertex);
             d.declareStream(Labels.Stream.vertices, fields);
-
-            fields =
-                new Fields(Labels.reqID, Labels.vertexCount);
+            fields = new Fields(Labels.reqID, Labels.vertexCount);
             d.declareStream(Labels.Stream.counts, fields);
+        }
+
+        private TrackingInfo tracking(String reqID) {
+            TrackingInfo info = keys.get(reqID);
+            if (info == null) {
+                Logger.println(log, "New tracking info for " + reqID);
+                info = new TrackingInfo();
+                info.values = new HashSet<String>();
+                info.countWait = 1;
+                keys.put(reqID, info);
+            }
+            return info;
+        }
+
+        private boolean streamIsCount(Tuple tuple) {
+            String stream = tuple.getSourceStreamId();
+            return (stream.equals(Labels.Stream.counts));
+        }
+
+        private boolean streamIsVertex(Tuple tuple) {
+            String stream = tuple.getSourceStreamId();
+            return (stream.equals(Labels.Stream.vertices));
         }
 
         private void handleCount(Tuple tuple) {
             String reqID = tuple.getString(0);
-            String count = tuple.getString(1);
+            long count = Long.decode(tuple.getString(1)).longValue();
             TrackingInfo info = keys.get(reqID);
-            info.count += Long.decode(count).longValue();
-            Logger.println(log, "recv count ("
-                    + reqID + ", " + count + ")"
-                    + " total " + Long.toString(info.count)
-                    + " uniq " + Integer.toString(info.values.size()));
+            info.countRecv++;
+            Logger.println(log, reqID + " countRecv " + info.countRecv);
+            String origin = tuple.getSourceComponent();
+            if (!origin.equals(lastID)) {
+                info.countWait += count;
+                Logger.println(log, reqID
+                        + " lastID: " + lastID + " this: " + origin
+                        + " countWait " + info.countWait);
+            }
+            info.vertexWait += count;
+            Logger.println(log, reqID + " vertexWait " + info.vertexWait);
         }
 
         private void handleVertex(Tuple tuple) {
             String reqID = tuple.getString(0);
             TrackingInfo info = keys.get(reqID);
             String vertex = tuple.getString(1);
-            info.values.add(vertex);
-            info.received++;
-            Logger.println(log, "recv vertex ("
-                    + reqID + ", " + vertex + ")");
+            info.vertexRecv++;
+            Logger.println(log, reqID + " vertexRecv " + info.vertexRecv);
+            if (info.values.add(vertex)) {
+                Values val = new Values(reqID, vertex);
+                c.emit(Labels.Stream.vertices, val);
+                Logger.println(log, "emit: " + vertex);
+            }
+            if (info.done()) {
+                Logger.println(log, "Got all for " + reqID);
+                keys.remove(reqID);
+            }
         }
 
-        private void addTracking(String reqID) {
-            TrackingInfo info = keys.get(reqID);
-            if (info != null)
-                return;
-            info = new TrackingInfo();
-            info.values = new HashSet<String>();
-            keys.put(reqID, info);
-        }
-
-        private boolean streamIsCount(Tuple tuple) {
-            String stream = tuple.getSourceStreamId();
-            return (stream.compareTo(Labels.Stream.counts) == 0);
-        }
-
-        private boolean streamIsVertex(Tuple tuple) {
-            String stream = tuple.getSourceStreamId();
-            return (stream.compareTo(Labels.Stream.vertices) == 0);
-        }
+        // TODO figure out when request is completed
 
         @Override
         public void execute(Tuple tuple) {
-            String reqID = tuple.getString(0); // first for all streams
-            addTracking(reqID);
+            String reqID = tuple.getString(0);
+            TrackingInfo info = tracking(reqID);
             if (streamIsCount(tuple))
                 handleCount(tuple);
             else if (streamIsVertex(tuple))
                 handleVertex(tuple);
             else throw new RuntimeException("unknown stream");
             c.ack(tuple);
-        }
-    }
-
-    // -----------------------------------------------------
-
-    public static class GraphSpout extends BaseRichSpout {
-        //Logger log;
-        @Override
-        public void open(Map conf,
-                TopologyContext context,
-                SpoutOutputCollector collector) {
-            //log = new Logger("GraphSpout");
-            //log.open();
-        }
-        @Override
-        public Map<String, Object> getComponentConfiguration() {
-            return null;
-        }
-        @Override
-        public void nextTuple() {
-            // collector.emit(String streamId, tuples)
-            // collector.emit(int taskId, tuples)
-            // collector.emit(String streamId, int taskId, tuples)
-            //collector.emit(new Values("tuple", 0));
-        }
-        @Override
-        public void declareOutputFields(OutputFieldsDeclarer declarer) {
-            declarer.declare(new Fields(Labels.reqID, Labels.vertex));
-        }
-    }
-
-    public static class BFSUnix extends ShellBolt implements IRichBolt {
-        public BFSUnix() {
-            super("/bin/sh", "run", "--bolt=bfs");
-        }
-        @Override
-        public void execute(Tuple tuple) {
-            String msg = new String();
-            msg += "Got a tuple, sending to Unix";
-            System.out.println(msg);
-            super.execute(tuple);
-        }
-        @Override
-        public Map<String, Object> getComponentConfiguration() {
-            return null;
-        }
-        @Override
-        public void declareOutputFields(OutputFieldsDeclarer declarer) {
-            declarer.declare(new Fields(Labels.reqID, Labels.vertex));
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // DRPC Bolts
-    // -------------------------------------------------------------------------
-
-    // remove duplicate vertices
-    public static class PartialUniquer extends BaseBatchBolt {
-        BatchOutputCollector _collector;
-        PrintWriter out;
-        int inCount = 0;
-        Set<String> _vertices = new HashSet<String>();
-        Object _id;
-        @Override
-        public void prepare(Map conf, TopologyContext context,
-                BatchOutputCollector c, Object id) {
-            _collector = c;
-            _id = id;
-
-            String hostVal = ManagementFactory.getRuntimeMXBean().getName();
-            String logPath = new String("/tmp/uniqbolt-" + hostVal);
-            try {
-                out = new PrintWriter(new BufferedWriter(new FileWriter(logPath)));
-            } catch (IOException e) {
-                System.out.println("Error: PartialUniquer could not"
-                        + " open log file: " + logPath
-                        + ": " + e);
-                return;
-            }
-            String text = new String("PartialUniquer prepare() invoked");
-            out.println(text);
-        }
-        @Override
-        public void execute(Tuple tuple) {
-            inCount++;
-            _vertices.add(tuple.getString(1));
-        }
-        @Override
-        public void finishBatch() {
-            String text = new String();
-            text += "finishBatch(): uniq " + Integer.toString(inCount)
-                + " -> " + Integer.toString(_vertices.size());
-            out.println(text);
-            for (String vertex : _vertices)
-                _collector.emit(new Values(_id, vertex));
-        }
-        @Override
-        public void declareOutputFields(OutputFieldsDeclarer declarer) {
-            declarer.declare(new Fields(Labels.reqID, Labels.vertex));
-        }
-    }
-
-    public static class Repeater extends BaseBasicBolt {
-        @Override
-        public void execute(Tuple tuple, BasicOutputCollector collector) {
-            Object id = tuple.getValue(0);
-            String vertex = tuple.getString(1);
-            for (int i = 0; i < 10; i++)
-                collector.emit(new Values(id, vertex));
-        }
-        @Override
-        public void declareOutputFields(OutputFieldsDeclarer declarer) {
-            declarer.declare(new Fields(Labels.reqID, Labels.vertex));
-        }
-    }
-
-    // connect unix bolts with other java bolts..
-    // some stupid bug in storm where batch bolts cannot follow unix bolts in a
-    // drpc workflow
-    public static class UnixGlue extends BaseBasicBolt {
-        @Override
-        public void execute(Tuple tuple, BasicOutputCollector collector) {
-            Object id = tuple.getValue(0);
-            String vertex = tuple.getString(1);
-            collector.emit(new Values(id, vertex));
-        }
-        @Override
-        public void declareOutputFields(OutputFieldsDeclarer declarer) {
-            declarer.declare(new Fields(Labels.reqID, Labels.vertex));
-        }
-    }
-
-    // for each vertex, emit the IDs of images associated with it
-    public static class ImageList extends BaseBasicBolt {
-        @Override
-        public void execute(Tuple tuple, BasicOutputCollector collector) {
-            Object id = tuple.getValue(0);
-            String vertex = tuple.getString(1);
-            // XXX
-        }
-        @Override
-        public void declareOutputFields(OutputFieldsDeclarer declarer) {
-            declarer.declare(new Fields(Labels.reqID, "image"));
-        }
-    }
-
-    // compute HOG operator; emit images that have objects in them;
-    // store the hog feature set in the object store
-    public static class Hog extends BaseBasicBolt {
-        @Override
-        public void execute(Tuple tuple, BasicOutputCollector collector) {
-            Object id = tuple.getValue(0);
-            String vertex = tuple.getString(1);
-            // XXX
-        }
-        @Override
-        public void declareOutputFields(OutputFieldsDeclarer declarer) {
-            declarer.declare(new Fields(Labels.reqID, "result"));
-        }
-    }
-
-    // convert all keys into one tuple
-    // b/c a shellbolt cannot be a batch for some reason
-    public static class PreMontage extends BaseBatchBolt {
-        BatchOutputCollector _collector;
-        List<String> keys = new LinkedList<String>();
-        Object _id;
-        @Override
-        public void prepare(Map conf, TopologyContext context,
-                BatchOutputCollector c, Object id) {
-            _collector = c;
-            _id = id;
-        }
-        @Override
-        public void execute(Tuple tuple) {
-            keys.add(tuple.getString(1));
-        }
-        @Override
-        public void finishBatch() {
-            String result = new String();
-            for (String key : keys) // XXX huge tuple...
-                result += key + ",";
-            _collector.emit(new Values(_id, result));
-        }
-        @Override
-        public void declareOutputFields(OutputFieldsDeclarer declarer) {
-            declarer.declare(new Fields(Labels.reqID, "all-keys"));
-        }
-    }
-
-    // give the huge tuple to unix process to merge images together
-    public static class MontageUnix extends ShellBolt implements IRichBolt {
-        public MontageUnix() {
-            super("/bin/sh", "run", "--bolt=montage");
-        }
-        @Override
-        public Map<String, Object> getComponentConfiguration() {
-            return null;
-        }
-        @Override
-        public void declareOutputFields(OutputFieldsDeclarer declarer) {
-            declarer.declare(new Fields(Labels.reqID, "montage-key"));
         }
     }
 
@@ -545,25 +363,26 @@ public class SearchTopology {
         throws Exception {
         System.out.println("Using regular Storm topology");
 
-        TopologyBuilder builder = new TopologyBuilder();
-
-        SpoutDeclarer gen = builder.setSpout("gen", new Generator(), 1);
-        BoltDeclarer uniq = builder.setBolt("uniq0", new Uniquer(), 1);
-
-        int numSpit = 2;
+        int numNeighbor = 2;
+        String neighBase = "neighbor", name = "";
         Fields sortByID = new Fields(Labels.reqID);
-        String name = "spit0";
-        builder.setBolt(name, new Spitter(), 1)
+
+        TopologyBuilder builder = new TopologyBuilder();
+        SpoutDeclarer gen = builder.setSpout("gen", new Generator(), 1);
+
+        name = neighBase + (numNeighbor - 1);
+        BoltDeclarer uniq = builder.setBolt("uniq0", new Uniquer(name), 1);
+
+        name = neighBase + 0;
+        builder.setBolt(name, new Neighbors(), 1)
             .shuffleGrouping("gen", Labels.Stream.vertices);
         uniq.fieldsGrouping(name, Labels.Stream.counts, sortByID);
         uniq.fieldsGrouping(name, Labels.Stream.vertices, sortByID);
-        for (int s = 1; s < numSpit; s++) {
-            String prior = "spit" + Integer.toString(s-1);
-            name = "spit" + Integer.toString(s);
-            builder.setBolt(name, new Spitter(), 1)
+        for (int n = 1; n < numNeighbor; n++) {
+            String prior = neighBase + (n - 1);
+            name = neighBase + n;
+            builder.setBolt(name, new Neighbors(), 1)
                 .fieldsGrouping(prior, Labels.Stream.vertices, sortByID);
-            // XXX does this work? all tuples belonging to same reqID must
-            // arrive at same instance of uniquer
             uniq.fieldsGrouping(name, Labels.Stream.counts, sortByID);
             uniq.fieldsGrouping(name, Labels.Stream.vertices, sortByID);
         }
@@ -581,85 +400,12 @@ public class SearchTopology {
         }
     }
 
-    public static void doDRPC(Config stormConf) {
-        System.out.println("Using linearDRPC");
-        LinearDRPCTopologyBuilder builder =
-            new LinearDRPCTopologyBuilder("search");
-
-        // XXX Ordering is important.. ? Weird bugs
-        // Unix bolt -> !batch bolt -> any bolt
-
-        builder.addBolt(new BFSUnix(), 1).shuffleGrouping();
-        //builder.addBolt(new UnixGlue(), 1).shuffleGrouping();
-        builder.addBolt(new PartialUniquer(), 1)
-            .shuffleGrouping();
-            //.fieldsGrouping(new Fields(Labels.reqID, "vertex"));
-        //builder.addBolt(new ImageList(), 4).shuffleGrouping();
-        //builder.addBolt(new Hog(), 1).shuffleGrouping();
-
-        builder.addBolt(new PreMontage(), 1).shuffleGrouping();
-        builder.addBolt(new MontageUnix(), 1).shuffleGrouping();
-
-        LocalDRPC drpc = new LocalDRPC();
-        LocalCluster cluster = new LocalCluster();
-        cluster.submitTopology("search", stormConf,
-                builder.createLocalTopology(drpc));
-
-        // XXX add some tags to guide the filter
-
-        // TODO instead of only vertex, send src-vertex and vertex, so the
-        // BFS walking doesn't emit the prior vertex for walking again, or
-        // each walk we put them through a uniquer?
-
-        Random rand = new Random(0);
-        for (int i = 0; i < 1; i++) {
-            //int idx = rand.nextInt(vertices.length);
-            int idx = 0;
-            String vertex = vertices[idx];
-            System.out.println("execute: " + vertex + " "
-                    + "output: " + drpc.execute("search", vertex));
-        }
-
-        cluster.shutdown();
-        drpc.shutdown();
-    }
-
-    public static void doTrident(Config stormConf) {
-        System.out.println("Using Trident");
-
-        TridentTopology trident = new TridentTopology();
-        LocalDRPC drpc = new LocalDRPC();
-        StormTopology storm;
-
-        // XXX https://issues.apache.org/jira/browse/STORM-151
-        // It seems shellbolt doesn't grok with Trident... need to implement
-        // Function which requires another prototype for execute() that
-        // shellbolt doesn't implement. Also, most examples online that use
-        // Trident are already out-of-date..
-
-        Stream s = trident.newDRPCStream("search", drpc)
-            ; //.each(new Fields("args"), new Spit(), new Fields("word"));
-        storm = trident.build();
-
-        LocalCluster cluster = new LocalCluster();
-        cluster.submitTopology("search", stormConf, storm);
-
-        String input = new String("hello");
-        System.out.println("execute: " + input + " "
-                + "output: " + drpc.execute("search", input));
-
-        // for remote RPC connections
-        // DRPCClient client = new DRPCClient("localhost", 3772, 9000);
-
-        cluster.shutdown();
-        drpc.shutdown();
-    }
-
     // -------------------------------------------------------------------------
     // main
     // -------------------------------------------------------------------------
 
     public static void main(String[] args) throws Exception {
+
         if (args.length < 1)
             throw new IllegalArgumentException("Specify path to conf");
 
@@ -674,8 +420,6 @@ public class SearchTopology {
         stormConf.setMaxTaskParallelism(8);
 
         doRegular(args, stormConf);
-        //doDRPC(stormConf);
-        //doTrident(stormConf);
     }
 }
 

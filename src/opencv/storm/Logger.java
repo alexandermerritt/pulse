@@ -29,8 +29,14 @@ public class Logger {
     }
 
     // static methods to avoid having to write null checks everywhere
+
+    // global toggle
+    private static boolean enable = true;
+    public static void enable() { enable = true; }
+    public static void disable() { enable = false; }
+
     public static void println(Logger l, String s) {
-        if ((l != null) && !l.error())
+        if (enable && (l != null) && !l.error())
             l.out.println(s);
     }
 

@@ -19,7 +19,10 @@ scons -C .. debug=1
 # this is read before storm puts everyone into the newly relocated resources/
 cp -v ../inputs/graph-ids.txt ./
 
-($STORM jar search.jar SearchTopology ../pulse.conf $@ 2>&1 ) | tee storm.log
+# enable JNI lib to be loaded from current path
+(LD_LIBRARY_PATH=$LD_LIBRARY_PATH:. \
+    $STORM jar search.jar SearchTopology ../pulse.conf $@ 2>&1 ) \
+    | tee storm.log
 
 # JARS="$(find $SOURCE/ -type f | egrep '\.jar$' | tr '\n' ':')"
 # java -client -Dstorm.options= \
