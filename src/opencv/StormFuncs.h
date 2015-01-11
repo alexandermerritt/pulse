@@ -11,28 +11,28 @@
 
 #include "StormWrapper.h"
 #include "Config.hpp"
+#include <google/protobuf/message_lite.h>
 #include <json/json.h>
 
 #include <libmemcached/memcached.h>
 
 const char CMD_ARG_DELIM     = '=';
 const char CMD_ARG_CONF[]    = "--conf";
-const char CMD_ARG_SPOUT[]   = "--spout";
 const char CMD_ARG_BOLT[]    = "--bolt";
+const char CMD_ARG_BFS[]     = "bfs";
 const char CMD_ARG_FEATURE[] = "feature";
 const char CMD_ARG_USER[]    = "user";
 const char CMD_ARG_MONTAGE[] = "montage";
-const char CMD_ARG_REQSTAT[] = "reqstat";
 
-class BFS : public storm::Bolt
-{
-    public:
-    BFS(void);
-    void Initialize(Json::Value conf, Json::Value context);
-    void Process(storm::Tuple &tuple);
-    memcached_st *memc;
-    unsigned int seed;
-};
+int init_log(const char *prefix);
+
+extern FILE *logfp;
+
+#define L(str, ...) \
+    do { \
+        fprintf(logfp, "%s::%s() " str "\n", __FILE__, __func__, ##__VA_ARGS__); \
+        fflush(logfp); \
+    } while (0)
 
 #if 0
 
@@ -107,6 +107,9 @@ class MontageBolt : public storm::BasicBolt
 };
 
 #endif
+
+int memc_get(memcached_st *memc, const std::string &key,
+        google::protobuf::MessageLite &msg);
 
 int memc_get(memcached_st *memc, const std::string &key,
         /* output */ void **val, size_t &len);

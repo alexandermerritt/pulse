@@ -25,20 +25,8 @@ class Config
             public:
             std::string prefix;
 
-            // name of key holding info about the graph as json type
-            std::string infoKeyPrefix;
-            std::string infoKey;
-            // name of field in json type holding max node ID
-            std::string infoKey_fieldMax;
-        };
-
-        class DataLoadConfig
-        {
-            public:
-            std::string prefix;
-
-            std::string perNodePrefix;
-            int maxImagesPerNode;
+            std::string idsFilePrefix;
+            std::string idsFile;
         };
 
         class MemcConfig
@@ -65,7 +53,6 @@ class Config
         };
 
         GraphConfig     graph;
-        DataLoadConfig  load;
         MemcConfig      memc;
         StormConfig     storm;
 

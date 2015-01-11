@@ -8,8 +8,9 @@ exec=./load_egonet
 
 # small dataset
 $exec proto ./inputs/ego_gplus_paths-small.in ./inputs/flickr_social_paths-small.in
-mv graph.pb inputs/graph-small.pb
-mv imagelist.pb inputs/imagelist-small.pb
+mv -v graph.pb inputs/graph-small.pb
+mv -v imagelist.pb inputs/imagelist-small.pb
+mv -v graph-ids.txt inputs/
 
 # TODO other datasets
 

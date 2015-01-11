@@ -16,12 +16,8 @@ Config *config;
 
 void Config::init(void)
 {
-    graph.prefix           = std::string("graph");
-    graph.infoKeyPrefix    = std::string("infokey");
-    graph.infoKey_fieldMax = std::string("max");
-
-    load.prefix         = std::string("load");
-    load.perNodePrefix  = std::string("per");
+    graph.prefix        = std::string("graph");
+    graph.idsFilePrefix = std::string("idsfile");
 
     memc.prefix         = std::string("memc");
     memc.serversPrefix  = std::string("serv");
@@ -50,17 +46,8 @@ int Config::parseLine(std::list<std::string> &split)
     if (prefix == config->graph.prefix) {
         const std::string sub(split.front());
         split.pop_front();
-        if (sub == config->graph.infoKeyPrefix) {
-            config->graph.infoKey = split.front();
-        } else {
-            ret = -1;
-        }
-        // we don't allow change to max field name
-    } else if (prefix == config->load.prefix) {
-        const std::string sub(split.front());
-        split.pop_front();
-        if (sub == config->load.perNodePrefix) {
-            config->load.maxImagesPerNode = atoi(split.front().c_str());
+        if (sub == config->graph.idsFilePrefix) {
+            config->graph.idsFile = split.front();
         } else {
             ret = -1;
         }

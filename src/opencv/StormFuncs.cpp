@@ -1,13 +1,6 @@
 /**
  * StormFuncs.cpp
  *
- * Executable must be named 'stormstitcher' and exist in a PATH directory.
- *
- * Tuples emitted and processed in this file must be
- *  - arrays (Json::Value treated with integer indeces)
- *  - have a number of elements (or 'Fields') equal to what is declared in the
- *  FuncsTopology.java file's Spout and Bolt implementations.
- *
  * Refer to load_graph.cpp comment at top of file for JSON formats and structure
  * of data in memcached.
  */
@@ -26,6 +19,7 @@
 #include <iostream>
 #include <json/json.h>
 #include <opencv2/opencv.hpp>
+#include <memory>
 
 // Local headers
 #include "StormWrapper.h"       // unofficial 'storm' namespace
@@ -33,66 +27,8 @@
 #include "stitcher.hpp"
 #include "Config.hpp"
 
-FILE *logfp;
-
-// TODO add pid, machine name, to filename
-#define L(str, ...) \
-    do { \
-        fprintf(logfp, ">> " str "\n", ##__VA_ARGS__); \
-        fflush(logfp); \
-    } while (0)
-
-// duplicate stdout/stderr into a log file
-int init_log(const char *prefix)
-{
-    char name[256];
-    if (logfp)
-        return 0;
-    if (!prefix)
-        return -1;
-    snprintf(name, 256, "/tmp/%s.log", prefix);
-    logfp = fopen(name, "w");
-    if (!logfp)
-        return -1;
-    return 0;
-}
-
-BFS::BFS(void)
-    : memc(nullptr), seed(0)
-{
-    char fname[64];
-    snprintf(fname, 64, "userbolt-%d", getpid());
-    if (init_log(fname))
-        abort();
-    L("BFS Bolt instantiated");
-}
-
-void BFS::Initialize(Json::Value conf, Json::Value context)
-{
-    L("BFS Bolt initialized");
-#if 0
-    errno = 0;
-    memc = memcached(config->memc.servers.c_str(),
-            config->memc.servers.length());
-    if (!memc)
-        abort();
-#endif
-}
-
-void BFS::Process(storm::Tuple &tuple)
-{
-    Json::Value next;
-    Json::Value v(tuple.GetValues());
-    next[0] = v[0];
-    for (int i = 0; i < 100; i++) {
-        next[1] = v[1].asString() + "." + std::to_string(i);
-        storm::Tuple tup(next);
-        storm::Emit(tup);
-    }
-}
-
-// -----------------------------------------------------------------------------
-
+#include "BFSBolt.h"
+#include "MontageBolt.h"
 
 #if 0
 FeatureBolt::FeatureBolt(void)
@@ -295,8 +231,8 @@ void MontageBolt::Initialize(Json::Value conf, Json::Value context)
  * Executable functions
  */
 
-int memc_get(memcached_st *memc, const std::string &key,
-        void **val, size_t &len)
+int memc_get(memcached_st *memc, const std::string &key, // input params
+        void **val, size_t &len) // output params
 {
     memcached_return_t mret;
     uint32_t flags;
@@ -308,6 +244,27 @@ int memc_get(memcached_st *memc, const std::string &key,
     return 0;
 }
 
+int memc_get(memcached_st *memc, const std::string &key,
+        google::protobuf::MessageLite &msg)
+{
+    size_t len(0);
+    void *val(nullptr);
+
+    if (!memc || key.length() == 0)
+        return -1;
+
+    if (memc_get(memc, key, &val, len))
+        return -1;
+
+    if (!msg.ParseFromArray(val, len)) {
+        free(val);
+        return -1;
+    }
+
+    free(val);
+    return 0;
+}
+
 int memc_set(memcached_st *memc, const std::string &key,
         void *val, size_t len)
 {
@@ -316,6 +273,28 @@ int memc_set(memcached_st *memc, const std::string &key,
     mret = memcached_set(memc, key.c_str(), key.length(),
             (char*)val, len, 0, 0);
     return !(mret == MEMCACHED_SUCCESS);
+}
+
+int memc_set(memcached_st *memc, const std::string &key,
+        google::protobuf::MessageLite &msg)
+{
+    size_t len(0);
+    void *val(nullptr);
+
+    if (!memc || key.length() == 0)
+        return -1;
+
+    len = msg.ByteSize();
+    if (!(val = malloc(len)))
+        return -1;
+
+    if (!msg.SerializeToArray(val, len)) {
+        return -1;
+    }
+
+    int ret = memc_set(memc, key, val, len);
+    free(val);
+    return ret;
 }
 
 int memc_exists(memcached_st *memc,
@@ -352,61 +331,15 @@ void badusage(int argc, char *argv[])
     std::cerr << std::endl;
     std::cerr << "Usage: "
         << std::endl << "    " << *argv << " --conf=/path/to/conf "
-                                << CMD_ARG_SPOUT
-        << std::endl << "    " << *argv << " --conf=/path/to/conf "
                                 << CMD_ARG_BOLT << "=[user|feature|montage]"
         << std::endl;
     exit(-1);
 }
 
+#if 0
 // We are instantiated by ShellSpout or ShellBolt constructors from Java.
 int main(int argc, char *argv[])
 {
-#if 1
-    BFS bolt;
-    bolt.Run();
-#else
-    char fname[64];
-    snprintf(fname, 64, "userbolt-%d", getpid());
-    if (init_log(fname))
-        abort();
-    L("BFS Bolt instantiated");
-
-    std::string msg, line;
-    bool read_line = false;
-    while(1)
-    {
-        read_line = getline(std::cin, line).good();
-        if (line == "end")
-            break;
-        else if (read_line)
-            msg += line + "\n";
-    }
-    L("%s", msg.c_str());
-
-    Json::Value root;
-    Json::Reader reader;
-    reader.parse(msg, root);
-    L("%s", root.toStyledString().c_str());
-    L("isArray: %s", (root.isArray() ? "true" : "false"));
-#endif
-
-#if 0
-    // modify in debugger
-    volatile bool debug = false;
-    if (debug) {
-        volatile int cmd = 0;
-        if (cmd == 0) {
-            GraphSpout s;
-            s.NextTuple();
-        } else if (cmd == 1) {
-            MontageBolt bolt;
-            std::string input("bull");
-            bolt.doProcess(input);
-        }
-        return 0;
-    }
-
     if (argc != 3)
         badusage(argc, argv);
 
@@ -429,26 +362,22 @@ int main(int argc, char *argv[])
     {
         std::string arg = std::string(argv[2]);
         auto pos = arg.find_first_of('=');
-        if ((pos == std::string::npos) && arg == CMD_ARG_SPOUT) {
-            GraphSpout spout;
-            spout.Run();
-        } else if (pos != std::string::npos) {
+        if (pos != std::string::npos) {
             std::string sub = arg.substr(0, pos);
             if (sub != CMD_ARG_BOLT)
                 badusage(argc, argv);
             sub = arg.substr(pos + 1);
-            if (sub == CMD_ARG_FEATURE) {
-                FeatureBolt bolt;
-                bolt.Run();
-            } else if (sub == CMD_ARG_USER) {
-                UserBolt bolt;
+            if (sub == CMD_ARG_BFS) {
+                BFS bolt;
                 bolt.Run();
             } else if (sub == CMD_ARG_MONTAGE) {
-                MontageBolt bolt;
+                Montage bolt;
                 bolt.Run();
+#if 0
             } else if (sub == CMD_ARG_REQSTAT) {
                 ReqStatBolt bolt;
                 bolt.Run();
+#endif
             } else {
                 badusage(argc, argv);
             }
@@ -456,8 +385,8 @@ int main(int argc, char *argv[])
             badusage(argc, argv);
         }
     }
-#endif
 
     return 0;
 }
+#endif
 

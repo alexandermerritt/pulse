@@ -15,10 +15,11 @@ import os
 import ycm_core
 
 cuda_root = '/usr/local/cuda'
+java_root = '/opt/java/jdk'
 
 flags = [
 # tell ycm the type of code we have
-'-std=c++1y',
+'-std=c++11',
 '-x', 'c++',
 # compilation flags
 '-Wall',
@@ -36,6 +37,8 @@ flags = [
 '-isystem', '/usr/include/jsoncpp/',
 '-isystem', '/usr/include/ImageMagick/',
 '-isystem', cuda_root + '/include/',
+'-isystem', java_root + '/include/',
+'-isystem', java_root + '/include/linux',
 '-I', os.getcwd() + '/../include/',
 '-I', os.getcwd() + '/',
 # No need to include -L or -l flags. Confuses YCM.

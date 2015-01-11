@@ -43,6 +43,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <json/json.h>
 
+extern FILE *logfp;
+
 namespace storm
 {
 	inline void Log(const std::string &msg);
@@ -107,6 +109,7 @@ namespace storm
 			else if (read_line)
 				msg += line + "\n";
 		}
+        //fprintf(logfp, "%s:%s %s", __FILE__, __func__, msg.c_str());
 		Json::Value root;
 		Json::Reader reader;
 		bool parsing_successful = reader.parse(msg, root);
@@ -174,6 +177,8 @@ namespace storm
 	inline Tuple ReadTuple()
 	{
 		Json::Value msg = ReadCommand();
+        fprintf(logfp, "%s:%s %s", __FILE__, __func__,
+                msg.toStyledString().c_str());
 		return Tuple(msg["id"].asString(), msg["comp"].asString(),
 				msg["stream"].asString(), msg["task"].asInt(),
 				msg["tuple"]);
@@ -365,6 +370,9 @@ namespace storm
 						this->Ack(msg);
 					else if (command == "fail")
 						this->Fail(msg);
+                    // XXX "Note that, as of version 0.7.1, there is no longer
+                    // any need for a shell bolt to 'sync'." Does this apply to
+                    // the latest version?
 					Sync();
 				}
 			}
@@ -388,8 +396,13 @@ namespace storm
 				while(1)
 				{
 					Tuple tuple = ReadTuple();
-					Process(tuple);
-					Ack(tuple.GetID());
+                    // XXX seems to incorporate heartbeat messages now
+                    if (tuple.GetStream() == "__heartbeat") {
+                        Sync();
+                    } else {
+                        Process(tuple);
+                        Ack(tuple.GetID());
+                    }
 				}
 			}
 	};
@@ -410,9 +423,14 @@ namespace storm
 				while(1)
 				{
 					Tuple tuple = ReadTuple();
-					Anchor_tuple = &tuple;
-					Process(tuple);
-					Ack(tuple.GetID());
+                    // XXX seems to incorporate heartbeat messages now
+                    if (tuple.GetStream() == "__heartbeat") {
+                        Sync();
+                    } else {
+                        Anchor_tuple = &tuple;
+                        Process(tuple);
+                        Ack(tuple.GetID());
+                    }
 				}
 			}
 	};

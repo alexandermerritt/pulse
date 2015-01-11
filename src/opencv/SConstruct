@@ -80,9 +80,11 @@ env.Append(CPPPATH = cpath)
 env.Append(LIBPATH = libpath)
 env.Append(LIBS = libs)
 
-sources = ['StormFuncs.cpp', 'StormWrapper.cpp', 'Config.cpp']
+sources = ['StormFuncs.cpp', 'StormWrapper.cpp',
+            'Config.cpp', 'BFSBolt.cc', 'MontageBolt.cc']
 sources.extend(protogen)
-env.Program('stormfuncs', sources)
+#env.Program('stormfuncs', sources)
+env.SharedLibrary('stormfuncs', sources)
 
 loadsources = ['load_egonet.cc', 'Config.cpp']
 loadsources.extend(protogen)

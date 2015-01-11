@@ -1,3 +1,4 @@
 resources/stormstitcher
 resources/pulse.conf
 *.jar
+*.so

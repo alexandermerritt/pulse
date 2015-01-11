@@ -275,7 +275,7 @@ int handle_feat(string &feats, deque<string> featidx)
 // graph has entries for all vertices; now fill in rest
 int handle_ego(egoid_t &egoid)
 {
-    deque<string> feats, featidx, followers;
+    deque<string> circles, feats, featidx, followers;
 
     string fname(egoid.path + ".featnames");
     if (read_lines(fname, featidx))
@@ -306,6 +306,21 @@ int handle_ego(egoid_t &egoid)
         return -1;
     for (auto &f : followers)
         graph.at(egoid.id).add_followers(f);
+
+    fname = egoid.path + ".circles";
+    if (read_lines(fname, circles))
+        return -1;
+    for (auto &line : circles) {
+        deque<string> tokens;
+        if (split_string(line, tokens, " "))
+            return -1;
+        string circname(tokens.at(0));
+        size_t i = 1;
+        for ( ; i < tokens.size(); i++) {
+            storm::Vertex *v = &graph.at(tokens.at(i));
+            v->add_circles(circname);
+        }
+    }
 
     return 0;
 }
@@ -439,6 +454,21 @@ int load_graph(string &path)
     free(buf);
     raw_output.release();
     close(fd);
+
+    // -----------------------------------------------
+
+    // write out the IDs of all vertices so someone can query them directly...
+    // putting into one protobuf would cause the PB lib to complain the PB is
+    // 'too large'
+    string idlist("graph-ids.txt");
+    cout << "Writing graph ids to " << idlist << endl;
+    FILE *fp = fopen(idlist.data(), "w");
+    if (!fp) return -1;
+    for (auto &g : graph) {
+        const string &id(g.first);
+        fprintf(fp, "%s\n", id.data());
+    }
+    fclose(fp);
 
     return 0;
 }

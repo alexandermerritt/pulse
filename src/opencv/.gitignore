@@ -9,3 +9,5 @@ load_egonet
 cscope.files
 cscope.out
 inputs/*.pb
+*.so
+JNILinker.h

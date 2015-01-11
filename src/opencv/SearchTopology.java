@@ -206,10 +206,12 @@ public class SearchTopology {
     //public static class ReqMgr extends SimpleBolt { }
 
     public static class Neighbors extends SimpleBolt {
+        private JNILinker jni;
         private Random rand;
 
         Neighbors() { 
             name = "neighbors-bolt";
+            jni = new JNILinker();
         }
 
         @Override // ignore superclass implementation
