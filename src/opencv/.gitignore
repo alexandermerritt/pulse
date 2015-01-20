@@ -11,3 +11,4 @@ cscope.out
 inputs/*.pb
 *.so
 JNILinker.h
+StormFuncsTest

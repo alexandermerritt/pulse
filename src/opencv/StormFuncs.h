@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdlib.h>
+#include <deque>
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/stitching/detail/matchers.hpp>
@@ -33,6 +34,20 @@ extern FILE *logfp;
         fprintf(logfp, "%s::%s() " str "\n", __FILE__, __func__, ##__VA_ARGS__); \
         fflush(logfp); \
     } while (0)
+
+class StormFuncs
+{
+    public:
+        StormFuncs(void);
+        int connect(std::string &servers);
+        int neighbors(std::string &vertex,
+                std::deque<std::string> &others);
+        int imagesOf(std::string &vertex,
+                std::deque<std::string> &keys);
+        int feature(std::string &image_key);
+    private:
+        memcached_st *memc;
+};
 
 #if 0
 

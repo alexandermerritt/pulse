@@ -1,3 +1,4 @@
+// These formats are used within the object store.
 package storm;
 
 message Vertex {

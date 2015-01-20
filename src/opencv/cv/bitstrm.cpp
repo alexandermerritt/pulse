@@ -43,7 +43,7 @@
 #include "precomp.hpp"
 #include "bitstrm.hpp"
 
-namespace cv
+namespace jpeg
 {
 
 const int BS_DEF_BLOCK_SIZE = 1<<15;

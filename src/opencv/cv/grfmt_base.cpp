@@ -44,10 +44,11 @@
 #include "grfmt_base.hpp"
 #include "bitstrm.hpp"
 
-namespace cv
+namespace jpeg
 {
 
 BaseImageDecoder::BaseImageDecoder()
+    : parse_buf(nullptr), parse_buflen(0)
 {
     m_width = m_height = 0;
     m_type = -1;

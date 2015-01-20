@@ -46,11 +46,9 @@
 #include "grfmt_base.hpp"
 #include "bitstrm.hpp"
 
-#ifdef HAVE_JPEG
-
 // IJG-based Jpeg codec
 
-namespace cv
+namespace jpeg
 {
 
 class JpegDecoder : public BaseImageDecoder
@@ -83,8 +81,11 @@ public:
     ImageEncoder newEncoder() const;
 };
 
-}
+// Mainly copied from invocation of imread_
+// data points to an in-memory representation of a compressed image as
+// it would be stored on disk.
+cv::Mat JPEGasMat(void *data, size_t len);
 
-#endif
+}
 
 #endif/*_GRFMT_JPEG_H_*/

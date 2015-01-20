@@ -1,4 +1,6 @@
 import java.io.Serializable;
+import java.io.IOException;
+import java.util.HashSet;
 
 // How to use:
 //   1. javah -jni JNILinker (produces header)
@@ -7,6 +9,7 @@ import java.io.Serializable;
 //   4. load shared object at runtime like below
 // If prototypes in this class change, header requires regeneration,
 // and cc file must be matched + rebuilt.
+
 
 
 // XXX serializable required for Storm to contain instance of this
@@ -24,7 +27,18 @@ public class JNILinker implements Serializable {
         System.load(lib);
     }
 
-    // Functions that pass through to StormFuncs
+    // Open persistent connection to memcached
+    public native int connect(String servers);
 
-    public native String[] message();
+    // Query object store for given key, returns set of keys
+    // representing neighbor vertices.
+    public native int neighbors(String vertex, HashSet<String> others);
+
+    // Query object store for metadata of given vertex and return a
+    // list of keys representing the images associated with it.
+    public native int imagesOf(String vertex, HashSet<String> keys);
+
+    // Compute features of image. Store back into object store. Uses
+    // the GPGPU.
+    public native int feature(String image_key);
 }

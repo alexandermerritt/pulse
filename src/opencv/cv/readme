@@ -1,0 +1,7 @@
+Files copied from opencv sources modules/highgui/src/ to allow
+decoding of images from their on-disk format to a cv::Mat without
+using the file system. These files are not part of the OpenCV API
+(used by cv::imread) and accessible only internally.
+
+Files are unmodified. Added precomp.hpp to make changes to support
+compilation (since most of them include this already).

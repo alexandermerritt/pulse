@@ -19,19 +19,20 @@ import backtype.storm.utils.ShellProcess;
 
 import java.lang.management.ManagementFactory;
 
-// Inner classes are static as they are considered top-level and not internal to
-// SearchTopology:
+// Inner classes are static as they are considered top-level and not
+// internal to SearchTopology:
 // http://docs.oracle.com/javase/tutorial/java/javaOO/nested.html
 
-// Constructors should not be declared to return 'void' else the Java compiler
-// doesn't recognize it as the constructor.
+// Constructors should not be declared to return 'void' else the Java
+// compiler doesn't recognize it as the constructor.
 
-// Each bolt/spout class in java is just a proxy for the C++ class equivalent
+// Each bolt/spout class in java is just a proxy for the C++ class
+// equivalent
 public class SearchTopology {
 
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------
     // Common code
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------
 
     // 0: request ID 1: action 2: action-specific 3: etc
     public static class Labels {
@@ -47,11 +48,13 @@ public class SearchTopology {
         public static final String vertexCount = "field_vertexCount";
     }
 
-    // XXX instead of maintaining as array, covnert all vertices to 0-X values
-    // and just give us the max...
+    // XXX instead of maintaining as array, covnert all vertices to
+    // 0-X values and just give us the max...
     public static String[] vertices;
 
-    public static void readVertexList(String confPath) throws IOException {
+    public static void readVertexList(String confPath)
+        throws IOException {
+
         String idsPath = new String();
         BufferedReader in = new BufferedReader(new FileReader(confPath));
         while (in.ready()) {
@@ -62,7 +65,8 @@ public class SearchTopology {
                     idsPath = tokens[2];
         }
         if (idsPath.length() == 0)
-            throw new IllegalArgumentException("No graph idsfile entry in conf");
+            throw new IllegalArgumentException(
+                    "No graph idsfile entry in conf");
 
         // open the file and suck in all values
         in = new BufferedReader(new FileReader(idsPath));
@@ -70,14 +74,15 @@ public class SearchTopology {
         while (in.ready())
             entries.add(in.readLine());
         vertices = entries.toArray(new String[0]);
-        System.out.println(Integer.toString(vertices.length) + " vertices");
+        System.out.println(Integer.toString(vertices.length)
+                + " vertices");
     }
 
     public static final String TopologyName = new String("search");
 
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------
     // Regular Bolts
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------
 
     // simplify my life
     public static abstract class SimpleSpout implements IRichSpout {
@@ -236,18 +241,26 @@ public class SearchTopology {
             if (!streamIsVertex(tuple))
                 throw new RuntimeException("neighbors got wrong stream");
 
-            values = new Values(reqID, Integer.toString(10));
-            c.emit(Labels.Stream.counts, values);
-            Logger.println(log, "emit count ("
-                    + reqID + ", " + Integer.toString(10) + ")");
+            String vertex = tuple.getString(1);
+            HashSet<String> others = new HashSet<String>();
+            int ret = jni.neighbors(vertex, others);
+            if (ret != 0)
+                throw new RuntimeException(
+                        "Error jni.neighbors");
 
-            int count;
-            for (count = 0; count < 10; count++) {
-                String vertex = Integer.toString(count);
-                values = new Values(reqID, vertex);
-                // does this go to both the next neighbors, and the unique bolt?
-                c.emit(Labels.Stream.vertices, values);
-            }
+//            values = new Values(reqID, Integer.toString(10));
+//            c.emit(Labels.Stream.counts, values);
+//            Logger.println(log, "emit count ("
+//                    + reqID + ", " + Integer.toString(10) + ")");
+//
+//            int count;
+//            for (count = 0; count < 10; count++) {
+//                String vertex = Integer.toString(count);
+//                values = new Values(reqID, vertex);
+//                // does this go to both the next neighbors, and the
+//                // unique bolt?
+//                c.emit(Labels.Stream.vertices, values);
+//            }
 
             c.ack(tuple);
         }
@@ -357,15 +370,15 @@ public class SearchTopology {
         }
     }
 
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------
     // Topologies
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------
 
     public static void doRegular(String[] args, Config stormConf)
         throws Exception {
         System.out.println("Using regular Storm topology");
 
-        int numNeighbor = 2;
+        int numNeighbor = 1;
         String neighBase = "neighbor", name = "";
         Fields sortByID = new Fields(Labels.reqID);
 
@@ -373,7 +386,8 @@ public class SearchTopology {
         SpoutDeclarer gen = builder.setSpout("gen", new Generator(), 1);
 
         name = neighBase + (numNeighbor - 1);
-        BoltDeclarer uniq = builder.setBolt("uniq0", new Uniquer(name), 1);
+        BoltDeclarer uniq = builder.setBolt("uniq0",
+                new Uniquer(name), 1);
 
         name = neighBase + 0;
         builder.setBolt(name, new Neighbors(), 1)
@@ -402,9 +416,9 @@ public class SearchTopology {
         }
     }
 
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------
     // main
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------
 
     public static void main(String[] args) throws Exception {
 
@@ -414,7 +428,7 @@ public class SearchTopology {
         String s = new String("abc");
 
         String confPath = args[0];
-        //readVertexList(confPath);
+        readVertexList(confPath);
 
         Config stormConf = new Config();
         stormConf.setDebug(true);

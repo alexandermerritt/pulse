@@ -1,4 +1,4 @@
-all: | search.jar load_egonet
+all: search.jar load_egonet
 
 CC = clang
 CXX = clang++
@@ -21,21 +21,30 @@ JAVA_CPATH = -I$(JAVA_PATH)/include -I$(JAVA_PATH)/include/linux
 STORM_PATH = /usr/local/src/storm/latest
 STORM_JAR := $(shell find $(STORM_PATH)/ -type f | egrep 'storm-core')
 
-CPATH = -I/usr/local/include -I../include -I
+CPATH = -I/usr/local/include -I../include -I.
 CPATH += $(OPENCV_CAPTH) $(JSON_CPATH) $(PROTOBUF_CPATH) $(NV_CPATH)
 CPATH += $(JAVA_CPATH)
 
-LIBS = -lmemcached
+LIBS = -lmemcached -ljpeg
 LIBS += $(OPENCV_LIBS) $(JSON_LIBS) $(PROTOBUF_LIBS) $(NV_LIBS)
 
-EXTRAFLAGS = -Wno-unused-function -Wno-unused-parameter
+EXTRAFLAGS = -Wall -Werror -Wextra 
+EXTRAFLAGS += -Wno-unused-function -Wno-unused-parameter
 EXTRAFLAGS += -fcolor-diagnostics
 
-CFLAGS = -Wall -Werror -Wextra $(EXTRAFLAGS) $(CPATH)
+DEBUG ?= 1
+ifeq ($(DEBUG),1)
+EXTRAFLAGS += -O0 -ggdb3
+else
+EXTRAFLAGS += -O2
+endif
+
+CFLAGS = $(EXTRAFLAGS) $(CPATH)
 CXXFLAGS = -std=c++11 $(EXTRAFLAGS) $(CPATH)
 
-# TODO update flags and rebuild
-# debug: sdfs
+#
+# Our java sources for use in Storm
+#
 
 JAVA_SOURCES = SearchTopology.java Logger.java JNILinker.java
 
@@ -44,29 +53,79 @@ JAVA_SOURCES = SearchTopology.java Logger.java JNILinker.java
 	touch .jar
 
 CLASSES = *.class
-search.jar: libstormfuncs.so .jar
+search.jar: libjnilinker.so .jar
 	jar cvf search.jar $(CLASSES) $< resources/
 
-%.pb.cc: %.proto
+#
+# Protobuf files
+#
+
+%.pb.h %.pb.cc: %.proto
 	protoc --cpp_out=. $<
+
+%.pb.o:	%.pb.cc %.pb.h
+	$(CXX) $(CXXFLAGS) -o $@ -c $<
+
+#
+# OpenCV source code integrated directly into our library.
+#
+
+CV_SOURCES = $(wildcard cv/*.cpp)
+CV_OBJ = $(patsubst %.cpp,%.o,$(CV_SOURCES))
+
+CV_COMMON = cv/decoders.h cv/precomp.hpp
+
+cv/%.o:	cv/%.cpp cv/%.hpp $(CV_COMMON)
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+cv/libcv.a:	$(CV_OBJ)
+	ar rcus $@ $^
+
+# 
+# Shared library for JNI invocation
+#
 
 JNILinker.h:	JNILinker.java
 	javah -jni JNILinker
+	touch $@
 
-LIB_SOURCES = StormFuncs.cpp Objects.pb.cc JNILinker.cc
+LIB_SOURCES = StormFuncs.cpp JNILinker.cc
 
-libstormfuncs.so: $(LIB_SOURCES) JNILinker.h
-	$(CXX) $(CXXFLAGS) --shared -fPIC $(CPATH) $(LIB_SOURCES) -o $@ $(LIBS)
+libjnilinker.so: cv/libcv.a Objects.pb.cc JNILinker.h | $(LIB_SOURCES)
+	$(CXX) $(CXXFLAGS) --shared -fPIC $(CPATH) -o $@ \
+		cv/libcv.a Objects.pb.cc $(LIB_SOURCES) $(LIBS)
 
-load_egonet: load_egonet.cc Objects.pb.cc Config.cpp
+#
+# Test codes
+#
+
+LinkerTest.class:	LinkerTest.java JNILinker.java
+	javac $^
+
+# make this directly if wanted
+LinkerTest:	LinkerTest.class libjnilinker.so cv/libcv.a
+	java LinkerTest
+
+StormFuncsTest:	Objects.pb.cc StormFuncsTest.cc StormFuncs.cpp cv/libcv.a
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
+
+#
+# Utilities for loading data into object store
+#
+
+load_egonet: load_egonet.o Objects.pb.cc Config.o
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LIBS)
+
+#
+# Misc
+#
 
 clean:
 	rm -fv .jar
 	rm -f *.class *.so *.o *.pb.cc *.pb.h JNILinker.h search.jar
+	rm -fv cv/*.o cv/*.a
 	rm -fv /tmp/*bolt* /tmp/*spout*
-	cd /tmp/
-	ls | egrep '^[0-9a-f]{8}-' | xargs rm -rvf
+	$(shell cd /tmp/; ls | egrep '^[0-9a-f]{8}-' | xargs rm -rf)
 
 .PHONY: all clean
 

@@ -45,7 +45,7 @@
 
 #include <stdio.h>
 
-namespace cv
+namespace jpeg
 {
 
 enum

@@ -46,7 +46,7 @@
 #include "utils.hpp"
 #include "bitstrm.hpp"
 
-namespace cv
+namespace jpeg
 {
 
 class BaseImageDecoder;
@@ -65,6 +65,9 @@ public:
     int height() const { return m_height; };
     virtual int type() const { return m_type; };
 
+    void setParseBuffer(void *b, size_t len)
+    { parse_buf = b; parse_buflen = len; }
+
     virtual bool setSource( const string& filename );
     virtual bool setSource( const Mat& buf );
     virtual bool readHeader() = 0;
@@ -82,6 +85,9 @@ protected:
     string m_signature;
     Mat m_buf;
     bool m_buf_supported;
+
+    void *parse_buf; // in-memory buffer of image, but in disk-format
+    size_t parse_buflen;
 };
 
 

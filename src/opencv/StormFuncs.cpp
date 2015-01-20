@@ -22,41 +22,85 @@
 #include <memory>
 
 // Local headers
-#include "StormWrapper.h"       // unofficial 'storm' namespace
 #include "StormFuncs.h"
 #include "stitcher.hpp"
 #include "Config.hpp"
 
-#include "BFSBolt.h"
-#include "MontageBolt.h"
+#include "Objects.pb.h" // generated
+#include "cv/decoders.h"
+
+StormFuncs::StormFuncs(void)
+: memc(nullptr)
+{ }
+
+int StormFuncs::connect(std::string &servers)
+{
+    memc = memcached(servers.c_str(), servers.length());
+    return !memc;
+}
+
+int StormFuncs::neighbors(std::string &vertex,
+        std::deque<std::string> &others)
+{
+    if (vertex.length() == 0)
+        return 0;
+    storm::Vertex vobj;
+    if (memc_get(memc, vertex, vobj))
+        return -1;
+    others.resize(vobj.followers_size());
+    for (size_t i = 0; i < others.size(); i++)
+        others[i] = vobj.followers(i);
+    return 0;
+}
+
+int StormFuncs::imagesOf(std::string &vertex,
+        std::deque<std::string> &keys)
+{
+    if (vertex.length() == 0)
+        return 0;
+    storm::Vertex vobj;
+    if (memc_get(memc, vertex, vobj))
+        return -1;
+    keys.resize(vobj.images_size());
+    for (size_t i = 0; i < keys.size(); i++)
+        keys[i] = vobj.images(i);
+    return 0;
+}
+
+int StormFuncs::feature(std::string &image_key)
+{
+    storm::Image iobj;
+    if (memc_get(memc, image_key, iobj))
+        return -1;
+
+    void *data;
+    size_t len;
+    if (memc_get(memc, iobj.key_data(), &data, len))
+        return -1;
+    if (!data || len == 0)
+        return -1;
+
+    cv::Mat mat;
+    mat = jpeg::JPEGasMat(data, len);
+    if (!mat.data || mat.cols < 1 || mat.rows < 1)
+        return -1;
 
 #if 0
-FeatureBolt::FeatureBolt(void)
-    : memc(NULL)
-{
-    char fname[64];
-    snprintf(fname, 64, "featurebolt-%d", getpid());
-
-    if (init_log(fname))
-        abort();
-
-    errno = 0;
-    memc = memcached(config->memc.servers.c_str(),
-            config->memc.servers.length());
-    if (!memc) {
-        L("Error connecting to memcached: %s", strerror(errno));
-        L("    config: %s", config->memc.servers.c_str());
-        abort();
+    cv::Ptr<cv::detail::FeaturesFinder> finder;
+    cv::detail::ImageFeatures features;
+    finder = new detail::OrbFeaturesFinder();
+    try {
+        // may segfart. if so, remove offending images from input
+        (*finder)(img, features);
+    } catch (Exception &e) {
     }
+    finder->collectGarbage();
+#endif
 
-    L("FeatureBolt initialized");
+    return 0;
 }
 
-void FeatureBolt::Initialize(Json::Value conf, Json::Value context)
-{
-}
-
-// separate function to allow for isolated debugging
+#if 0
 void FeatureBolt::doProcess(std::string &imageID)
 {
     cv::Mat img;

@@ -1,3 +1,5 @@
+// Implementation (in C++) of the JNILinker.java native methods.
+
 #include <iostream>
 #include <stdio.h>
 
@@ -6,9 +8,88 @@
 
 #include "StormFuncs.h"
 
-JNIEXPORT jobjectArray JNICALL Java_JNILinker_message
-  (JNIEnv *, jobject)
+static StormFuncs funcs;
+static const std::string prefix("JNI: ");
+
+#if 0
+struct Log {
+    FILE *logfp;
+    Log(std::string &name) : logfp(nullptr) { }
+    void println(std::string &msg) {
+    }
+};
+#endif
+
+static inline std::string j2c_string(JNIEnv *env, jstring jstr)
 {
-    return nullptr;
+    const char *cstr = env->GetStringUTFChars(jstr, 0);
+    std::string str(cstr);
+    env->ReleaseStringUTFChars(jstr, cstr);
+    return str;
+}
+
+// int neighbors(String vertex, HashSet<String> others);
+JNIEXPORT jint JNICALL Java_JNILinker_neighbors
+  (JNIEnv *env, jobject thisobj, jstring vertex, jobject hashset)
+{
+    std::string vertex_cpp(j2c_string(env, vertex));
+    std::deque<std::string> others;
+    if (0 != funcs.neighbors(vertex_cpp, others))
+        return -1;
+    if (0 == others.size())
+        return 0; // nothing to do
+
+    // Move the neighbor vertices to the other object
+    auto cls = env->GetObjectClass(hashset);
+    if (!cls) return -1;
+    // HashSet<E>.add(E e) -- for templated parameters, use Object
+    // TODO cache this reference
+    auto add = env->GetMethodID(cls, "add", "(Ljava/lang/Object;)Z");
+    if (!add) return -1;
+
+    for (std::string &s : others)
+        env->CallBooleanMethod(hashset, add,
+                env->NewStringUTF(s.c_str()));
+
+    return 0;
+}
+
+// int connect(String servers);
+JNIEXPORT jint JNICALL Java_JNILinker_connect
+  (JNIEnv *env, jobject thisobj, jstring servers)
+{
+    std::string s(j2c_string(env, servers));
+    return funcs.connect(s);
+}
+
+// int imagesOf(String vertex, HashSet<String> keys);
+JNIEXPORT jint JNICALL Java_JNILinker_imagesOf
+  (JNIEnv *env, jobject thisobj, jstring vertex, jobject hashset)
+{
+    std::string v(j2c_string(env, vertex));
+    std::deque<std::string> keys;
+    if (0 != funcs.imagesOf(v, keys))
+        return -1;
+    if (0 == keys.size())
+        return 0; // nothing to do
+
+    auto cls = env->GetObjectClass(hashset);
+    if (!cls) return -1;
+    auto add = env->GetMethodID(cls, "add", "(Ljava/lang/Object;)Z");
+    if (!add) return -1;
+
+    for (std::string &s : keys)
+        env->CallBooleanMethod(hashset, add,
+                env->NewStringUTF(s.c_str()));
+
+    return 0;
+}
+
+// int feature(String image_key);
+JNIEXPORT jint JNICALL Java_JNILinker_feature
+  (JNIEnv *env, jobject thisobj, jstring image_key)
+{
+    std::string key(j2c_string(env, image_key));
+    return funcs.feature(key);
 }
 

@@ -42,13 +42,6 @@
 #include "precomp.hpp"
 #include "grfmt_jpeg.hpp"
 
-#ifdef HAVE_JPEG
-
-#ifdef _MSC_VER
-//interaction between '_setjmp' and C++ object destruction is non-portable
-#pragma warning(disable: 4611)
-#endif
-
 #include <stdio.h>
 #include <setjmp.h>
 
@@ -57,39 +50,21 @@
 #define mingw_getsp(...) 0
 #define __builtin_frame_address(...) 0
 
-#ifdef WIN32
-
-#define XMD_H // prevent redefinition of INT32
-#undef FAR  // prevent FAR redefinition
-
-#endif
-
-#if defined WIN32 && defined __GNUC__
-typedef unsigned char boolean;
-#endif
-
 #undef FALSE
 #undef TRUE
 
-extern "C" {
-#include "jpeglib.h"
-}
+//extern "C" {
+#include <jpeglib.h>
+//}
 
-namespace cv
+namespace jpeg
 {
 
-#ifdef _MSC_VER
-# pragma warning(push)
-# pragma warning(disable:4324) //structure was padded due to __declspec(align())
-#endif
 struct JpegErrorMgr
 {
     struct jpeg_error_mgr pub;
     jmp_buf setjmp_buffer;
 };
-#ifdef _MSC_VER
-# pragma warning(pop)
-#endif
 
 struct JpegSource
 {
@@ -176,6 +151,8 @@ JpegDecoder::JpegDecoder()
     m_signature = "\xFF\xD8\xFF";
     m_state = 0;
     m_f = 0;
+    parse_buf = nullptr;
+    parse_buflen = 0;
     m_buf_supported = true;
 }
 
@@ -211,7 +188,7 @@ ImageDecoder JpegDecoder::newDecoder() const
     return new JpegDecoder;
 }
 
-bool  JpegDecoder::readHeader()
+bool JpegDecoder::readHeader(void)
 {
     bool result = false;
     close();
@@ -233,9 +210,14 @@ bool  JpegDecoder::readHeader()
         }
         else
         {
-            m_f = fopen( m_filename.c_str(), "rb" );
-            if( m_f )
-                jpeg_stdio_src( &state->cinfo, m_f );
+            if ( parse_buf ) {
+                jpeg_mem_src( &state->cinfo,
+                        (unsigned char*)parse_buf, parse_buflen );
+            } else {
+                m_f = fopen( m_filename.c_str(), "rb" );
+                if( m_f )
+                    jpeg_stdio_src( &state->cinfo, m_f );
+            }
         }
 
         if (state->cinfo.src != 0)
@@ -653,8 +635,44 @@ _exit_:
     return result;
 }
 
+cv::Mat JPEGasMat(void *data, size_t len)
+{
+    JpegDecoder decoder;
+    cv::Mat mat;
+
+    decoder.setParseBuffer(data, len);
+    if (!decoder.readHeader())
+        return mat;
+
+    int type = decoder.type();
+
+    // flags:
+    // CV_LOAD_IMAGE_ANYDEPTH;
+    // CV_LOAD_IMAGE_ANYCOLOR;
+    // CV_LOAD_IMAGE_COLOR;
+    // >0 return 3-ch color image
+    // =0 grayscale
+    // <0 return image as-is (with alpha)
+    constexpr int flags = CV_LOAD_IMAGE_ANYDEPTH;
+
+    if( (flags & CV_LOAD_IMAGE_ANYDEPTH) == 0 ) {
+        type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
+    }
+    if( (flags & CV_LOAD_IMAGE_COLOR) != 0 ||
+            ((flags & CV_LOAD_IMAGE_ANYCOLOR) != 0 &&
+             CV_MAT_CN(type) > 1) ) {
+        type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
+    } else {
+        type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
+    }
+
+    mat.create(decoder.height(), decoder.width(), type );
+    if(!decoder.readData(mat))
+        mat.release();
+
+    return mat;
 }
 
-#endif
+}
 
 /* End of file. */
