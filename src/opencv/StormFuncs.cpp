@@ -73,31 +73,89 @@ int StormFuncs::feature(std::string &image_key)
     if (memc_get(memc, image_key, iobj))
         return -1;
 
+    if (iobj.has_key_features())
+        std::cout << "    image has features" << std::endl;
+
+    // get image
     void *data;
     size_t len;
     if (memc_get(memc, iobj.key_data(), &data, len))
         return -1;
-    if (!data || len == 0)
+    if (!data || len == 0) {
+        free(data);
         return -1;
+    }
 
-    cv::Mat mat;
-    mat = jpeg::JPEGasMat(data, len);
-    if (!mat.data || mat.cols < 1 || mat.rows < 1)
+    // decode
+    cv::Mat img;
+    img = jpeg::JPEGasMat(data, len);
+    if (!img.data || img.cols < 1 || img.rows < 1) {
+        free(data);
         return -1;
+    }
 
-#if 0
+    free(data);
+
+    // feature detect
     cv::Ptr<cv::detail::FeaturesFinder> finder;
     cv::detail::ImageFeatures features;
-    finder = new detail::OrbFeaturesFinder();
+    finder = new detail::OrbFeaturesFinder(); // TODO use GPGPU
     try {
-        // may segfart. if so, remove offending images from input
-        (*finder)(img, features);
+        (*finder)(img, features); // may segvomit
     } catch (Exception &e) {
+        return -1;
     }
     finder->collectGarbage();
-#endif
+
+    // serialize features
+    std::string key(iobj.key_id() + "::features");
+    iobj.set_key_features(key);
+    storm::ImageFeatures fobj;
+    marshal(features, fobj, key);
+
+    // updated features key
+    if (memc_set(memc, iobj.key_id(), iobj))
+        return -1;
+    // new feature object
+    if (memc_set(memc, fobj.key_id(), fobj))
+        return -1;
 
     return 0;
+}
+
+void StormFuncs::marshal(cv::detail::ImageFeatures &cv_feat,
+        storm::ImageFeatures &fobj, std::string &key)
+{
+    fobj.Clear();
+    fobj.set_key_id(key);
+    fobj.set_img_idx(0); // XXX wtf is this used for
+    fobj.set_width(cv_feat.img_size.width);
+    fobj.set_height(cv_feat.img_size.height);
+    for (auto &kp : cv_feat.keypoints)
+        marshal(kp, fobj.add_keypoints());
+
+    const cv::Mat &desc = cv_feat.descriptors;
+    if (desc.data) {
+        storm::Mat *mobj = fobj.mutable_mat();
+        mobj->set_flags(desc.flags);
+        mobj->set_dims(desc.dims);
+        mobj->set_rows(desc.rows);
+        mobj->set_cols(desc.cols);
+        mobj->set_key_data(key + "::desc_data");
+    }
+}
+
+void StormFuncs::marshal(cv::KeyPoint &cv_kp,
+        storm::KeyPoint *kobj)
+{
+    kobj->Clear();
+    kobj->set_x(cv_kp.pt.x);
+    kobj->set_y(cv_kp.pt.y);
+    kobj->set_octave(cv_kp.octave);
+    kobj->set_class_(cv_kp.class_id);
+    kobj->set_size(cv_kp.size);
+    kobj->set_angle(cv_kp.angle);
+    kobj->set_resp(cv_kp.response);
 }
 
 #if 0

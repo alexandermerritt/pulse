@@ -2,12 +2,14 @@
 package storm;
 
 message Vertex {
-    required string key = 1;
+    // this object's key
+    required string key_id = 1;
+    // list of keys of follow(ers|ing)
     repeated string followers = 2;
     repeated string following = 3;
-    // other info, like media keys, etc.
+    // keys of images associated with this person
     repeated string images = 6; // keys
-    // gplus egonet features
+    // egonet gplus features
     repeated string circles = 7;
     optional int32  gender = 8; 
     repeated string inst = 9;
@@ -17,16 +19,18 @@ message Vertex {
     repeated string jobtitle = 13;
 }
 
-// cv::Mat
+// encoded image (i.e., JPG on disk)
 message Image {
-    // image properties
+    // this object's key
     required string key_id = 1;
     required uint32 width = 2;
     required uint32 height = 3;
     required uint32 depth = 4;
+    // key of object to raw JPG/etc. bytes
     required string key_data = 7;
-    required string path = 8; // on disk
-    // optional stuff I need
+    // path to image on disk
+    required string path = 8;
+    // key to ImageFeatures object
     optional string key_features = 10;
 }
 
@@ -41,11 +45,22 @@ message KeyPoint {
     required float resp = 7;
 }
 
+// cv::Mat
+message Mat {
+    required uint32 flags = 2;
+    required uint32 dims = 3;
+    required uint32 rows = 4;
+    required uint32 cols = 5;
+    // key of object of raw bytes
+    required string key_data = 6;
+}
+
 // cv::detail::ImageFeatures
 message ImageFeatures {
-    required uint32 img_idx = 1;
-    required uint32 width = 2;
-    required uint32 height = 3;
-    optional string key_desc = 4;
-    repeated KeyPoint keypoints = 16;
+    required string key_id = 1;
+    required uint32 img_idx = 2;
+    required uint32 width = 3;
+    required uint32 height = 4;
+    repeated KeyPoint keypoints = 5;
+    optional Mat mat = 6;
 }

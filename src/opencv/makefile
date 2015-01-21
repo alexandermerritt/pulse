@@ -1,5 +1,7 @@
 all: search.jar load_egonet
 
+allall:	all StormFuncsTest LinkerTest.class JNILinker.h
+
 CC = clang
 CXX = clang++
 
@@ -125,6 +127,7 @@ clean:
 	rm -f *.class *.so *.o *.pb.cc *.pb.h JNILinker.h search.jar
 	rm -fv cv/*.o cv/*.a
 	rm -fv /tmp/*bolt* /tmp/*spout*
+	rm -fv load_egonet StormFuncsTest
 	$(shell cd /tmp/; ls | egrep '^[0-9a-f]{8}-' | xargs rm -rf)
 
 .PHONY: all clean

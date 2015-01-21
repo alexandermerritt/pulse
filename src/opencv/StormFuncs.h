@@ -15,6 +15,7 @@
 #include <google/protobuf/message_lite.h>
 #include <json/json.h>
 
+#include "Objects.pb.h" // generated
 #include <libmemcached/memcached.h>
 
 const char CMD_ARG_DELIM     = '=';
@@ -47,6 +48,11 @@ class StormFuncs
         int feature(std::string &image_key);
     private:
         memcached_st *memc;
+        void marshal(cv::detail::ImageFeatures &cv_feat,
+                storm::ImageFeatures &pb_feat,
+                std::string &key);
+        void marshal(cv::KeyPoint &cv_kp,
+                storm::KeyPoint *kobj);
 };
 
 #if 0
@@ -131,6 +137,9 @@ int memc_get(memcached_st *memc, const std::string &key,
 
 int memc_set(memcached_st *memc, const std::string &key,
         void *val, size_t len);
+
+int memc_set(memcached_st *memc, const std::string &key,
+        google::protobuf::MessageLite &msg);
 
 int memc_exists(memcached_st *memc,
         const std::string &key);

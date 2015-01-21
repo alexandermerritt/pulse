@@ -237,7 +237,7 @@ int handle_feat(string &feats, deque<string> featidx)
 
     const string &id(tokens.at(0));
     storm::Vertex *v(&graph[id]);
-    v->set_key(id);
+    v->set_key_id(id);
     for (size_t tokidx = 1; tokidx < tokens.size(); tokidx++) {
         size_t idx = tokidx - 1; // first col is vertex ID, not a feature
         if (0 == atoi(tokens.at(idx).c_str())) // feat not used
@@ -373,9 +373,9 @@ int load_graph(string &path)
         //cout << "    " << n1 << " " << n2 << endl;
 
         storm::Vertex *v1 = &graph[n1], *v2 = &graph[n2];
-        v1->set_key(n1);
+        v1->set_key_id(n1);
         v1->add_following(n2);
-        v2->set_key(n2);
+        v2->set_key_id(n2);
         v2->add_followers(n1);
     }
 
@@ -541,8 +541,8 @@ load_proto(string &graph, string &imagelist, string &config)
         storm::Vertex vertex;
         vertex.ParseFromArray(buf, len);
 
-        auto mret = memcached_set(memc, vertex.key().c_str(),
-                vertex.key().length(), (char*)buf, len, 0, 0);
+        auto mret = memcached_set(memc, vertex.key_id().c_str(),
+                vertex.key_id().length(), (char*)buf, len, 0, 0);
         if (mret != MEMCACHED_SUCCESS) {
             fprintf(stderr, "memc error: %s", memcached_strerror(memc, mret));
             return -1;
