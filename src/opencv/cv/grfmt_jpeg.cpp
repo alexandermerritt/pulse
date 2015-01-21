@@ -644,28 +644,8 @@ cv::Mat JPEGasMat(void *data, size_t len)
     if (!decoder.readHeader())
         return mat;
 
-    int type = decoder.type();
-
-    // flags:
-    // CV_LOAD_IMAGE_ANYDEPTH;
-    // CV_LOAD_IMAGE_ANYCOLOR;
-    // CV_LOAD_IMAGE_COLOR;
-    // >0 return 3-ch color image
-    // =0 grayscale
-    // <0 return image as-is (with alpha)
-    constexpr int flags = CV_LOAD_IMAGE_ANYDEPTH;
-
-    if( (flags & CV_LOAD_IMAGE_ANYDEPTH) == 0 ) {
-        type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
-    }
-    if( (flags & CV_LOAD_IMAGE_COLOR) != 0 ||
-            ((flags & CV_LOAD_IMAGE_ANYCOLOR) != 0 &&
-             CV_MAT_CN(type) > 1) ) {
-        type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
-    } else {
-        type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
-    }
-
+    // load as color
+    int type = CV_MAKETYPE(CV_MAT_DEPTH(decoder.type()), 3);
     mat.create(decoder.height(), decoder.width(), type );
     if(!decoder.readData(mat))
         mat.release();
