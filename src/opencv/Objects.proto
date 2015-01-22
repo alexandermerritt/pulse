@@ -39,7 +39,7 @@ message KeyPoint {
     required uint32 x = 1;
     required uint32 y = 2;
     required uint32 octave = 3;
-    required uint32 class = 4;
+    required uint32 class_id = 4;
     required float size = 5;
     required float angle = 6;
     required float resp = 7;
@@ -48,11 +48,12 @@ message KeyPoint {
 // cv::Mat
 message Mat {
     required uint32 flags = 2;
-    required uint32 dims = 3;
+    required uint32 dims = 3; // maybe not needed
     required uint32 rows = 4;
     required uint32 cols = 5;
+    required uint32 type = 6;
     // key of object of raw bytes
-    required string key_data = 6;
+    required string key_data = 7;
 }
 
 // cv::detail::ImageFeatures

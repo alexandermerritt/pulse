@@ -8,8 +8,6 @@ CONF=pulse.conf
 
 exec=./load_egonet
 
-[[ ! -e $exec  ]] && scons -j6
-
 if [[ "$1" == "small" ]]; then
     $exec load ./inputs/graph-small.pb ./inputs/imagelist-small.pb $CONF
 fi

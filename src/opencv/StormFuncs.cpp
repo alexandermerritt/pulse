@@ -9,8 +9,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <libmemcached/memcached.h>
-#include <uuid/uuid.h>
-#include <signal.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -25,9 +23,9 @@
 #include "StormFuncs.h"
 #include "stitcher.hpp"
 #include "Config.hpp"
-
 #include "Objects.pb.h" // generated
 #include "cv/decoders.h"
+#include "matchers.hpp"
 
 StormFuncs::StormFuncs(void)
 : memc(nullptr)
@@ -67,14 +65,11 @@ int StormFuncs::imagesOf(std::string &vertex,
     return 0;
 }
 
-int StormFuncs::feature(std::string &image_key)
+int StormFuncs::feature(std::string &image_key, int &found)
 {
     storm::Image iobj;
     if (memc_get(memc, image_key, iobj))
         return -1;
-
-    if (iobj.has_key_features())
-        std::cout << "    image has features" << std::endl;
 
     // get image
     void *data;
@@ -99,31 +94,240 @@ int StormFuncs::feature(std::string &image_key)
     // feature detect
     cv::Ptr<cv::detail::FeaturesFinder> finder;
     cv::detail::ImageFeatures features;
-    finder = new detail::OrbFeaturesFinder(); // TODO use GPGPU
-    try {
-        (*finder)(img, features); // may segvomit
-    } catch (Exception &e) {
-        return -1;
-    }
+    // cv::resize(img, scaled, Size(), 0.4, 0.4); // optional
+    // finder = new detail::OrbFeaturesFinder(); // CPU
+#define SURF_PARAMS 4000.,1,6
+    finder = new detail::SurfFeaturesFinderGpu(SURF_PARAMS);
+#undef SURF_PARAMS
+    try { (*finder)(img, features); } // may segvomit
+    catch (Exception &e) { return -1; }
     finder->collectGarbage();
+    found = features.keypoints.size();
 
-    // serialize features
+    // update image with features key
     std::string key(iobj.key_id() + "::features");
     iobj.set_key_features(key);
-    storm::ImageFeatures fobj;
-    marshal(features, fobj, key);
-
-    // updated features key
     if (memc_set(memc, iobj.key_id(), iobj))
         return -1;
-    // new feature object
+
+    // serialize and store features
+    storm::ImageFeatures fobj;
+    marshal(features, fobj, key);
     if (memc_set(memc, fobj.key_id(), fobj))
         return -1;
+    const cv::Mat &cvmat = features.descriptors;
+    if (cvmat.data) {
+        len = cvmat.elemSize() * cvmat.total();
+        if (memc_set(memc, fobj.mat().key_data(), cvmat.data, len))
+            return -1;
+    }
 
     return 0;
 }
 
-void StormFuncs::marshal(cv::detail::ImageFeatures &cv_feat,
+int StormFuncs::match(std::deque<std::string> &imgkeys,
+        std::deque<cv::detail::MatchesInfo> &matches)
+{
+    std::deque<cv::detail::ImageFeatures> features;
+
+    // get all the image features
+    size_t i = 0;
+    for (std::string &key : imgkeys) {
+        storm::Image iobj;
+        if (memc_get(memc, key, iobj))
+            return -1;
+        if (iobj.has_key_features()) {
+            storm::ImageFeatures fobj;
+            if (memc_get(memc, iobj.key_features(), fobj))
+                return -1;
+            cv::detail::ImageFeatures cvfeat;
+            if (unmarshal(cvfeat, fobj))
+                return -1;
+            cvfeat.img_idx = i++;
+            features.push_back(cvfeat);
+        }
+    }
+
+    return do_match(features, matches);
+}
+
+// Private functions
+
+int StormFuncs::do_match_on(
+        cv::Ptr<cv::detail::FeaturesMatcher> &matcher,
+        const cv::detail::ImageFeatures &f1,
+        const cv::detail::ImageFeatures &f2,
+        cv::detail::MatchesInfo &minfo,
+        size_t thresh1, size_t thresh2)
+{
+    (*matcher)(f1, f2, minfo);
+
+    // Check if it makes sense to find homography
+    if (minfo.matches.size() < thresh1)
+        return -1;
+
+    // Construct point-point correspondences for homography estimation
+    cv::Mat src_points(1, minfo.matches.size(), CV_32FC2);
+    cv::Mat dst_points(1, minfo.matches.size(), CV_32FC2);
+    for (size_t i = 0; i < minfo.matches.size(); ++i) {
+        const DMatch& m = minfo.matches[i];
+
+        cv::Point2f p = f1.keypoints[m.queryIdx].pt;
+        p.x -= f1.img_size.width * 0.5f;
+        p.y -= f1.img_size.height * 0.5f;
+        src_points.at<cv::Point2f>(0, static_cast<int>(i)) = p;
+
+        p = f2.keypoints[m.trainIdx].pt;
+        p.x -= f2.img_size.width * 0.5f;
+        p.y -= f2.img_size.height * 0.5f;
+        dst_points.at<cv::Point2f>(0, static_cast<int>(i)) = p;
+    }
+
+    // Find pair-wise motion
+    minfo.H = findHomography(src_points, dst_points,
+            minfo.inliers_mask, CV_RANSAC);
+    if (std::abs(determinant(minfo.H))
+            < numeric_limits<double>::epsilon())
+        return -1;
+
+    // Find number of inliers
+    minfo.num_inliers = 0;
+    for (size_t i = 0; i < minfo.inliers_mask.size(); ++i)
+        if (minfo.inliers_mask[i])
+            minfo.num_inliers++;
+
+    // These coeffs are from paper M. Brown and D. Lowe. "Automatic
+    // Panoramic Image Stitching using Invariant Features"
+    minfo.confidence = minfo.num_inliers
+        / (8 + 0.3 * minfo.matches.size());
+
+    // Set zero confidence to remove matches between too close images,
+    // as they don't provide additional information anyway. The
+    // threshold was set experimentally.
+    minfo.confidence = minfo.confidence > 3. ? 0. : minfo.confidence;
+
+    // Check if we should try to refine motion
+    if (static_cast<size_t>(minfo.num_inliers) < thresh2)
+        return -1;
+
+    // Construct point-point correspondences for inliers only
+    src_points.create(1, minfo.num_inliers, CV_32FC2);
+    dst_points.create(1, minfo.num_inliers, CV_32FC2);
+    int inlier_idx = 0;
+    for (size_t i = 0; i < minfo.matches.size(); ++i) {
+        if (!minfo.inliers_mask[i])
+            continue;
+
+        const DMatch& m = minfo.matches[i];
+
+        cv::Point2f p = f1.keypoints[m.queryIdx].pt;
+        p.x -= f1.img_size.width * 0.5f;
+        p.y -= f1.img_size.height * 0.5f;
+        src_points.at<cv::Point2f>(0, inlier_idx) = p;
+
+        p = f2.keypoints[m.trainIdx].pt;
+        p.x -= f2.img_size.width * 0.5f;
+        p.y -= f2.img_size.height * 0.5f;
+        dst_points.at<cv::Point2f>(0, inlier_idx) = p;
+
+        inlier_idx++;
+    }
+
+    // Rerun motion estimation on inliers only
+    minfo.H = findHomography(src_points, dst_points, CV_RANSAC);
+    return 0;
+}
+
+int StormFuncs::do_match(std::deque<cv::detail::ImageFeatures> &features,
+        std::deque<cv::detail::MatchesInfo> &matches)
+{
+    matches.clear();
+    cv::Ptr<cv::detail::FeaturesMatcher> matcher;
+    const size_t num_images = features.size();
+
+    Mat_<uchar> mask_ = Mat::ones(num_images, num_images, CV_8U);
+
+    std::vector<std::pair<int,int>> near_pairs;
+    for (size_t i = 0; i < num_images - 1; ++i)
+        for (size_t j = i + 1; j < num_images; ++j)
+            if (features[i].keypoints.size() > 0
+                    && features[j].keypoints.size() > 0
+                    && mask_(i, j))
+                near_pairs.push_back(make_pair(i, j));
+
+    matches.resize(num_images * num_images);
+
+#if defined(_OPENMP)
+#pragma omp parallel \
+    private(matcher) \
+    num_threads(num_threads)
+#endif  /* _OPENMP */
+    {
+        matcher = new CpuMatcher(0.2f);
+        // matcher = new GpuMatcher(0.2f);
+#if defined(_OPENMP)
+#pragma omp for
+#endif  /* _OPENMP */
+        for (size_t i = 0; i < near_pairs.size(); ++i)
+        {
+            int from = near_pairs[i].first;
+            int to = near_pairs[i].second;
+            int pair_idx = from*num_images + to;
+
+            if (do_match_on(matcher, features[from], features[to],
+                    matches[pair_idx]))
+                return -1;
+
+            matches[pair_idx].src_img_idx = from;
+            matches[pair_idx].dst_img_idx = to;
+
+            size_t dual_pair_idx = to*num_images + from;
+
+            matches[dual_pair_idx] = matches[pair_idx];
+            matches[dual_pair_idx].src_img_idx = to;
+            matches[dual_pair_idx].dst_img_idx = from;
+
+            if (!matches[pair_idx].H.empty())
+                matches[dual_pair_idx].H = matches[pair_idx].H.inv();
+
+            const size_t num = matches[dual_pair_idx].matches.size();
+            for (size_t j = 0; j < num; ++j)
+                std::swap(matches[dual_pair_idx].matches[j].queryIdx,
+                        matches[dual_pair_idx].matches[j].trainIdx);
+        }
+    }
+
+    return 0;
+}
+
+inline int StormFuncs::unmarshal(cv::detail::ImageFeatures &cv_feat,
+        const storm::ImageFeatures &fobj)
+{
+    cv_feat.img_idx = fobj.img_idx();
+    cv_feat.img_size.width = fobj.width();
+    cv_feat.img_size.height = fobj.height();
+
+    std::vector<cv::KeyPoint> &kp = cv_feat.keypoints;
+    kp.resize(fobj.keypoints_size());
+    for (int i = 0; i < fobj.keypoints_size(); i++)
+        unmarshal(kp[i], fobj.keypoints(i));
+
+    if (fobj.has_mat()) {
+        const storm::Mat &mobj = fobj.mat();
+        void *data; size_t len;
+        if (memc_get(memc, mobj.key_data(), &data, len))
+            return -1;
+        cv::Mat &mat = cv_feat.descriptors;
+        mat = cv::Mat(mobj.rows(), mobj.cols(),
+                mobj.type(), static_cast<unsigned char*>(data));
+        mat.flags = mobj.flags();
+        mat.dims = mobj.dims();
+    }
+
+    return 0;
+}
+
+inline void StormFuncs::marshal(cv::detail::ImageFeatures &cv_feat,
         storm::ImageFeatures &fobj, std::string &key)
 {
     fobj.Clear();
@@ -141,18 +345,31 @@ void StormFuncs::marshal(cv::detail::ImageFeatures &cv_feat,
         mobj->set_dims(desc.dims);
         mobj->set_rows(desc.rows);
         mobj->set_cols(desc.cols);
+        mobj->set_type(desc.type());
         mobj->set_key_data(key + "::desc_data");
     }
 }
 
-void StormFuncs::marshal(cv::KeyPoint &cv_kp,
+inline void StormFuncs::unmarshal(cv::KeyPoint &cv_kp,
+        const storm::KeyPoint &kobj)
+{
+    cv_kp.pt.x = kobj.x();
+    cv_kp.pt.y = kobj.y();
+    cv_kp.octave = kobj.octave();
+    cv_kp.class_id = kobj.class_id();
+    cv_kp.size = kobj.size();
+    cv_kp.angle = kobj.angle();
+    cv_kp.response = kobj.resp();
+}
+
+inline void StormFuncs::marshal(cv::KeyPoint &cv_kp,
         storm::KeyPoint *kobj)
 {
     kobj->Clear();
     kobj->set_x(cv_kp.pt.x);
     kobj->set_y(cv_kp.pt.y);
     kobj->set_octave(cv_kp.octave);
-    kobj->set_class_(cv_kp.class_id);
+    kobj->set_class_id(cv_kp.class_id);
     kobj->set_size(cv_kp.size);
     kobj->set_angle(cv_kp.angle);
     kobj->set_resp(cv_kp.response);
@@ -333,8 +550,8 @@ void MontageBolt::Initialize(Json::Value conf, Json::Value context)
  * Executable functions
  */
 
-int memc_get(memcached_st *memc, const std::string &key, // input params
-        void **val, size_t &len) // output params
+int memc_get(memcached_st *memc, const std::string &key,
+        void **val, size_t &len)
 {
     memcached_return_t mret;
     uint32_t flags;
@@ -368,7 +585,7 @@ int memc_get(memcached_st *memc, const std::string &key,
 }
 
 int memc_set(memcached_st *memc, const std::string &key,
-        void *val, size_t len)
+        const void *val, size_t len)
 {
     memcached_return_t mret;
     if (!memc || !val) return -1;
@@ -378,7 +595,7 @@ int memc_set(memcached_st *memc, const std::string &key,
 }
 
 int memc_set(memcached_st *memc, const std::string &key,
-        google::protobuf::MessageLite &msg)
+        const google::protobuf::MessageLite &msg)
 {
     size_t len(0);
     void *val(nullptr);

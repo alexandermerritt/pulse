@@ -41,18 +41,39 @@ class StormFuncs
     public:
         StormFuncs(void);
         int connect(std::string &servers);
+        // graph-based functions
         int neighbors(std::string &vertex,
                 std::deque<std::string> &others);
         int imagesOf(std::string &vertex,
                 std::deque<std::string> &keys);
-        int feature(std::string &image_key);
+        // image-processing
+        int feature(std::string &image_key, int &found);
+        int match(std::deque<std::string> &imgkeys,
+                std::deque<cv::detail::MatchesInfo> &matches);
+        // TODO montage
+
     private:
         memcached_st *memc;
-        void marshal(cv::detail::ImageFeatures &cv_feat,
+
+        int do_match(std::deque<cv::detail::ImageFeatures> &features,
+                std::deque<cv::detail::MatchesInfo> &matches);
+
+        int do_match_on(cv::Ptr<cv::detail::FeaturesMatcher> &matcher,
+                const cv::detail::ImageFeatures &f1,
+                const cv::detail::ImageFeatures &f2,
+                cv::detail::MatchesInfo &matches_info,
+                size_t thresh1 = 6, size_t thresh2 = 6);
+
+        inline void marshal(cv::detail::ImageFeatures &cv_feat,
                 storm::ImageFeatures &pb_feat,
                 std::string &key);
-        void marshal(cv::KeyPoint &cv_kp,
+        inline int unmarshal(cv::detail::ImageFeatures &cv_feat,
+                const storm::ImageFeatures &fobj);
+
+        inline void marshal(cv::KeyPoint &cv_kp,
                 storm::KeyPoint *kobj);
+        inline void unmarshal(cv::KeyPoint &cv_kp,
+                const storm::KeyPoint &kobj);
 };
 
 #if 0
@@ -136,10 +157,10 @@ int memc_get(memcached_st *memc, const std::string &key,
         /* output */ void **val, size_t &len);
 
 int memc_set(memcached_st *memc, const std::string &key,
-        void *val, size_t len);
+        const void *val, size_t len);
 
 int memc_set(memcached_st *memc, const std::string &key,
-        google::protobuf::MessageLite &msg);
+        const google::protobuf::MessageLite &msg);
 
 int memc_exists(memcached_st *memc,
         const std::string &key);

@@ -39,13 +39,28 @@ int main(void)
         << " has " << neighbors.size() << " neighbors"
         << std::endl;
 
+    int found = 0;
     for (std::string &image_key : image_keys) {
         std::cout << "Exec feature on " << image_key << std::endl;
-        if (funcs.feature(image_key)) {
+        if (funcs.feature(image_key, found)) {
             std::cerr << "Error: feature on "
                 << image_key << std::endl;
             return -1;
         }
+        std::cout << "    found " << found
+            << " features" << std::endl;
+    }
+
+    std::deque<cv::detail::MatchesInfo> matchinfo;
+    if (funcs.match(image_keys, matchinfo))
+        return -1;
+    std::cout << "There are " << matchinfo.size()
+        << " match infos" << std::endl;
+    for (auto &m : matchinfo) {
+        std::cout << m.src_img_idx << " matches "
+            << m.dst_img_idx << " with " 
+            << m.matches.size() << " at conf "
+            << m.confidence << std::endl;
     }
 
     return 0;

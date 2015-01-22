@@ -36,9 +36,9 @@ EXTRAFLAGS += -fcolor-diagnostics
 
 DEBUG ?= 1
 ifeq ($(DEBUG),1)
-EXTRAFLAGS += -O0 -ggdb3
+EXTRAFLAGS += -O0 -ggdb3 -fno-inline
 else
-EXTRAFLAGS += -O2
+EXTRAFLAGS += -Os -mmmx  -msse  -msse2 -msse3 -msse4.1 -msse4.2
 endif
 
 CFLAGS = $(EXTRAFLAGS) $(CPATH)
@@ -91,7 +91,7 @@ JNILinker.h:	JNILinker.java
 	javah -jni JNILinker
 	touch $@
 
-LIB_SOURCES = StormFuncs.cpp JNILinker.cc
+LIB_SOURCES = StormFuncs.cpp JNILinker.cc matchers.cpp
 
 libjnilinker.so: cv/libcv.a Objects.pb.cc JNILinker.h | $(LIB_SOURCES)
 	$(CXX) $(CXXFLAGS) --shared -fPIC $(CPATH) -o $@ \
@@ -108,7 +108,7 @@ LinkerTest.class:	LinkerTest.java JNILinker.java
 LinkerTest:	LinkerTest.class libjnilinker.so cv/libcv.a
 	java LinkerTest
 
-StormFuncsTest:	Objects.pb.cc StormFuncsTest.cc StormFuncs.cpp cv/libcv.a
+StormFuncsTest:	Objects.pb.cc StormFuncsTest.cc StormFuncs.cpp cv/libcv.a matchers.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 #

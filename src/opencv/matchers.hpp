@@ -40,17 +40,14 @@
 //
 //M*/
 
-#ifndef __MATCHERS_HPP_INCLUDED__
-#define __MATCHERS_HPP_INCLUDED__
+#pragma once
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
-
 #include <opencv2/opencv_modules.hpp>
 
-#if defined(HAVE_OPENCV_NONFREE) && defined(HAVE_OPENCV_GPU)
-    #include "opencv2/nonfree/gpu.hpp"
-#endif
+// need to have nonfree modules built/installed
+#include "opencv2/nonfree/gpu.hpp"
 
 using namespace std;
 using namespace cv;
@@ -69,7 +66,6 @@ private:
     float match_conf_;
 };
 
-#ifdef HAVE_OPENCV_GPU
 class GpuMatcher : public FeaturesMatcher
 {
 public:
@@ -84,7 +80,4 @@ private:
     cv::gpu::GpuMat train_idx_, distance_, all_dist_;
     vector< vector<DMatch> > pair_matches;
 };
-#endif
 
-
-#endif // __MATCHERS_HPP_INCLUDED__
