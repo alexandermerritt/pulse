@@ -93,7 +93,7 @@ JNILinker.h:	JNILinker.java
 
 LIB_SOURCES = StormFuncs.cpp JNILinker.cc matchers.cpp
 
-libjnilinker.so: cv/libcv.a Objects.pb.cc JNILinker.h | $(LIB_SOURCES)
+libjnilinker.so: cv/libcv.a Objects.pb.cc JNILinker.h $(LIB_SOURCES)
 	$(CXX) $(CXXFLAGS) --shared -fPIC $(CPATH) -o $@ \
 		cv/libcv.a Objects.pb.cc $(LIB_SOURCES) $(LIBS)
 

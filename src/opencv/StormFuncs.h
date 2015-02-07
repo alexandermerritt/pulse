@@ -50,7 +50,8 @@ class StormFuncs
         int feature(std::string &image_key, int &found);
         int match(std::deque<std::string> &imgkeys,
                 std::deque<cv::detail::MatchesInfo> &matches);
-        // TODO montage
+        int montage(std::deque<std::string> &imgs,
+                std::string &montage_key);
 
     private:
         memcached_st *memc;
@@ -62,7 +63,7 @@ class StormFuncs
                 const cv::detail::ImageFeatures &f1,
                 const cv::detail::ImageFeatures &f2,
                 cv::detail::MatchesInfo &matches_info,
-                size_t thresh1 = 6, size_t thresh2 = 6);
+                size_t thresh1 = 4, size_t thresh2 = 4);
 
         inline void marshal(cv::detail::ImageFeatures &cv_feat,
                 storm::ImageFeatures &pb_feat,

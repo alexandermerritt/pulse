@@ -27,6 +27,10 @@
 #include "cv/decoders.h"
 #include "matchers.hpp"
 
+//==--------------------------------------------------------------==//
+// Public functions
+//==--------------------------------------------------------------==//
+
 StormFuncs::StormFuncs(void)
 : memc(nullptr)
 { }
@@ -135,14 +139,14 @@ int StormFuncs::match(std::deque<std::string> &imgkeys,
     for (std::string &key : imgkeys) {
         storm::Image iobj;
         if (memc_get(memc, key, iobj))
-            return -1;
+            throw std::runtime_error("memc");
         if (iobj.has_key_features()) {
             storm::ImageFeatures fobj;
             if (memc_get(memc, iobj.key_features(), fobj))
-                return -1;
+                throw std::runtime_error("memc");
             cv::detail::ImageFeatures cvfeat;
             if (unmarshal(cvfeat, fobj))
-                return -1;
+                throw std::runtime_error("unmarshal");
             cvfeat.img_idx = i++;
             features.push_back(cvfeat);
         }
@@ -151,7 +155,87 @@ int StormFuncs::match(std::deque<std::string> &imgkeys,
     return do_match(features, matches);
 }
 
+int StormFuncs::montage(std::deque<std::string> &image_keys,
+        std::string &montage_key)
+{
+    if (image_keys.size() < 4)
+        return -1;
+
+    // get all images
+    std::deque<cv::Mat> images;
+    images.resize(image_keys.size());
+    for (size_t i = 0; i < images.size(); i++) {
+        storm::Image iobj;
+        if (memc_get(memc, image_keys[i], iobj))
+            return -1;
+        void *data; size_t len;
+        if (memc_get(memc, iobj.key_data(), &data, len))
+            return -1;
+        images[i] = jpeg::JPEGasMat(data, len);
+        free(data);
+    }
+
+    // create canvas and montage within it
+    size_t area = 0;
+    for (cv::Mat &img : images)
+        area += img.rows * img.cols;
+    area <<= 1;
+
+    // 16:9 ratio for canvas
+    cv::Size size;
+    size.height   = (3 * (int)std::sqrt(area)) >> 2;
+    size.width    = area / size.height;
+
+    cv::Rect rect;
+    rect.height = size.height >> 1;
+    rect.width  = size.width >> 1;
+    rect.x      = rect.width >> 2;
+    rect.y      = rect.height >> 2;
+    cv::Mat canvas(cv::Mat::zeros(size.height, size.width,
+                        images[0].type()));
+
+    std::random_device rd;
+    std::mt19937 gen_rand(rd());
+    std::uniform_int_distribution<> dis(0, rect.area());
+    for (cv::Mat &img : images) {
+        auto _scale = std::log1p(img.rows) * 400 / img.rows;
+        cv::Mat scaled;
+        cv::resize(img, scaled, cv::Size(), _scale, _scale);
+        auto loc = dis(gen_rand);
+        int x = (loc % rect.width) + rect.x;
+        int y = (loc / rect.width) + rect.y;
+        scaled.copyTo(canvas(cv::Rect(x, y, scaled.cols, scaled.rows)));
+    }
+
+    cv::Mat montage(canvas(rect));
+    void *buf;
+    size_t len;
+    if (jpeg::MatToJPEG(montage, &buf, len))
+        return -1;
+    std::stringstream ss;
+    for (int i = 0; i < 4; i++)
+        ss << dis(gen_rand);
+    if (memc_set(memc, ss.str(), buf, len))
+        return -1;
+    free(buf);
+    buf = nullptr;
+    montage_key = ss.str();
+
+#if 0
+    // test
+    if (memc_get(memc, ss.str(), &buf, len))
+        return -1;
+    cv::Mat image = jpeg::JPEGasMat(buf, len);
+    free(buf);
+    imwrite("/tmp/montage.jpg", image);
+#endif
+
+    return 0;
+}
+
+//==--------------------------------------------------------------==//
 // Private functions
+//==--------------------------------------------------------------==//
 
 int StormFuncs::do_match_on(
         cv::Ptr<cv::detail::FeaturesMatcher> &matcher,
@@ -164,7 +248,8 @@ int StormFuncs::do_match_on(
 
     // Check if it makes sense to find homography
     if (minfo.matches.size() < thresh1)
-        return -1;
+        throw std::runtime_error(std::string(__func__)
+                + " matches < threshold");
 
     // Construct point-point correspondences for homography estimation
     cv::Mat src_points(1, minfo.matches.size(), CV_32FC2);
@@ -188,7 +273,8 @@ int StormFuncs::do_match_on(
             minfo.inliers_mask, CV_RANSAC);
     if (std::abs(determinant(minfo.H))
             < numeric_limits<double>::epsilon())
-        return -1;
+        throw std::runtime_error(std::string(__func__)
+                + " determinant too small");
 
     // Find number of inliers
     minfo.num_inliers = 0;
@@ -208,7 +294,8 @@ int StormFuncs::do_match_on(
 
     // Check if we should try to refine motion
     if (static_cast<size_t>(minfo.num_inliers) < thresh2)
-        return -1;
+        throw std::runtime_error(std::string(__func__)
+                + " num_inliers < threshold");
 
     // Construct point-point correspondences for inliers only
     src_points.create(1, minfo.num_inliers, CV_32FC2);

@@ -50,6 +50,7 @@ int main(void)
         std::cout << "    found " << found
             << " features" << std::endl;
     }
+    std::cout << image_keys.size() << " images" << std::endl;
 
     std::deque<cv::detail::MatchesInfo> matchinfo;
     if (funcs.match(image_keys, matchinfo))
@@ -57,10 +58,32 @@ int main(void)
     std::cout << "There are " << matchinfo.size()
         << " match infos" << std::endl;
     for (auto &m : matchinfo) {
+        if (m.confidence <= 0)
+            continue;
         std::cout << m.src_img_idx << " matches "
             << m.dst_img_idx << " with " 
             << m.matches.size() << " at conf "
             << m.confidence << std::endl;
+    }
+
+
+    // pick ones with least similarity and create montage
+    // pick images above some threshold size
+    std::string montage_key;
+    size_t num = image_keys.size();
+    if (num > 16)
+        num = static_cast<size_t>(std::log1p(image_keys.size())) << 2;
+    auto comp = [](const cv::detail::MatchesInfo &a,
+            const cv::detail::MatchesInfo &b) {
+        return !!(a.confidence < b.confidence);
+    };
+    std::sort(matchinfo.begin(), matchinfo.end(), comp);
+    while (matchinfo.size() > num)
+        matchinfo.erase(matchinfo.end() - 1);
+    std::cout << "montage with " << num << " images" << std::endl;
+    if (funcs.montage(image_keys, montage_key)) {
+        std::cout << "Error with montage" << std::endl;
+        return -1;
     }
 
     return 0;

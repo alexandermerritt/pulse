@@ -85,6 +85,7 @@ public:
 // data points to an in-memory representation of a compressed image as
 // it would be stored on disk.
 cv::Mat JPEGasMat(void *data, size_t len);
+int MatToJPEG(cv::Mat &mat, void **data, size_t &len);
 
 }
 

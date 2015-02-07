@@ -653,6 +653,26 @@ cv::Mat JPEGasMat(void *data, size_t len)
     return mat;
 }
 
+int MatToJPEG(cv::Mat &mat, void **data, size_t &len)
+{
+    JpegEncoder encoder;
+    std::vector<int> params(0);
+
+    std::vector<uchar> buf;
+    if (!encoder.setDestination(buf))
+        return -1;
+    if (!encoder.write(mat, params))
+        return -1;
+
+    len = buf.size() * sizeof(buf[0]);
+    *data = malloc(len);
+    if (!*data)
+        return -1;
+    memcpy(*data, buf.data(), len);
+
+    return 0;
+}
+
 }
 
 /* End of file. */
