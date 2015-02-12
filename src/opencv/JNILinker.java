@@ -1,6 +1,7 @@
 import java.io.Serializable;
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.Iterator;
 
 // How to use:
 //   1. javah -jni JNILinker (produces header)
@@ -39,6 +40,12 @@ public class JNILinker implements Serializable {
     public native int imagesOf(String vertex, HashSet<String> keys);
 
     // Compute features of image. Store back into object store. Uses
-    // the GPGPU.
+    // the GPGPU. Return value <0 is error, else a count of number of
+    // features found.
     public native int feature(String image_key);
+
+    public native int match(HashSet<String> image_keys);
+
+    public native int montage(HashSet<String> image_keys,
+            StringBuffer montage_key);
 }

@@ -1,4 +1,5 @@
 // Implementation (in C++) of the JNILinker.java native methods.
+// http://www.ibm.com/developerworks/java/tutorials/j-jni/j-jni.html
 
 #include <iostream>
 #include <stdio.h>
@@ -11,16 +12,21 @@
 static StormFuncs funcs;
 static const std::string prefix("JNI: ");
 
-#if 0
-struct Log {
-    FILE *logfp;
-    Log(std::string &name) : logfp(nullptr) { }
-    void println(std::string &msg) {
-    }
-};
-#endif
+//==------------------------------------------------------------------
+// Utility functions
+//==------------------------------------------------------------------
 
-static inline std::string j2c_string(JNIEnv *env, jstring jstr)
+static inline void
+jcheck(JNIEnv *env)
+{
+    if (env->ExceptionCheck()) {
+        env->ExceptionDescribe();
+        assert("JNI hiccup");
+    }
+}
+
+static inline std::string
+J2C_string(JNIEnv *env, jstring jstr)
 {
     const char *cstr = env->GetStringUTFChars(jstr, 0);
     std::string str(cstr);
@@ -28,11 +34,72 @@ static inline std::string j2c_string(JNIEnv *env, jstring jstr)
     return str;
 }
 
+static std::deque<std::string>
+J2C_hashset(JNIEnv *env, jobject hashset)
+{
+    std::deque<std::string> deque(0);
+
+    if (!hashset)
+        return deque;
+
+    // HashSet<String>::iterator iter;
+    jclass cls = env->GetObjectClass(hashset);
+    jcheck(env);
+    jmethodID getiter = env->GetMethodID(cls,
+            "iterator", "()Ljava/util/Iterator;");
+    jcheck(env);
+    jobject iter = env->CallObjectMethod(hashset, getiter);
+    jcheck(env);
+    cls = env->GetObjectClass(iter);
+    jcheck(env);
+
+    jmethodID hasNext = env->GetMethodID(cls, "hasNext", "()Z");
+    jcheck(env);
+    jmethodID next = env->GetMethodID(cls,
+            "next", "()Ljava/lang/Object;");
+    jcheck(env);
+
+    while (env->CallBooleanMethod(iter, hasNext)) {
+        jcheck(env);
+        jobject obj = env->CallObjectMethod(iter, next);
+        jcheck(env);
+        jstring str = static_cast<jstring>(obj);
+        jcheck(env);
+        deque.push_back(J2C_string(env, str));
+    }
+
+    return deque;
+}
+
+static void
+C2J_hashset(JNIEnv *env, std::deque<std::string> &set, jobject hashset)
+{
+    jclass cls = env->GetObjectClass(hashset);
+    jcheck(env);
+    jmethodID clear = env->GetMethodID(cls, "clear", "()V");
+    jcheck(env);
+    env->CallVoidMethod(hashset, clear);
+    jcheck(env);
+
+    jmethodID add = env->GetMethodID(cls,
+            "add", "(Ljava/lang/Object;)Z");
+    jcheck(env);
+    for (std::string &item : set) {
+        env->CallBooleanMethod(hashset, add,
+                env->NewStringUTF(item.c_str()));
+        jcheck(env);
+    }
+}
+
+//==------------------------------------------------------------------
+// JNI implementation
+//==------------------------------------------------------------------
+
 // int neighbors(String vertex, HashSet<String> others);
 JNIEXPORT jint JNICALL Java_JNILinker_neighbors
   (JNIEnv *env, jobject thisobj, jstring vertex, jobject hashset)
 {
-    std::string vertex_cpp(j2c_string(env, vertex));
+    std::string vertex_cpp(J2C_string(env, vertex));
     std::deque<std::string> others;
     if (0 != funcs.neighbors(vertex_cpp, others))
         return -1;
@@ -58,7 +125,7 @@ JNIEXPORT jint JNICALL Java_JNILinker_neighbors
 JNIEXPORT jint JNICALL Java_JNILinker_connect
   (JNIEnv *env, jobject thisobj, jstring servers)
 {
-    std::string s(j2c_string(env, servers));
+    std::string s(J2C_string(env, servers));
     return funcs.connect(s);
 }
 
@@ -66,7 +133,7 @@ JNIEXPORT jint JNICALL Java_JNILinker_connect
 JNIEXPORT jint JNICALL Java_JNILinker_imagesOf
   (JNIEnv *env, jobject thisobj, jstring vertex, jobject hashset)
 {
-    std::string v(j2c_string(env, vertex));
+    std::string v(J2C_string(env, vertex));
     std::deque<std::string> keys;
     if (0 != funcs.imagesOf(v, keys))
         return -1;
@@ -89,7 +156,74 @@ JNIEXPORT jint JNICALL Java_JNILinker_imagesOf
 JNIEXPORT jint JNICALL Java_JNILinker_feature
   (JNIEnv *env, jobject thisobj, jstring image_key)
 {
-    std::string key(j2c_string(env, image_key));
-    return funcs.feature(key);
+    std::string key(J2C_string(env, image_key));
+    int num;
+    return !!funcs.feature(key, num);
+}
+
+// int match(HashSet<String> image_keys);
+JNIEXPORT jint JNICALL Java_JNILinker_match
+  (JNIEnv *env, jobject thisobj, jobject hashset)
+{
+    std::deque<cv::detail::MatchesInfo> matchinfo;
+    std::deque<std::string> keys;
+
+    keys = J2C_hashset(env, hashset);
+    if (keys.size() == 0)
+        return -1;
+
+#if 0 // fucking opencv asserts make me want to die
+    if (funcs.match(keys, matchinfo))
+        return -1;
+
+    // pick images above some threshold size
+    size_t num = keys.size();
+    if (num > 16)
+        num = static_cast<size_t>(std::log1p(keys.size())) << 2;
+    auto comp = [](const cv::detail::MatchesInfo &a,
+            const cv::detail::MatchesInfo &b) {
+        return !!(a.confidence < b.confidence);
+    };
+    std::sort(matchinfo.begin(), matchinfo.end(), comp);
+    while (matchinfo.size() > num)
+        matchinfo.erase(matchinfo.end() - 1);
+#else
+    size_t num = keys.size();
+    if (num > 16)
+        num = static_cast<size_t>(std::log1p(keys.size())) << 2;
+    while (keys.size() > num)
+        keys.erase(keys.end());
+#endif
+
+    C2J_hashset(env, keys, hashset);
+
+    return 0;
+}
+
+// int montage(HashSet<String> imageKeys, String montage_key);
+JNIEXPORT jint JNICALL Java_JNILinker_montage
+  (JNIEnv *env, jobject thisobj, jobject hashset, jobject montage_key)
+{
+    std::deque<std::string> keys;
+    std::string key;
+
+    keys = J2C_hashset(env, hashset);
+    if (keys.size() == 0)
+        return -1;
+
+    if (funcs.montage(keys, key))
+        return -1;
+
+    // update montage_key
+    jclass cls = env->GetObjectClass(montage_key);
+    jcheck(env);
+    jmethodID append = env->GetMethodID(cls,
+            "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;");
+    jcheck(env);
+    env->CallObjectMethod(montage_key, append,
+            env->NewStringUTF(key.c_str()));
+    jcheck(env);
+
+    return 0;
 }
 

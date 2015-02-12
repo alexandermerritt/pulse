@@ -31,7 +31,7 @@ LIBS = -lmemcached -ljpeg
 LIBS += $(OPENCV_LIBS) $(JSON_LIBS) $(PROTOBUF_LIBS) $(NV_LIBS)
 
 EXTRAFLAGS = -Wall -Werror -Wextra 
-EXTRAFLAGS += -Wno-unused-function -Wno-unused-parameter
+EXTRAFLAGS += -Wno-unused-function -Wno-unused-parameter -Wno-unused-variable
 EXTRAFLAGS += -fcolor-diagnostics
 
 DEBUG ?= 1
@@ -95,7 +95,7 @@ LIB_SOURCES = StormFuncs.cpp JNILinker.cc matchers.cpp
 
 libjnilinker.so: cv/libcv.a Objects.pb.cc JNILinker.h $(LIB_SOURCES)
 	$(CXX) $(CXXFLAGS) --shared -fPIC $(CPATH) -o $@ \
-		cv/libcv.a Objects.pb.cc $(LIB_SOURCES) $(LIBS)
+		Objects.pb.cc $(LIB_SOURCES) $(CV_SOURCES) $(LIBS)
 
 #
 # Test codes

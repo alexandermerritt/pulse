@@ -86,5 +86,7 @@ int main(void)
         return -1;
     }
 
+    // XXX add montage to original user
+
     return 0;
 }
