@@ -27,6 +27,8 @@
 #include "cv/decoders.h"
 #include "matchers.hpp"
 
+// FIXME make memc a per-thread variable...
+
 //==--------------------------------------------------------------==//
 // Public functions
 //==--------------------------------------------------------------==//
@@ -45,10 +47,10 @@ int StormFuncs::neighbors(std::string &vertex,
         std::deque<std::string> &others)
 {
     if (vertex.length() == 0)
-        return 0;
+        throw runtime_error("vertex zero length");
     storm::Vertex vobj;
     if (memc_get(memc, vertex, vobj))
-        return -1;
+        throw runtime_error("memc returned error: " + vertex);
     others.resize(vobj.followers_size());
     for (size_t i = 0; i < others.size(); i++)
         others[i] = vobj.followers(i);
@@ -159,7 +161,7 @@ int StormFuncs::montage(std::deque<std::string> &image_keys,
         std::string &montage_key)
 {
     if (image_keys.size() < 4)
-        return -1;
+        throw std::runtime_error("image set too small");
 
     // get all images
     std::deque<cv::Mat> images;
@@ -167,10 +169,12 @@ int StormFuncs::montage(std::deque<std::string> &image_keys,
     for (size_t i = 0; i < images.size(); i++) {
         storm::Image iobj;
         if (memc_get(memc, image_keys[i], iobj))
-            return -1;
+            throw std::runtime_error("memc_get failed on "
+                    + image_keys[i]);
         void *data; size_t len;
         if (memc_get(memc, iobj.key_data(), &data, len))
-            return -1;
+            throw std::runtime_error("memc_get failed on "
+                    + iobj.key_data());
         images[i] = jpeg::JPEGasMat(data, len);
         free(data);
     }
@@ -200,14 +204,30 @@ int StormFuncs::montage(std::deque<std::string> &image_keys,
     for (cv::Mat &img : images) {
         auto _scale = std::log1p(img.rows) * 400 / img.rows;
         cv::Mat scaled;
-        cv::resize(img, scaled, cv::Size(), _scale, _scale);
-        auto loc = dis(gen_rand);
-        int x = (loc % rect.width) + rect.x;
-        int y = (loc / rect.width) + rect.y;
-        scaled.copyTo(canvas(cv::Rect(x, y, scaled.cols, scaled.rows)));
+        try {
+            cv::resize(img, scaled, cv::Size(), _scale, _scale);
+            auto loc = dis(gen_rand);
+            int x = (loc % rect.width) + rect.x;
+            int y = (loc / rect.width) + rect.y;
+            scaled.copyTo(canvas(cv::Rect(x, y,
+                            scaled.cols, scaled.rows)));
+        } catch (cv::Exception e) {
+            std::cerr << "Error: caught exception"
+                << std::endl;
+            return -1;
+        }
     }
 
-    cv::Mat montage(canvas(rect));
+    cv::Mat montage;
+    try {
+        montage = canvas(rect);
+    } catch (cv::Exception e) {
+        // XXX maybe just ignore this and silently return?
+        std::cerr << "Error: caught exception"
+            << std::endl;
+        throw std::runtime_error("montage: creating canvas: "
+                + std::string(e.what()));
+    }
     void *buf;
     size_t len;
     if (jpeg::MatToJPEG(montage, &buf, len))
@@ -215,6 +235,7 @@ int StormFuncs::montage(std::deque<std::string> &image_keys,
     std::stringstream ss;
     for (int i = 0; i < 4; i++)
         ss << dis(gen_rand);
+    ss << ".jpg";
     if (memc_set(memc, ss.str(), buf, len))
         return -1;
     free(buf);
@@ -231,6 +252,23 @@ int StormFuncs::montage(std::deque<std::string> &image_keys,
 #endif
 
     return 0;
+}
+
+void StormFuncs::writeImage(std::string &key, std::string &path)
+{
+    void *buf;
+    size_t len;
+    if (memc_get(memc, key, &buf, len))
+        throw std::runtime_error("memc_get failed on " + key);
+    cv::Mat image = jpeg::JPEGasMat(buf, len);
+    if (!image.data)
+        throw std::runtime_error("JPEGasMat failed");
+    try {
+        cv::imwrite(path, image);
+    } catch (cv::Exception &e) {
+        throw std::runtime_error("cv::imwrite failed: "
+                + std::string(e.what()));
+    }
 }
 
 //==--------------------------------------------------------------==//

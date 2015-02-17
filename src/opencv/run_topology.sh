@@ -12,7 +12,7 @@ make
 
 # enable JNI lib to be loaded from current path
 (LD_LIBRARY_PATH=$LD_LIBRARY_PATH:. \
-    $STORM jar search.jar SearchTopology pulse.conf $@ 2>&1 ) \
+    $STORM jar search.jar SearchTopology 2>&1 ) \
     | tee storm.log
 
 # JARS="$(find $SOURCE/ -type f | egrep '\.jar$' | tr '\n' ':')"
@@ -23,9 +23,4 @@ make
 #     -Dstorm.jar=search.jar \
 #     SearchTopology \
 #     ../pulse.conf $@
-
-echo ''
-echo 'results:'
-echo ''
-grep output: storm.log
 

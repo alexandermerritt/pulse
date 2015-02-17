@@ -28,40 +28,40 @@ class LinkerTest {
         for (String v : others) {
             if (0 != jni.imagesOf(v, image_keys)) {
                 System.out.println("Error: jni.imagesOf()");
-                return;
+                continue;
             }
             System.out.println(v + " has " + image_keys.size()
                     + " images");
-            if (image_keys.size() > 1) {
+
+            if (image_keys.size() > 1)
                 vertex = v;
-                break;
+            else
+                continue;
+
+            // feature detection test
+            for (String image_key : image_keys) {
+                System.out.println("computing features for " + image_key);
+                if (0 != jni.feature(image_key)) {
+                    System.out.println("Error: jni.feature()");
+                    continue;
+                }
             }
-        }
-        if (vertex.length() < 1) {
-            System.out.println("No neighbors have any images.");
-            return;
-        }
 
-        // feature detection test
-        for (String image_key : image_keys) {
-            System.out.println("computing features for " + image_key);
-            if (0 != jni.feature(image_key)) {
-                System.out.println("Error: jni.feature()");
-                return;
+            System.out.println("calling match");
+            if (0 != jni.match(image_keys)) {
+                System.out.println("Error: jni.match()");
+                continue;
             }
-        }
+            System.out.println("image reduced to "
+                    + image_keys.size());
 
-        System.out.println("calling match");
-        if (0 != jni.match(image_keys)) {
-            System.out.println("Error: jni.match()");
-            return;
-        }
-
-        StringBuffer montage_key = new StringBuffer();
-        System.out.println("calling montage");
-        if (0 != jni.montage(image_keys, montage_key)) {
-            System.out.println("Error: jni.montage()");
-            return;
+            StringBuffer montage_key = new StringBuffer();
+            System.out.println("calling montage");
+            if (0 != jni.montage(image_keys, montage_key)) {
+                System.out.println("Error: jni.montage()");
+                continue;
+            }
+            System.out.println("montage key: " + montage_key);
         }
     }
 }

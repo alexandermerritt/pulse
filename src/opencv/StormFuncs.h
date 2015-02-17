@@ -53,6 +53,8 @@ class StormFuncs
         int montage(std::deque<std::string> &imgs,
                 std::string &montage_key);
 
+        void writeImage(std::string &key, std::string &path);
+
     private:
         memcached_st *memc;
 

@@ -54,8 +54,15 @@ JAVA_SOURCES = SearchTopology.java Logger.java JNILinker.java
 	javac -cp $(STORM_JAR) $^
 	touch .jar
 
+graph-ids.txt:	load_egonet
+	echo "Run load_egonet using the load-data.sh script"
+	echo "to generate the graph-ids.txt file, before"
+	echo "we can create the search.jar file"
+
 CLASSES = *.class
-search.jar: libjnilinker.so .jar
+search.jar: libjnilinker.so .jar graph-ids.txt
+	cp -vf libjnilinker.so resources/
+	cp -vf graph-ids.txt resources/
 	jar cvf search.jar $(CLASSES) $< resources/
 
 #

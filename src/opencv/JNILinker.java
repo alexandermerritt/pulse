@@ -48,4 +48,6 @@ public class JNILinker implements Serializable {
 
     public native int montage(HashSet<String> image_keys,
             StringBuffer montage_key);
+
+    public native int writeImage(String key, String path);
 }
