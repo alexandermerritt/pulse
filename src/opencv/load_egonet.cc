@@ -455,22 +455,26 @@ int load_graph(string &path)
     raw_output.release();
     close(fd);
 
-    // -----------------------------------------------
+    return 0;
+}
 
-    // write out the IDs of all vertices so someone can query them directly...
-    // putting into one protobuf would cause the PB lib to complain the PB is
-    // 'too large'
-    string idlist("graph-ids.txt");
-    cout << "Writing graph ids to " << idlist << endl;
-    FILE *fp = fopen(idlist.data(), "w");
-    if (!fp) return -1;
-    for (auto &g : graph) {
-        const string &id(g.first);
-        fprintf(fp, "%s\n", id.data());
+// write out the IDs of all vertices so someone can query them directly...
+// putting into one protobuf would cause the PB lib to complain the PB is
+// 'too large'
+void
+write_graphids_file(std::string &path, deque<string> &nodes)
+{
+    //string idlist("graph-ids.txt");
+    cout << "Writing graph ids to " << path << endl;
+    FILE *fp = fopen(path.data(), "w");
+    if (!fp) {
+        std::cerr << "Error writing graph-ids file" << std::endl;
+        return;
     }
+    for (auto &n : nodes)
+        fprintf(fp, "%s\n", n.data());
     fclose(fp);
 
-    return 0;
 }
 
 int init_memc(void)
@@ -499,7 +503,7 @@ make_proto(string &egolist, string &images)
 // load previously created protobuf files
 // insert them into object store
 int
-load_proto(string &graph, string &imagelist, string &config)
+load_proto(string &graph_path, string &imagelist, string &config)
 {
     if (init_config(config))
         return 1;
@@ -510,7 +514,7 @@ load_proto(string &graph, string &imagelist, string &config)
     // -------------------------------------------------
     cout << "Loading graph data into object store..." << endl;
 
-    int fd = open(graph.data(), O_RDONLY);
+    int fd = open(graph_path.data(), O_RDONLY);
     if (fd < 0) return -1;
     unique_ptr<ZeroCopyInputStream> raw_input(new FileInputStream(fd));
 
@@ -523,6 +527,7 @@ load_proto(string &graph, string &imagelist, string &config)
     void *buf(nullptr);
     size_t buflen(0);
     unsigned int len;
+    deque<string> nodes(count); // used for writing graph-ids file
 
     cout << count << " nodes to read" << endl;
 
@@ -547,9 +552,14 @@ load_proto(string &graph, string &imagelist, string &config)
             fprintf(stderr, "memc error: %s", memcached_strerror(memc, mret));
             return -1;
         }
+
+        nodes.at(count) = vertex.key_id().data();
     }
     raw_input.release();
     close(fd);
+
+    string p("graph-ids.txt");
+    write_graphids_file(p, nodes);
 
     // -------------------------------------------------
     cout << "Loading image data into object store..." << endl;
@@ -647,6 +657,10 @@ main(int argc, char *argv[])
         // path to config file
         string config(argv[4]);
         ret = load_proto(graph, images, config);
+
+        cout << endl << "\tDon't forget to copy the graph ids file " << endl
+            << "\t\tinto the storm resources/ directory before" << endl
+            << "\t\tcreating the jar" << endl;
     } else {
         usage();
         ret = -1;
