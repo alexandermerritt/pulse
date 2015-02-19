@@ -1,0 +1,8 @@
+storm.zookeeper.servers:
+    - "ifrit"
+
+nimbus.host: "ifrit"
+java.library.path: "/usr/local/cuda/lib64"
+
+storm.local.dir: "/var/local/storm"
+

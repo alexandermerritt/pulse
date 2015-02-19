@@ -319,8 +319,9 @@ public class SearchTopology {
                 throw new RuntimeException("invalid completion: "
                         + reqID + " not associated");
             System.out.println("Completed " +reqID + image);
-            String path = new String("/tmp/") + image;
-            jni.writeImage(image, path);
+
+            //String path = new String("/tmp/") + image;
+            //jni.writeImage(image, path);
         }
 
         @Override
@@ -526,6 +527,7 @@ public class SearchTopology {
     public static class ImagesOf extends SimpleBolt {
         private JNILinker jni;
         class TrackingInfo {
+            // XXX arbitrary limit on # images to process per request
             final int maxPerRequest = 50;
             long vertexRecv, vertexWait;
             long countRecv, imagesSent;
@@ -864,8 +866,10 @@ public class SearchTopology {
                 Labels.Stream.completed, sortByID);
 
         StormTopology t = builder.createTopology();
-        if (args.length > 1) {
-            stormConf.setNumWorkers(1);
+        if (args.length > 0) {
+            //stormConf.setNumWorkers(1);
+            stormConf.setMaxTaskParallelism(8);
+            System.out.println("Submitting to Storm");
             StormSubmitter.submitTopology(args[0], stormConf, t);
         } else {
             stormConf.setMaxTaskParallelism(1);

@@ -11,21 +11,17 @@ import java.util.Iterator;
 // If prototypes in this class change, header requires regeneration,
 // and cc file must be matched + rebuilt.
 
-
-
 // XXX serializable required for Storm to contain instance of this
-// class in any bolt/spout. Not sure of implications... need to
-// store/save shared library info and restore?
+// class in any bolt/spout.
 public class JNILinker implements Serializable {
 
-    // NOTE: shared library should be in same dir as process when
-    // FIRST instance of this class is instanstiated. For Storm, we
-    // find ourselves in the resources/ dir somewhere in /tmp/ as
-    // provided by the user-submitted jar file.
+    // XXX in order to find this library, it must be in the resource/
+    // directory of the jar. In order to find the libraries it depends
+    // on, such as cuda, you must specify
+    //      java.library.path
+    // in the storm.yaml configuration file.
     static {
-        String dir = System.getProperty("user.dir");
-        String lib = dir + "/libjnilinker.so";
-        System.load(lib);
+        System.loadLibrary("jnilinker");
     }
 
     // Open persistent connection to memcached
