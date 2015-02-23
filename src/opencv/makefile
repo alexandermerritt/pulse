@@ -2,8 +2,17 @@ all: search.jar load_egonet
 
 allall:	all StormFuncsTest LinkerTest.class JNILinker.h
 
+HOST = $(shell hostname | cut -c 1-3)
+
+NFSDIR = /opt/ifrit-nfs/cercs-kid
+
+ifeq ($(HOST),kid)
+CC = gcc-4.8
+CXX = g++-4.8
+else
 CC = clang
 CXX = clang++
+endif
 
 NV_CPATH = -I/usr/local/cuda/include
 NV_LIBS = -L/usr/local/cuda/lib64
@@ -11,28 +20,41 @@ NV_LIBS = -L/usr/local/cuda/lib64
 OPENCV_LIBS = $(shell pkg-config --libs opencv)
 OPENCV_CAPTH = $(shell pkg-config --cflags opencv)
 
-JSON_LIBS = $(shell pkg-config --libs jsoncpp)
-JSON_CPATH = $(shell pkg-config --cflags jsoncpp)
-
 PROTOBUF_LIBS = $(shell pkg-config --libs protobuf)
 PROTOBUF_CPATH = $(shell pkg-config --cflags protobuf)
 
+ifeq ($(HOST),kid)
+STORM_PATH = $(NFSDIR)/src/storm/latest
+JAVA_PATH = $(NFSDIR)/src/java/latest
+else
+STORM_PATH = /usr/local/src/storm/latest
 JAVA_PATH = /opt/java/jdk
+endif
+
 JAVA_CPATH = -I$(JAVA_PATH)/include -I$(JAVA_PATH)/include/linux
 
-STORM_PATH = /usr/local/src/storm/latest
 STORM_JAR := $(shell find $(STORM_PATH)/ -type f | egrep 'storm-core')
 
 CPATH = -I/usr/local/include -I../include -I.
-CPATH += $(OPENCV_CAPTH) $(JSON_CPATH) $(PROTOBUF_CPATH) $(NV_CPATH)
+CPATH += $(OPENCV_CAPTH) $(PROTOBUF_CPATH) $(NV_CPATH)
 CPATH += $(JAVA_CPATH)
 
-LIBS = -lmemcached -ljpeg
-LIBS += $(OPENCV_LIBS) $(JSON_LIBS) $(PROTOBUF_LIBS) $(NV_LIBS)
+ifeq ($(HOST),kid)
+CPATH += -I$(NFSDIR)/local/include
+endif
 
-EXTRAFLAGS = -Wall -Werror -Wextra 
+# update LD_LIBRARY_PATH to point to the libdir where this is
+JPEG_LIBS = -ljpeg
+
+LIBS = -L$(NFSDIR)/local/lib64 -L$(NFSDIR)/local/lib
+LIBS += -lmemcached $(JPEG_LIBS)
+LIBS += $(OPENCV_LIBS) $(PROTOBUF_LIBS) $(NV_LIBS)
+
+EXTRAFLAGS = -Wall -Wextra 
 EXTRAFLAGS += -Wno-unused-function -Wno-unused-parameter -Wno-unused-variable
+ifeq ($(CC),clang)
 EXTRAFLAGS += -fcolor-diagnostics
+endif
 
 DEBUG ?= 1
 ifeq ($(DEBUG),1)
@@ -128,6 +150,9 @@ load_egonet: load_egonet.o Objects.pb.cc Config.o
 #
 # Misc
 #
+
+read:	read.o
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(LIBS)
 
 clean:
 	rm -fv .jar

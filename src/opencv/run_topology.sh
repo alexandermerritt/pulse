@@ -6,24 +6,38 @@ ulimit -c unlimited
     echo "Specify 'local' or 'storm'" && \
     exit 1
 
-source /etc/profile.d/java.sh
+if [[ -e /etc/profile.d/java.sh ]]; then
+    source /etc/profile.d/java.sh
+fi
 
-SOURCE=/usr/local/src/storm/latest
+SOURCE=''
+HOST=$(hostname | cut -c 1-3)
+if [[ kid = $HOST ]]; then
+    SOURCE=/opt/ifrit-nfs/cercs-kid/src/storm/latest
+else
+    SOURCE=/usr/local/src/storm/latest
+fi
 STORM=$SOURCE/bin/storm
+if [[ ! -d $SOURCE ]]; then
+    echo "Error: $SOURCE not a directory"
+    exit 1
+fi
+if [[ ! -e $STORM ]]; then
+    echo "Error: $STORM not found"
+    exit 1
+fi
 
 set -e
 make
 
 CLASSNAME="SearchTopology"
-#CLASSNAME="TestTopology"
 
 if [[ "$1" == "local" ]]; then
-# enable JNI lib to be loaded from current path
-(LD_LIBRARY_PATH=$LD_LIBRARY_PATH:. \
-    $STORM jar search.jar $CLASSNAME 2>&1 ) \
-    | tee storm.log
+    # enable JNI lib to be loaded from current path
+    (LD_LIBRARY_PATH=$LD_LIBRARY_PATH:. \
+        $STORM jar search.jar $CLASSNAME 2>&1 ) \
+        | tee storm.log
 elif [[ "$1" == "storm" ]]; then
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:. \
     $STORM jar search.jar $CLASSNAME search
 fi
 
