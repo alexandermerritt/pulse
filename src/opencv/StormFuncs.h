@@ -10,10 +10,8 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/stitching/detail/matchers.hpp>
 
-#include "StormWrapper.h"
 #include "Config.hpp"
 #include <google/protobuf/message_lite.h>
-#include <json/json.h>
 
 #include "Objects.pb.h" // generated
 #include <libmemcached/memcached.h>

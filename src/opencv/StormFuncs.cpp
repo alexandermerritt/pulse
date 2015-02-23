@@ -15,7 +15,6 @@
 
 // C++ headers
 #include <iostream>
-#include <json/json.h>
 #include <opencv2/opencv.hpp>
 #include <memory>
 
