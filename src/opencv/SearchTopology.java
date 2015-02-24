@@ -56,7 +56,28 @@ public class SearchTopology {
     // 0-X values and just give us the max...
     public static String[] vertices;
 
-    public static final String _confPath = new String("pulse.conf");
+    public static Object lock = new Object();
+    public static String resourcesDir;
+    public static final String confName = new String("pulse.conf");
+
+    public static void setResourceDir(Map conf) {
+        synchronized(lock) {
+            if (null != resourcesDir)
+                return;
+            resourcesDir = new String();
+            resourcesDir += conf.get("storm.local.dir");
+            resourcesDir += "/supervisor/stormdist";
+            resourcesDir += "/" + conf.get("storm.id");
+            resourcesDir += "/resources";
+        }
+    }
+
+    public static String getResourcePath(String filename) {
+        if (null == resourcesDir)
+            throw new RuntimeException("Error: resourcesDir not yet initialized");
+        String s = resourcesDir + "/" + filename;
+        return s;
+    }
 
     public static String readMemcInfo(String confPath)
         throws IOException {
@@ -94,6 +115,7 @@ public class SearchTopology {
                     "No graph idsfile entry in conf");
 
         // open the file and suck in all values
+        idsPath = getResourcePath(idsPath);
         in = new BufferedReader(new FileReader(idsPath));
         ArrayDeque<String> entries = new ArrayDeque<String>();
         while (in.ready())
@@ -116,6 +138,7 @@ public class SearchTopology {
         // initialize below fields in subclass' constructor
         Fields outputFields;
         String name, memcInfo;
+        boolean active = false;
 
         @Override
         public void declareOutputFields(OutputFieldsDeclarer d) {
@@ -129,8 +152,11 @@ public class SearchTopology {
             log = new Logger(name);
             log.open();
 
+            setResourceDir(conf);
+
+            String confPath = getResourcePath(confName);
             try {
-                memcInfo = readMemcInfo(_confPath);
+                memcInfo = readMemcInfo(confPath);
             } catch (IOException e) {
                 System.err.println("Error opening conf file");
             }
@@ -157,10 +183,12 @@ public class SearchTopology {
         @Override
         public void deactivate() {
             Logger.println(log, "deactivate()");
+            active = false;
         }
         @Override
         public void activate() {
             Logger.println(log, "activate()");
+            active = true;
         }
     }
 
@@ -179,15 +207,17 @@ public class SearchTopology {
         }
 
         @Override
-        public void prepare(Map stormConf,
+        public void prepare(Map conf,
                 TopologyContext context, OutputCollector collector) {
             c = collector;
             log = new Logger(name);
             log.open();
             Logger.println(log, "prepare()");
 
+            setResourceDir(conf);
+
             try {
-                memcInfo = readMemcInfo(_confPath);
+                memcInfo = readMemcInfo(resourcesDir + "/" + confName);
             } catch (IOException e) {
                 System.err.println("Error opening conf file");
             }
@@ -225,13 +255,27 @@ public class SearchTopology {
                     + Labels.reqID + " " + Labels.vertex);
         }
 
+        private Date last;
+
         // TODO use a thread
         @Override
         public void nextTuple() {
 
-            // XXX remove barrier once code works
-            if (count > 0)
+            if (!active)
                 return;
+
+            if ((count++ % 200) != 0)
+                return;
+
+            if (null != last) {
+                Date now = new Date();
+                long t0 = last.getTime(), t1 = now.getTime();
+                if ((t1 - t0) > (30 * 1e3))
+                    return;
+                last = now;
+            } else {
+                last = new Date();
+            }
 
             String reqID = Long.toString(Math.abs(rand.nextLong()));
 
@@ -245,7 +289,6 @@ public class SearchTopology {
 
             // TODO allow customization of the rate
 
-            count++;
         }
 
         public void open(Map conf, TopologyContext context,
@@ -253,7 +296,7 @@ public class SearchTopology {
             super.open(conf, context, collector);
             rand = new Random();
 
-            String confPath = new String(_confPath);
+            String confPath = getResourcePath(confName);
             try {
                 readVertexList(confPath);
             } catch (IOException e) {
@@ -275,12 +318,12 @@ public class SearchTopology {
         RequestManager() {
             name = "request-manager-bolt";
             reqSent = new HashSet<String>();
-            jni = new JNILinker();
         }
 
-        public void prepare(Map stormConf,
+        public void prepare(Map conf,
                 TopologyContext context, OutputCollector collector) {
-            super.prepare(stormConf, context, collector);
+            super.prepare(conf, context, collector);
+            jni = new JNILinker();
             if (0 != jni.connect(memcInfo)) {
                 throw new RuntimeException(
                         "Error: jni.connect(" + memcInfo + ")");
@@ -318,7 +361,7 @@ public class SearchTopology {
             if (!reqSent.remove(reqID))
                 throw new RuntimeException("invalid completion: "
                         + reqID + " not associated");
-            System.out.println("Completed " +reqID + image);
+            System.out.println("Completed request " + reqID + " with result montage " + image);
 
             //String path = new String("/tmp/") + image;
             //jni.writeImage(image, path);
@@ -346,12 +389,12 @@ public class SearchTopology {
 
         Neighbors() { 
             name = "neighbors-bolt";
-            jni = new JNILinker();
         }
 
-        public void prepare(Map stormConf,
+        public void prepare(Map conf,
                 TopologyContext context, OutputCollector collector) {
-            super.prepare(stormConf, context, collector);
+            super.prepare(conf, context, collector);
+            jni = new JNILinker();
             if (0 != jni.connect(memcInfo)) {
                 throw new RuntimeException(
                         "Error: jni.connect(" + memcInfo + ")");
@@ -557,13 +600,13 @@ public class SearchTopology {
         String endingBoltID;
 
         ImagesOf() {
-            jni = new JNILinker();
             name = "images-of-bolt";
             keys = new HashMap<String, TrackingInfo>();
         }
-        public void prepare(Map stormConf,
+        public void prepare(Map conf,
                 TopologyContext context, OutputCollector collector) {
-            super.prepare(stormConf, context, collector);
+            super.prepare(conf, context, collector);
+            jni = new JNILinker();
             if (0 != jni.connect(memcInfo)) {
                 throw new RuntimeException(
                         "Error: jni.connect(" + memcInfo + ")");
@@ -665,7 +708,6 @@ public class SearchTopology {
         private JNILinker jni;
 
         Feature() {
-            jni = new JNILinker();
             name = "feature-bolt";
         }
 
@@ -675,9 +717,10 @@ public class SearchTopology {
             d.declareStream(Labels.Stream.images, fields);
         }
 
-        public void prepare(Map stormConf,
+        public void prepare(Map conf,
                 TopologyContext context, OutputCollector collector) {
-            super.prepare(stormConf, context, collector);
+            super.prepare(conf, context, collector);
+            jni = new JNILinker();
             if (0 != jni.connect(memcInfo)) {
                 throw new RuntimeException(
                         "Error: jni.connect(" + memcInfo + ")");
@@ -730,13 +773,13 @@ public class SearchTopology {
         String endingBoltID;
 
         Montage() {
-            jni = new JNILinker();
             name = "montage-bolt";
             keys = new HashMap<String, TrackingInfo>();
         }
-        public void prepare(Map stormConf,
+        public void prepare(Map conf,
                 TopologyContext context, OutputCollector collector) {
-            super.prepare(stormConf, context, collector);
+            super.prepare(conf, context, collector);
+            jni = new JNILinker();
             if (0 != jni.connect(memcInfo)) {
                 throw new RuntimeException(
                         "Error: jni.connect(" + memcInfo + ")");
@@ -811,7 +854,17 @@ public class SearchTopology {
     // Topologies
     // ---------------------------------------------------------------
 
-    public static void doRegular(String[] args, Config stormConf)
+    public class SearchConfig {
+        public static final int spout = 1;
+        public static final int reqMgr = 1;
+        public static final int neighbor = 8;
+        public static final int uniq = 8;
+        public static final int imagesOf = 8;
+        public static final int feature = 1;
+        public static final int montage = 1;
+    }
+
+    public static void doRegular(String[] args, Config config)
         throws Exception {
         System.out.println("Using regular Storm topology");
 
@@ -820,43 +873,44 @@ public class SearchTopology {
         Fields sortByID = new Fields(Labels.reqID);
 
         TopologyBuilder builder = new TopologyBuilder();
-        SpoutDeclarer gen = builder.setSpout("gen", new Generator(), 1);
+        SpoutDeclarer gen = builder.setSpout("gen", new Generator(),
+                SearchConfig.spout);
 
         BoltDeclarer reqMgr = builder.setBolt("mgr",
-                new RequestManager(), 1);
+                new RequestManager(), SearchConfig.reqMgr);
         reqMgr.shuffleGrouping("gen", Labels.Stream.vertices);
 
         name = neighBase + (numNeighbor - 1);
         BoltDeclarer uniq = builder.setBolt("uniq",
-                new Uniquer(name), 1);
+                new Uniquer(name), SearchConfig.uniq);
 
         name = neighBase + 0;
-        builder.setBolt(name, new Neighbors(), 1)
+        builder.setBolt(name, new Neighbors(), SearchConfig.neighbor)
             .shuffleGrouping("mgr", Labels.Stream.vertices);
         uniq.fieldsGrouping(name, Labels.Stream.counts, sortByID);
         uniq.fieldsGrouping(name, Labels.Stream.vertices, sortByID);
         for (int n = 1; n < numNeighbor; n++) {
             String prior = neighBase + (n - 1);
             name = neighBase + n;
-            builder.setBolt(name, new Neighbors(), 1)
+            builder.setBolt(name, new Neighbors(), SearchConfig.neighbor)
                 .fieldsGrouping(prior, Labels.Stream.vertices, sortByID);
             uniq.fieldsGrouping(name, Labels.Stream.counts, sortByID);
             uniq.fieldsGrouping(name, Labels.Stream.vertices, sortByID);
         }
 
         BoltDeclarer imagesof = builder.setBolt("imagesOf",
-                new ImagesOf(), 1);
+                new ImagesOf(), SearchConfig.imagesOf);
         imagesof.fieldsGrouping("uniq",
                 Labels.Stream.vertices, sortByID);
         imagesof.fieldsGrouping("uniq",
                 Labels.Stream.counts, sortByID);
 
         BoltDeclarer feature = builder.setBolt("feature",
-                new Feature(), 1);
+                new Feature(), SearchConfig.feature);
         feature.shuffleGrouping("imagesOf", Labels.Stream.images);
 
         BoltDeclarer montage = builder.setBolt("montage",
-                new Montage(), 1);
+                new Montage(), SearchConfig.montage);
         montage.fieldsGrouping("feature",
                 Labels.Stream.images, sortByID);
         montage.fieldsGrouping("imagesOf",
@@ -867,14 +921,14 @@ public class SearchTopology {
 
         StormTopology t = builder.createTopology();
         if (args.length > 0) {
-            //stormConf.setNumWorkers(1);
-            stormConf.setMaxTaskParallelism(8);
+            config.setNumWorkers(8); // controls distribution
+            config.setMaxTaskParallelism(32); // controls threading
             System.out.println("Submitting to Storm");
-            StormSubmitter.submitTopology(args[0], stormConf, t);
+            StormSubmitter.submitTopology(args[0], config, t);
         } else {
-            stormConf.setMaxTaskParallelism(1);
+            config.setMaxTaskParallelism(1);
             LocalCluster cluster = new LocalCluster();
-            cluster.submitTopology("search", stormConf, t);
+            cluster.submitTopology("search", config, t);
             Thread.sleep(60 * 1000); // ms
             cluster.shutdown();
         }
@@ -885,12 +939,9 @@ public class SearchTopology {
     // ---------------------------------------------------------------
 
     public static void main(String[] args) throws Exception {
-        Config stormConf = new Config();
-        stormConf.setDebug(true);
-
-        stormConf.setMaxTaskParallelism(8);
-
-        doRegular(args, stormConf);
+        Config config = new Config();
+        config.setDebug(false); // how much is dumped into the log files
+        doRegular(args, config);
     }
 }
 
