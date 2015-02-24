@@ -33,6 +33,10 @@ jthrow(JNIEnv *env, std::string &msg)
     jthrow(env, msg.data());
 }
 
+// XXX this lock protects corruption seen when multiple threads access
+// these functions.. happens in Storm when one worker has a bunch of
+// threads (all share the same JNI instance since it's the same
+// process). no idea what performance implications ensue
 static std::mutex l;
 class Lock {
     public:
