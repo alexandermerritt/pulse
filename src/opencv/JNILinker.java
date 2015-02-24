@@ -22,24 +22,30 @@ public class JNILinker implements Serializable {
     // on, such as cuda, you must specify
     //      java.library.path
     // in the storm.yaml configuration file.
+    // XXX make sure somewhere in /etc/ld.so.conf.d/ there is a file
+    // that includes the lib directories that this library depends on,
+    // if they are not found in the default system paths
     static {
-        // update system path (needed for local topology)
-        String path = System.getProperty("java.library.path");
-        path += ":.";
-        System.setProperty("java.library.path", path);
+        if (false) { // only when run locally
+            // update system path (needed for local topology)
+            String path = System.getProperty("java.library.path");
+            path += ":" + System.getProperty("user.dir");
+            path += ":/usr/lib64";
+            System.setProperty("java.library.path", path);
 
-        // force re-read of system path
-        // http://blog.cedarsoft.com/2010/11/setting-java-library-path-programmatically/
-        try {
-            Field syspath = ClassLoader.class.getDeclaredField("sys_paths");
-            syspath.setAccessible(true);
-            syspath.set(null, null);
-        } catch (NoSuchFieldException e) {
-            throw new RuntimeException("Error: no sys_path: "
-                    + e.toString());
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException("Error updating sys_path: "
-                    + e.toString());
+            // force re-read of system path
+            // http://blog.cedarsoft.com/2010/11/setting-java-library-path-programmatically/
+            try {
+                Field syspath = ClassLoader.class.getDeclaredField("sys_paths");
+                syspath.setAccessible(true);
+                syspath.set(null, null);
+            } catch (NoSuchFieldException e) {
+                throw new RuntimeException("Error: no sys_path: "
+                        + e.toString());
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException("Error updating sys_path: "
+                        + e.toString());
+            }
         }
 
         System.loadLibrary("jnilinker");
