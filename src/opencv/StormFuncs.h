@@ -6,6 +6,8 @@
 
 #include <stdlib.h>
 #include <deque>
+#include <stdexcept>
+#include <exception>
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/stitching/detail/matchers.hpp>
@@ -34,6 +36,30 @@ extern FILE *logfp;
         fflush(logfp); \
     } while (0)
 
+class memc_notfound : public std::runtime_error
+{
+    public:
+        memc_notfound(const std::string &msg)
+            : runtime_error(msg)
+        { ; }
+};
+
+class protobuf_parsefail : public std::runtime_error
+{
+    public:
+        protobuf_parsefail(const std::string &msg)
+            : runtime_error(msg)
+        { ; }
+};
+
+class ocv_vomit : public std::runtime_error
+{
+    public:
+        ocv_vomit(const std::string &msg)
+            : runtime_error(msg)
+        { ; }
+};
+
 class StormFuncs
 {
     public:
@@ -52,6 +78,8 @@ class StormFuncs
                 std::string &montage_key);
 
         void writeImage(std::string &key, std::string &path);
+
+        inline memcached_st* getMemc(void) { return memc; }
 
     private:
         memcached_st *memc;

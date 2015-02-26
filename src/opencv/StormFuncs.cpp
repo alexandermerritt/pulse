@@ -3,6 +3,10 @@
  *
  * Refer to load_graph.cpp comment at top of file for JSON formats and structure
  * of data in memcached.
+ *
+ * Each of these functions may access a key-value store. STL
+ * exceptions are used to communicate errors. Keys not found have a
+ * special error: memc_notfound and must be caught.
  */
 
 // C headers
@@ -16,6 +20,7 @@
 // C++ headers
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include <sstream>
 #include <memory>
 
 // Local headers
@@ -38,6 +43,8 @@ StormFuncs::StormFuncs(void)
 
 int StormFuncs::connect(std::string &servers)
 {
+    if (memc)
+        return 0;
     memc = memcached(servers.c_str(), servers.length());
     return !memc;
 }
@@ -48,8 +55,7 @@ int StormFuncs::neighbors(std::string &vertex,
     if (vertex.length() == 0)
         throw runtime_error("vertex zero length");
     storm::Vertex vobj;
-    if (memc_get(memc, vertex, vobj))
-        throw runtime_error("memc returned error: " + vertex);
+    memc_get(memc, vertex, vobj);
     others.resize(vobj.followers_size());
     for (size_t i = 0; i < others.size(); i++)
         others[i] = vobj.followers(i);
@@ -62,8 +68,7 @@ int StormFuncs::imagesOf(std::string &vertex,
     if (vertex.length() == 0)
         return 0;
     storm::Vertex vobj;
-    if (memc_get(memc, vertex, vobj))
-        return -1;
+    memc_get(memc, vertex, vobj);
     keys.resize(vobj.images_size());
     for (size_t i = 0; i < keys.size(); i++)
         keys[i] = vobj.images(i);
@@ -73,17 +78,16 @@ int StormFuncs::imagesOf(std::string &vertex,
 int StormFuncs::feature(std::string &image_key, int &found)
 {
     storm::Image iobj;
-    if (memc_get(memc, image_key, iobj))
-        return -1;
+    memc_get(memc, image_key, iobj);
 
     // get image
     void *data;
     size_t len;
-    if (memc_get(memc, iobj.key_data(), &data, len))
-        return -1;
+    memc_get(memc, iobj.key_data(), &data, len);
     if (!data || len == 0) {
         free(data);
-        return -1;
+        throw std::runtime_error(std::string(__func__) + ": "
+                + "invalid args");
     }
 
     // decode
@@ -91,7 +95,8 @@ int StormFuncs::feature(std::string &image_key, int &found)
     img = jpeg::JPEGasMat(data, len);
     if (!img.data || img.cols < 1 || img.rows < 1) {
         free(data);
-        return -1;
+        throw std::runtime_error(std::string(__func__) + ": "
+                + "JPEGasMat failed on " + image_key);
     }
 
     free(data);
@@ -105,26 +110,27 @@ int StormFuncs::feature(std::string &image_key, int &found)
     finder = new detail::SurfFeaturesFinderGpu(SURF_PARAMS);
 #undef SURF_PARAMS
     try { (*finder)(img, features); } // may segvomit
-    catch (Exception &e) { return -1; }
+    catch (Exception &e) {
+        throw ocv_vomit(std::string(__func__) + ": "
+                + "opencv shat itself on " + image_key
+                + ": " + e.what());
+    }
     finder->collectGarbage();
     found = features.keypoints.size();
 
     // update image with features key
     std::string key(iobj.key_id() + "::features");
     iobj.set_key_features(key);
-    if (memc_set(memc, iobj.key_id(), iobj))
-        return -1;
+    memc_set(memc, iobj.key_id(), iobj);
 
     // serialize and store features
     storm::ImageFeatures fobj;
     marshal(features, fobj, key);
-    if (memc_set(memc, fobj.key_id(), fobj))
-        return -1;
+    memc_set(memc, fobj.key_id(), fobj);
     const cv::Mat &cvmat = features.descriptors;
     if (cvmat.data) {
         len = cvmat.elemSize() * cvmat.total();
-        if (memc_set(memc, fobj.mat().key_data(), cvmat.data, len))
-            return -1;
+        memc_set(memc, fobj.mat().key_data(), cvmat.data, len);
     }
 
     return 0;
@@ -139,12 +145,10 @@ int StormFuncs::match(std::deque<std::string> &imgkeys,
     size_t i = 0;
     for (std::string &key : imgkeys) {
         storm::Image iobj;
-        if (memc_get(memc, key, iobj))
-            throw std::runtime_error("memc");
+        memc_get(memc, key, iobj);
         if (iobj.has_key_features()) {
             storm::ImageFeatures fobj;
-            if (memc_get(memc, iobj.key_features(), fobj))
-                throw std::runtime_error("memc");
+            memc_get(memc, iobj.key_features(), fobj);
             cv::detail::ImageFeatures cvfeat;
             if (unmarshal(cvfeat, fobj))
                 throw std::runtime_error("unmarshal");
@@ -167,13 +171,9 @@ int StormFuncs::montage(std::deque<std::string> &image_keys,
     images.resize(image_keys.size());
     for (size_t i = 0; i < images.size(); i++) {
         storm::Image iobj;
-        if (memc_get(memc, image_keys[i], iobj))
-            throw std::runtime_error("memc_get failed on "
-                    + image_keys[i]);
+        memc_get(memc, image_keys[i], iobj);
         void *data; size_t len;
-        if (memc_get(memc, iobj.key_data(), &data, len))
-            throw std::runtime_error("memc_get failed on "
-                    + iobj.key_data());
+        memc_get(memc, iobj.key_data(), &data, len);
         images[i] = jpeg::JPEGasMat(data, len);
         free(data);
     }
@@ -243,8 +243,7 @@ int StormFuncs::montage(std::deque<std::string> &image_keys,
 
 #if 0
     // test
-    if (memc_get(memc, ss.str(), &buf, len))
-        return -1;
+    memc_get(memc, ss.str(), &buf, len);
     cv::Mat image = jpeg::JPEGasMat(buf, len);
     free(buf);
     imwrite("/tmp/montage.jpg", image);
@@ -257,8 +256,7 @@ void StormFuncs::writeImage(std::string &key, std::string &path)
 {
     void *buf;
     size_t len;
-    if (memc_get(memc, key, &buf, len))
-        throw std::runtime_error("memc_get failed on " + key);
+    memc_get(memc, key, &buf, len);
     cv::Mat image = jpeg::JPEGasMat(buf, len);
     if (!image.data)
         throw std::runtime_error("JPEGasMat failed");
@@ -439,8 +437,7 @@ inline int StormFuncs::unmarshal(cv::detail::ImageFeatures &cv_feat,
     if (fobj.has_mat()) {
         const storm::Mat &mobj = fobj.mat();
         void *data; size_t len;
-        if (memc_get(memc, mobj.key_data(), &data, len))
-            return -1;
+        memc_get(memc, mobj.key_data(), &data, len);
         cv::Mat &mat = cv_feat.descriptors;
         mat = cv::Mat(mobj.rows(), mobj.cols(),
                 mobj.type(), static_cast<unsigned char*>(data));
@@ -674,16 +671,28 @@ void MontageBolt::Initialize(Json::Value conf, Json::Value context)
  * Executable functions
  */
 
+// low-level call
 int memc_get(memcached_st *memc, const std::string &key,
         void **val, size_t &len)
 {
     memcached_return_t mret;
     uint32_t flags;
-    if (!memc || !val) return -1;
+    if (!memc || !val)
+        throw std::runtime_error(std::string(__func__) + ": "
+                + "invalid arguments");
     *val = memcached_get(memc, key.c_str(), key.length(),
             &len, &flags, &mret);
-    if (!*val || (mret != MEMCACHED_SUCCESS))
-        return -1;
+    if (!*val || (mret != MEMCACHED_SUCCESS)) {
+        std::stringstream ss;
+        ss << std::string(__func__) + ": "
+                + "failed to fetch " + key;
+        ss << ": ";
+        ss << memcached_strerror(memc, mret);
+        if (MEMCACHED_NOTFOUND == mret)
+            throw memc_notfound(std::string(ss.str()));
+        else
+            throw std::runtime_error(ss.str());
+    }
     return 0;
 }
 
@@ -693,16 +702,36 @@ int memc_get(memcached_st *memc, const std::string &key,
     size_t len(0);
     void *val(nullptr);
 
-    if (!memc || key.length() == 0)
-        return -1;
+    if (!memc)
+        throw std::runtime_error(std::string(__func__) + ": "
+                + "memc arg is null");
+    if (key.length() == 0)
+        throw std::runtime_error(std::string(__func__) + ": "
+                + "key is empty");
 
-    if (memc_get(memc, key, &val, len))
-        return -1;
+    memc_get(memc, key, &val, len);
 
-    if (!msg.ParseFromArray(val, len)) {
+    // try to parse buffer.
+    // XXX hack. if the buffer is corrupt in some way where just the
+    // length is invalid, try to decrease it to a point where a valid
+    // protobuf can be extracted. Don't decrease more than a quarter
+    // of the original size.
+    size_t real = len;
+    while (!msg.ParseFromArray(val, real))
+        if (real-- <= (len >> 2))
+            break;
+    if (real <= (len >> 2)) {
         free(val);
-        return -1;
+        std::stringstream ss;
+        ss << std::string(__func__) + ": ";
+        ss << "failed to parse object '" + key;
+        ss << "' within length ";
+        ss << len; ss << "-"; ss << real;
+        throw protobuf_parsefail(ss.str());
     }
+    if (real != len)
+        std::cerr << "Key was reduced in size during parsing: "
+            + key << std::endl;
 
     free(val);
     return 0;
@@ -712,10 +741,15 @@ int memc_set(memcached_st *memc, const std::string &key,
         const void *val, size_t len)
 {
     memcached_return_t mret;
-    if (!memc || !val) return -1;
+    if (!memc || !val)
+        throw std::runtime_error(std::string(__func__) + ": "
+                + "invalid args");
     mret = memcached_set(memc, key.c_str(), key.length(),
             (char*)val, len, 0, 0);
-    return !(mret == MEMCACHED_SUCCESS);
+    if (!(mret == MEMCACHED_SUCCESS))
+        throw std::runtime_error(std::string(__func__) + ": "
+                + "failed to fetch " + key);
+    return 0;
 }
 
 int memc_set(memcached_st *memc, const std::string &key,
@@ -725,14 +759,17 @@ int memc_set(memcached_st *memc, const std::string &key,
     void *val(nullptr);
 
     if (!memc || key.length() == 0)
-        return -1;
+        throw std::runtime_error(std::string(__func__) + ": "
+                + "invalid args");
 
     len = msg.ByteSize();
     if (!(val = malloc(len)))
-        return -1;
+        throw std::runtime_error(std::string(__func__) + ": "
+                + "out of memory");
 
     if (!msg.SerializeToArray(val, len)) {
-        return -1;
+        throw protobuf_parsefail(std::string(__func__) + ": "
+                + "failed to serialize object " + key);
     }
 
     int ret = memc_set(memc, key, val, len);
