@@ -546,6 +546,11 @@ load_proto(string &graph_path, string &imagelist, string &config)
         storm::Vertex vertex;
         vertex.ParseFromArray(buf, len);
 
+        // avoid duplicates.. could happen with bugs in the snapshot
+        // protobuf file
+        if (memc_exists(memc, vertex.key_id()))
+            continue;
+
         auto mret = memcached_set(memc, vertex.key_id().c_str(),
                 vertex.key_id().length(), (char*)buf, len, 0, 0);
         if (mret != MEMCACHED_SUCCESS) {
