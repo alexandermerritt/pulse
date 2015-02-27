@@ -51,26 +51,36 @@ public class JNILinker implements Serializable {
         System.loadLibrary("jnilinker");
     }
 
-    // Open persistent connection to memcached
-    public native int connect(String servers);
+    private JNILinker() { }
+
+    private native void setServers(String servers);
+
+    public JNILinker(String memcServers) {
+        setServers(memcServers);
+    }
 
     // Query object store for given key, returns set of keys
     // representing neighbor vertices.
-    public native int neighbors(String vertex, HashSet<String> others);
+    public native int neighbors(String vertex, HashSet<String> others)
+        throws JNIException;
 
     // Query object store for metadata of given vertex and return a
     // list of keys representing the images associated with it.
-    public native int imagesOf(String vertex, HashSet<String> keys);
+    public native int imagesOf(String vertex, HashSet<String> keys)
+        throws JNIException;
 
     // Compute features of image. Store back into object store. Uses
     // the GPGPU. Return value <0 is error, else a count of number of
     // features found.
-    public native int feature(String image_key);
+    public native int feature(String image_key)
+        throws JNIException;
 
-    public native int match(HashSet<String> image_keys);
+    public native int match(HashSet<String> image_keys)
+        throws JNIException;
 
     public native int montage(HashSet<String> image_keys,
-            StringBuffer montage_key);
+            StringBuffer montage_key)
+        throws JNIException;
 
     public native int writeImage(String key, String path);
 }
