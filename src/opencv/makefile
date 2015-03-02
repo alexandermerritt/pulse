@@ -47,7 +47,7 @@ endif
 JPEG_LIBS = -ljpeg
 
 LIBS = -L$(NFSDIR)/local/lib64 -L$(NFSDIR)/local/lib
-LIBS += -lmemcached $(JPEG_LIBS)
+LIBS += -lmemcached -lpthread $(JPEG_LIBS)
 LIBS += $(OPENCV_LIBS) $(PROTOBUF_LIBS) $(NV_LIBS)
 
 EXTRAFLAGS = -Wall -Wextra 
@@ -70,7 +70,7 @@ CXXFLAGS = -std=c++11 $(EXTRAFLAGS) $(CPATH)
 # Our java sources for use in Storm
 #
 
-JAVA_SOURCES = SearchTopology.java Logger.java JNILinker.java
+JAVA_SOURCES = SearchTopology.java Logger.java JNILinker.java JNIException.java
 
 .jar: $(JAVA_SOURCES)
 	javac -cp $(STORM_JAR) $^
@@ -85,6 +85,7 @@ CLASSES = *.class
 search.jar: libjnilinker.so .jar graph-ids.txt
 	cp -vf libjnilinker.so resources/
 	cp -vf graph-ids.txt resources/
+	cp -vf pulse.conf resources/
 	jar cvf search.jar $(CLASSES) $< resources/
 
 #
@@ -130,12 +131,13 @@ libjnilinker.so: cv/libcv.a Objects.pb.cc JNILinker.h $(LIB_SOURCES)
 # Test codes
 #
 
-LinkerTest.class:	LinkerTest.java JNILinker.java
+LinkerTest.class:	LinkerTest.java JNILinker.java JNIException.java
 	javac $^
 
 # make this directly if wanted
+CWD = $(shell pwd)
 LinkerTest:	LinkerTest.class libjnilinker.so cv/libcv.a
-	java LinkerTest
+	java -Djava.library.path=$(CWD) LinkerTest
 
 StormFuncsTest:	Objects.pb.cc StormFuncsTest.cc StormFuncs.cpp cv/libcv.a matchers.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
@@ -145,6 +147,9 @@ StormFuncsTest:	Objects.pb.cc StormFuncsTest.cc StormFuncs.cpp cv/libcv.a matche
 #
 
 load_egonet: load_egonet.o Objects.pb.cc Config.o
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(LIBS)
+
+memctest:	memctest.o Objects.pb.cc
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LIBS)
 
 #
@@ -158,7 +163,7 @@ clean:
 	rm -fv .jar
 	rm -f *.class *.so *.o *.pb.cc *.pb.h JNILinker.h search.jar
 	rm -fv cv/*.o cv/*.a
-	rm -fv /tmp/*bolt* /tmp/*spout*
+	rm -fv /tmp/*.log
 	rm -fv load_egonet StormFuncsTest
 	$(shell cd /tmp/; ls | egrep '^[0-9a-f]{8}-' | xargs rm -rf)
 

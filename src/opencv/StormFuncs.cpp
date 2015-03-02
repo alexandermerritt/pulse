@@ -38,8 +38,10 @@
 //==--------------------------------------------------------------==//
 
 StormFuncs::StormFuncs(void)
-: memc(nullptr)
-{ }
+: memc(nullptr), rd(), gen(rd()), dis(0,1UL<<20)
+{
+
+}
 
 int StormFuncs::connect(std::string &servers)
 {
@@ -56,9 +58,37 @@ int StormFuncs::neighbors(std::string &vertex,
         throw runtime_error("vertex zero length");
     storm::Vertex vobj;
     memc_get(memc, vertex, vobj);
-    others.resize(vobj.followers_size());
-    for (size_t i = 0; i < others.size(); i++)
-        others[i] = vobj.followers(i);
+
+    // adjust how many we emit.. otherwise growth is too great
+    const size_t ower = vobj.followers_size();
+    const size_t ing  = vobj.following_size();
+    const size_t total = (ower + ing);
+    // XXX dangling vertex? use self
+    if (total == 0) {
+        std::cout << "zero links" << std::endl;
+        others.push_back(vertex);
+        return 0;
+    }
+    const float base = 1.5f;
+    size_t num;
+    if (ower > ing) {
+        num = ower;
+        if (ower > 20)
+            num = std::log2(ower) / std::log2(base);
+        others.resize(num);
+        for (size_t i = 0; i < others.size(); i++)
+            others[i] = vobj.followers(i);
+            //others[i] = vobj.followers(dis(gen) % ower);
+    } else {
+        num = ing;
+        if (ing > 20)
+            num = std::log2(ing) / std::log2(base);
+        others.resize(num);
+        for (size_t i = 0; i < others.size(); i++)
+            others[i] = vobj.following(i);
+            //others[i] = vobj.following(dis(gen) % ing);
+    }
+
     return 0;
 }
 
@@ -68,7 +98,19 @@ int StormFuncs::imagesOf(std::string &vertex,
     if (vertex.length() == 0)
         return 0;
     storm::Vertex vobj;
-    memc_get(memc, vertex, vobj);
+    try {
+        memc_get(memc, vertex, vobj);
+    } catch (memc_notfound &e) {
+        // XXX hard-code some image
+        keys.push_back(std::string("15800153247.jpg"));
+        return 0;
+    }
+    size_t num = vobj.images_size();
+    if (num == 0) {
+        // XXX hard-code some image
+        keys.push_back(std::string("15800153247.jpg"));
+        return 0;
+    }
     keys.resize(vobj.images_size());
     for (size_t i = 0; i < keys.size(); i++)
         keys[i] = vobj.images(i);
@@ -81,21 +123,15 @@ int StormFuncs::feature(std::string &image_key, int &found)
     memc_get(memc, image_key, iobj);
 
     // get image
-    void *data;
-    size_t len;
+    void *data; size_t len;
     memc_get(memc, iobj.key_data(), &data, len);
-    if (!data || len == 0) {
-        free(data);
-        throw std::runtime_error(std::string(__func__) + ": "
-                + "invalid args");
-    }
 
     // decode
     cv::Mat img;
     img = jpeg::JPEGasMat(data, len);
     if (!img.data || img.cols < 1 || img.rows < 1) {
         free(data);
-        throw std::runtime_error(std::string(__func__) + ": "
+        throw ocv_vomit(std::string(__func__) + ": "
                 + "JPEGasMat failed on " + image_key);
     }
 
@@ -139,32 +175,41 @@ int StormFuncs::feature(std::string &image_key, int &found)
 int StormFuncs::match(std::deque<std::string> &imgkeys,
         std::deque<cv::detail::MatchesInfo> &matches)
 {
-    std::deque<cv::detail::ImageFeatures> features;
+    //std::deque<cv::detail::ImageFeatures> features;
 
     // get all the image features
     size_t i = 0;
     for (std::string &key : imgkeys) {
         storm::Image iobj;
-        memc_get(memc, key, iobj);
+        try { memc_get(memc, key, iobj); }
+        catch (memc_notfound &e)  { continue; }
         if (iobj.has_key_features()) {
             storm::ImageFeatures fobj;
-            memc_get(memc, iobj.key_features(), fobj);
+            try { memc_get(memc, iobj.key_features(), fobj); }
+            catch (memc_notfound &e)  { continue; }
             cv::detail::ImageFeatures cvfeat;
             if (unmarshal(cvfeat, fobj))
-                throw std::runtime_error("unmarshal");
+                continue; // ignore..
             cvfeat.img_idx = i++;
-            features.push_back(cvfeat);
+            //features.push_back(cvfeat);
         }
     }
 
-    return do_match(features, matches);
+    return 0;
+    //return do_match(features, matches); // XXX broken
 }
 
 int StormFuncs::montage(std::deque<std::string> &image_keys,
         std::string &montage_key)
 {
+    std::deque<cv::detail::MatchesInfo> matches; // not used
+
     if (image_keys.size() < 4)
-        throw std::runtime_error("image set too small");
+        throw ocv_vomit("image set too small");
+
+    // touch the features
+    try { match(image_keys, matches); }
+    catch (memc_notfound &e) { ; }
 
     // get all images
     std::deque<cv::Mat> images;
@@ -221,10 +266,7 @@ int StormFuncs::montage(std::deque<std::string> &image_keys,
     try {
         montage = canvas(rect);
     } catch (cv::Exception e) {
-        // XXX maybe just ignore this and silently return?
-        std::cerr << "Error: caught exception"
-            << std::endl;
-        throw std::runtime_error("montage: creating canvas: "
+        throw ocv_vomit("montage: creating canvas: "
                 + std::string(e.what()));
     }
     void *buf;
@@ -235,8 +277,7 @@ int StormFuncs::montage(std::deque<std::string> &image_keys,
     for (int i = 0; i < 4; i++)
         ss << dis(gen_rand);
     ss << ".jpg";
-    if (memc_set(memc, ss.str(), buf, len))
-        return -1;
+    memc_set(memc, ss.str(), buf, len);
     free(buf);
     buf = nullptr;
     montage_key = ss.str();

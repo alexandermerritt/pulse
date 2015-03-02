@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <deque>
 #include <stdexcept>
+#include <random>
 #include <exception>
 
 #include <opencv2/opencv.hpp>
@@ -83,6 +84,10 @@ class StormFuncs
 
     private:
         memcached_st *memc;
+
+        std::random_device rd;
+        std::mt19937 gen;
+        std::uniform_int_distribution<> dis;
 
         int do_match(std::deque<cv::detail::ImageFeatures> &features,
                 std::deque<cv::detail::MatchesInfo> &matches);
