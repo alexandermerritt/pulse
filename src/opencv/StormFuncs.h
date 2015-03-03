@@ -89,15 +89,6 @@ class StormFuncs
         std::mt19937 gen;
         std::uniform_int_distribution<> dis;
 
-        int do_match(std::deque<cv::detail::ImageFeatures> &features,
-                std::deque<cv::detail::MatchesInfo> &matches);
-
-        int do_match_on(cv::Ptr<cv::detail::FeaturesMatcher> &matcher,
-                const cv::detail::ImageFeatures &f1,
-                const cv::detail::ImageFeatures &f2,
-                cv::detail::MatchesInfo &matches_info,
-                size_t thresh1 = 4, size_t thresh2 = 4);
-
         inline void marshal(cv::detail::ImageFeatures &cv_feat,
                 storm::ImageFeatures &pb_feat,
                 std::string &key);

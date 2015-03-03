@@ -121,7 +121,7 @@ JNILinker.h:	JNILinker.java
 	javah -jni JNILinker
 	touch $@
 
-LIB_SOURCES = StormFuncs.cpp JNILinker.cc matchers.cpp
+LIB_SOURCES = StormFuncs.cpp JNILinker.cc
 
 libjnilinker.so: cv/libcv.a Objects.pb.cc JNILinker.h $(LIB_SOURCES)
 	$(CXX) $(CXXFLAGS) --shared -fPIC $(CPATH) -o $@ \
@@ -139,7 +139,7 @@ CWD = $(shell pwd)
 LinkerTest:	LinkerTest.class libjnilinker.so cv/libcv.a
 	java -Djava.library.path=$(CWD) LinkerTest
 
-StormFuncsTest:	Objects.pb.cc StormFuncsTest.cc StormFuncs.cpp cv/libcv.a matchers.cpp
+StormFuncsTest:	Objects.pb.cc StormFuncsTest.cc StormFuncs.cpp cv/libcv.a
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 #

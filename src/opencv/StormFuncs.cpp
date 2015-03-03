@@ -25,7 +25,6 @@
 
 // Local headers
 #include "StormFuncs.h"
-#include "stitcher.hpp"
 #include "Config.hpp"
 #include "Objects.pb.h" // generated
 #include "cv/decoders.h"
@@ -196,7 +195,6 @@ int StormFuncs::match(std::deque<std::string> &imgkeys,
     }
 
     return 0;
-    //return do_match(features, matches); // XXX broken
 }
 
 int StormFuncs::montage(std::deque<std::string> &image_keys,
@@ -312,156 +310,6 @@ void StormFuncs::writeImage(std::string &key, std::string &path)
 //==--------------------------------------------------------------==//
 // Private functions
 //==--------------------------------------------------------------==//
-
-int StormFuncs::do_match_on(
-        cv::Ptr<cv::detail::FeaturesMatcher> &matcher,
-        const cv::detail::ImageFeatures &f1,
-        const cv::detail::ImageFeatures &f2,
-        cv::detail::MatchesInfo &minfo,
-        size_t thresh1, size_t thresh2)
-{
-    (*matcher)(f1, f2, minfo);
-
-    // Check if it makes sense to find homography
-    if (minfo.matches.size() < thresh1)
-        throw std::runtime_error(std::string(__func__)
-                + " matches < threshold");
-
-    // Construct point-point correspondences for homography estimation
-    cv::Mat src_points(1, minfo.matches.size(), CV_32FC2);
-    cv::Mat dst_points(1, minfo.matches.size(), CV_32FC2);
-    for (size_t i = 0; i < minfo.matches.size(); ++i) {
-        const DMatch& m = minfo.matches[i];
-
-        cv::Point2f p = f1.keypoints[m.queryIdx].pt;
-        p.x -= f1.img_size.width * 0.5f;
-        p.y -= f1.img_size.height * 0.5f;
-        src_points.at<cv::Point2f>(0, static_cast<int>(i)) = p;
-
-        p = f2.keypoints[m.trainIdx].pt;
-        p.x -= f2.img_size.width * 0.5f;
-        p.y -= f2.img_size.height * 0.5f;
-        dst_points.at<cv::Point2f>(0, static_cast<int>(i)) = p;
-    }
-
-    // Find pair-wise motion
-    minfo.H = findHomography(src_points, dst_points,
-            minfo.inliers_mask, CV_RANSAC);
-    if (std::abs(determinant(minfo.H))
-            < numeric_limits<double>::epsilon())
-        throw std::runtime_error(std::string(__func__)
-                + " determinant too small");
-
-    // Find number of inliers
-    minfo.num_inliers = 0;
-    for (size_t i = 0; i < minfo.inliers_mask.size(); ++i)
-        if (minfo.inliers_mask[i])
-            minfo.num_inliers++;
-
-    // These coeffs are from paper M. Brown and D. Lowe. "Automatic
-    // Panoramic Image Stitching using Invariant Features"
-    minfo.confidence = minfo.num_inliers
-        / (8 + 0.3 * minfo.matches.size());
-
-    // Set zero confidence to remove matches between too close images,
-    // as they don't provide additional information anyway. The
-    // threshold was set experimentally.
-    minfo.confidence = minfo.confidence > 3. ? 0. : minfo.confidence;
-
-    // Check if we should try to refine motion
-    if (static_cast<size_t>(minfo.num_inliers) < thresh2)
-        throw std::runtime_error(std::string(__func__)
-                + " num_inliers < threshold");
-
-    // Construct point-point correspondences for inliers only
-    src_points.create(1, minfo.num_inliers, CV_32FC2);
-    dst_points.create(1, minfo.num_inliers, CV_32FC2);
-    int inlier_idx = 0;
-    for (size_t i = 0; i < minfo.matches.size(); ++i) {
-        if (!minfo.inliers_mask[i])
-            continue;
-
-        const DMatch& m = minfo.matches[i];
-
-        cv::Point2f p = f1.keypoints[m.queryIdx].pt;
-        p.x -= f1.img_size.width * 0.5f;
-        p.y -= f1.img_size.height * 0.5f;
-        src_points.at<cv::Point2f>(0, inlier_idx) = p;
-
-        p = f2.keypoints[m.trainIdx].pt;
-        p.x -= f2.img_size.width * 0.5f;
-        p.y -= f2.img_size.height * 0.5f;
-        dst_points.at<cv::Point2f>(0, inlier_idx) = p;
-
-        inlier_idx++;
-    }
-
-    // Rerun motion estimation on inliers only
-    minfo.H = findHomography(src_points, dst_points, CV_RANSAC);
-    return 0;
-}
-
-int StormFuncs::do_match(std::deque<cv::detail::ImageFeatures> &features,
-        std::deque<cv::detail::MatchesInfo> &matches)
-{
-    matches.clear();
-    cv::Ptr<cv::detail::FeaturesMatcher> matcher;
-    const size_t num_images = features.size();
-
-    Mat_<uchar> mask_ = Mat::ones(num_images, num_images, CV_8U);
-
-    std::vector<std::pair<int,int>> near_pairs;
-    for (size_t i = 0; i < num_images - 1; ++i)
-        for (size_t j = i + 1; j < num_images; ++j)
-            if (features[i].keypoints.size() > 0
-                    && features[j].keypoints.size() > 0
-                    && mask_(i, j))
-                near_pairs.push_back(make_pair(i, j));
-
-    matches.resize(num_images * num_images);
-
-#if defined(_OPENMP)
-#pragma omp parallel \
-    private(matcher) \
-    num_threads(num_threads)
-#endif  /* _OPENMP */
-    {
-        matcher = new CpuMatcher(0.2f);
-        // matcher = new GpuMatcher(0.2f);
-#if defined(_OPENMP)
-#pragma omp for
-#endif  /* _OPENMP */
-        for (size_t i = 0; i < near_pairs.size(); ++i)
-        {
-            int from = near_pairs[i].first;
-            int to = near_pairs[i].second;
-            int pair_idx = from*num_images + to;
-
-            if (do_match_on(matcher, features[from], features[to],
-                    matches[pair_idx]))
-                return -1;
-
-            matches[pair_idx].src_img_idx = from;
-            matches[pair_idx].dst_img_idx = to;
-
-            size_t dual_pair_idx = to*num_images + from;
-
-            matches[dual_pair_idx] = matches[pair_idx];
-            matches[dual_pair_idx].src_img_idx = to;
-            matches[dual_pair_idx].dst_img_idx = from;
-
-            if (!matches[pair_idx].H.empty())
-                matches[dual_pair_idx].H = matches[pair_idx].H.inv();
-
-            const size_t num = matches[dual_pair_idx].matches.size();
-            for (size_t j = 0; j < num; ++j)
-                std::swap(matches[dual_pair_idx].matches[j].queryIdx,
-                        matches[dual_pair_idx].matches[j].trainIdx);
-        }
-    }
-
-    return 0;
-}
 
 inline int StormFuncs::unmarshal(cv::detail::ImageFeatures &cv_feat,
         const storm::ImageFeatures &fobj)
