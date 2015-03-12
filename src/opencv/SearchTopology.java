@@ -70,11 +70,11 @@ public class SearchTopology {
         public static class threads {
             public static final int spout       = 1;
             public static final int reqMgr      = 1;
-            public static final int neighbor    = numNodes*6;
-            public static final int uniq        = numNodes*6;
-            public static final int imagesOf    = numNodes*6;
+            public static final int neighbor    = numNodes*3;
+            public static final int uniq        = numNodes*3;
+            public static final int imagesOf    = numNodes*3;
             public static final int feature     = numGPUs;
-            public static final int montage     = numNodes*6;
+            public static final int montage     = numNodes*3;
         }
         // how many instances of each bolt object. make 1:1
         public static class tasks {
