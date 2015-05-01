@@ -409,8 +409,8 @@ int load_graph(string &path)
     for (auto &g : graph) {
         storm::Vertex *v = &g.second;
         // arbitrarily but deterministically determine count
-        size_t n_to_assign =
-            v->followers_size() % MAX_IMGS_PER_VERTEX;
+        size_t n_to_assign = // XXX require >0 images/vertex
+            1 + (v->followers_size() % MAX_IMGS_PER_VERTEX);
         // pick n images at this place
         size_t imgidx = (v->followers_size() + v->following_size() +
                 v->gender() * 10 + v->circles_size()) %
@@ -527,7 +527,7 @@ load_proto(string &graph_path, string &imagelist, string &config)
     void *buf(nullptr);
     size_t buflen(0);
     unsigned int len;
-    deque<string> nodes(count); // used for writing graph-ids file
+    deque<string> nodes; // used for writing graph-ids file
 
     cout << count << " nodes to read" << endl;
 
@@ -544,16 +544,25 @@ load_proto(string &graph_path, string &imagelist, string &config)
         // the entire stream belongs to a single message
         coded_input.ReadRaw(buf, len);
         storm::Vertex vertex;
-        vertex.ParseFromArray(buf, len);
+        if (!vertex.ParseFromArray(buf, len)) {
+            // a bug in the file or in the generation code
+            std::cerr << "protobuf could not parse object" << std::endl;
+        } else {
+            nodes.push_back(vertex.key_id().data());
 
-        auto mret = memcached_set(memc, vertex.key_id().c_str(),
-                vertex.key_id().length(), (char*)buf, len, 0, 0);
-        if (mret != MEMCACHED_SUCCESS) {
-            fprintf(stderr, "memc error: %s", memcached_strerror(memc, mret));
-            return -1;
+            // avoid duplicates.. could happen with bugs in the snapshot
+            // protobuf file
+            if (memc_exists(memc, vertex.key_id()))
+                continue;
+
+            auto mret = memcached_set(memc, vertex.key_id().c_str(),
+                    vertex.key_id().length(), (char*)buf, len, 0, 0);
+            if (mret != MEMCACHED_SUCCESS) {
+                fprintf(stderr, "memc error: %s",
+                        memcached_strerror(memc, mret));
+                return -1;
+            }
         }
-
-        nodes.at(count) = vertex.key_id().data();
     }
     raw_input.release();
     close(fd);

@@ -6,14 +6,15 @@
 
 #include <stdlib.h>
 #include <deque>
+#include <stdexcept>
+#include <random>
+#include <exception>
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/stitching/detail/matchers.hpp>
 
-#include "StormWrapper.h"
 #include "Config.hpp"
 #include <google/protobuf/message_lite.h>
-#include <json/json.h>
 
 #include "Objects.pb.h" // generated
 #include <libmemcached/memcached.h>
@@ -36,6 +37,30 @@ extern FILE *logfp;
         fflush(logfp); \
     } while (0)
 
+class memc_notfound : public std::runtime_error
+{
+    public:
+        memc_notfound(const std::string &msg)
+            : runtime_error(msg)
+        { ; }
+};
+
+class protobuf_parsefail : public std::runtime_error
+{
+    public:
+        protobuf_parsefail(const std::string &msg)
+            : runtime_error(msg)
+        { ; }
+};
+
+class ocv_vomit : public std::runtime_error
+{
+    public:
+        ocv_vomit(const std::string &msg)
+            : runtime_error(msg)
+        { ; }
+};
+
 class StormFuncs
 {
     public:
@@ -55,17 +80,14 @@ class StormFuncs
 
         void writeImage(std::string &key, std::string &path);
 
+        inline memcached_st* getMemc(void) { return memc; }
+
     private:
         memcached_st *memc;
 
-        int do_match(std::deque<cv::detail::ImageFeatures> &features,
-                std::deque<cv::detail::MatchesInfo> &matches);
-
-        int do_match_on(cv::Ptr<cv::detail::FeaturesMatcher> &matcher,
-                const cv::detail::ImageFeatures &f1,
-                const cv::detail::ImageFeatures &f2,
-                cv::detail::MatchesInfo &matches_info,
-                size_t thresh1 = 4, size_t thresh2 = 4);
+        std::random_device rd;
+        std::mt19937 gen;
+        std::uniform_int_distribution<> dis;
 
         inline void marshal(cv::detail::ImageFeatures &cv_feat,
                 storm::ImageFeatures &pb_feat,
