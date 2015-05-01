@@ -8,9 +8,12 @@ CONF=pulse.conf
 
 exec=./load_egonet
 
-if [[ "$1" == "small" ]]; then
-    $exec load ./inputs/graph-small.pb ./inputs/imagelist-small.pb $CONF
-fi
-
-# TODO other datasets
+size=$1
+graph=inputs/graph-$size.pb
+images=inputs/imagelist-$size.pb
+[[ ! -e $graph ]] && \
+    echo "Error: file not found: $graph" && exit 1
+[[ ! -e $images ]] && \
+    echo "Error: file not found: $images" && exit 1
+$exec load $graph $images $CONF
 

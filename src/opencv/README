@@ -1,17 +1,93 @@
-storm nimbus
-    Run this on one node.
+----------------------------------------------------------------------
+-- Environment configuration
+----------------------------------------------------------------------
 
-storm supervisor
-    Run this on all nodes.
+ZooKeeper ----------------------------------------
 
-./compile_java.sh
-    Compiles Java code and builds a jar.
+Configuration file is kept in the conf/ directory. No need to move it
+anywhere else when using downloaded tarball. Data and log directories
+need a few gigabytes of extra storage.
 
-storm jar <name>.jar <ClassName>
-    For local execution
+# zoo.cfg ------
+tickTime=2000
+initLimit=10
+syncLimit=5
+dataDir=/opt/ifrit-nfs/cercs-kid/var/zookeeper
+clientPort=2181
+server.1=10.0.0.2:2888:3888
+# zoo.cfg ------
 
-storm jar <name>.jar <ClassName> <topologyName>
-    For submission to Storm cluster.
+Snapshots etc are in a directory called version-2/
 
-http://demeter.inf.ed.ac.uk/cross/stormcpp.html
-    For C++ integration.
+supervisord -------------------------------------
+
+Place all the services under watch by this so you don't have to
+restart manually when it fails. Also, sending supervisord SIGHUP
+causes it to restart all services automatically.
+
+killall -s SIGHUP supervisord
+
+Configuration file in /etc/supervisord.conf
+
+# supervisord.conf ------------
+[program:zookeeper]
+command=/opt/ifrit-nfs/cercs-kid/src/zookeeper/latest/bin/zkServer.sh start-foreground
+autostart=true
+autorestart=true
+startsecs=10
+startretries=3
+killasgroup=true ; maybe not supported yet by this version
+stopasgroup=true ; maybe not supported yet by this version
+exitcodes=0,2
+stopsignal=TERM
+stopwaitsecs=5
+user=root
+log_stdout=true
+log_stderr=true
+logfile=/var/log/zookeeper-out.log
+logfile_maxbytes=1MB
+logfile_backups=10
+
+[program:stormnimbus]
+command=/opt/ifrit-nfs/cercs-kid/src/storm/latest/bin/storm nimbus
+autostart=true
+autorestart=true
+startsecs=20
+startretries=3
+killasgroup=true ; maybe not supported yet by this version
+stopasgroup=true ; maybe not supported yet by this version
+exitcodes=0,2
+stopsignal=TERM
+stopwaitsecs=10
+user=amerritt
+log_stdout=true
+log_stderr=true
+logfile=/var/log/stormnimbus-out.log
+logfile_maxbytes=1MB
+logfile_backups=10
+
+[program:stormsupervisor]
+command=/opt/ifrit-nfs/cercs-kid/src/storm/latest/bin/storm supervisor
+autostart=true
+autorestart=true
+startsecs=20
+startretries=3
+killasgroup=true ; maybe not supported yet by this version
+stopasgroup=true ; maybe not supported yet by this version
+exitcodes=0,2
+stopsignal=TERM
+stopwaitsecs=10
+user=amerritt
+log_stdout=true
+log_stderr=true
+logfile=/var/log/stormsupervisor-out.log
+logfile_maxbytes=1MB
+logfile_backups=10
+# supervisord.conf ------------
+
+----------------------------------------------------------------------
+-- Running the code
+----------------------------------------------------------------------
+
+TBD
+
