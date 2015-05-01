@@ -98,7 +98,7 @@ JNILinker.h:	JNILinker.java
 	javah -jni JNILinker
 	touch $@
 
-LIB_SOURCES = StormFuncs.cpp JNILinker.cc matchers.cpp
+LIB_SOURCES = StormFuncs.cpp JNILinker.cc# matchers.cpp
 
 libjnilinker.so: cv/libcv.a Objects.pb.cc JNILinker.h $(LIB_SOURCES)
 	$(CXX) $(CXXFLAGS) --shared -fPIC $(CPATH) -o $@ \

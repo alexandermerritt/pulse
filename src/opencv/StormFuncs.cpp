@@ -25,7 +25,7 @@
 #include "Config.hpp"
 #include "Objects.pb.h" // generated
 #include "cv/decoders.h"
-#include "matchers.hpp"
+//#include "matchers.hpp"
 
 // FIXME make memc a per-thread variable...
 
@@ -131,6 +131,7 @@ int StormFuncs::feature(std::string &image_key, int &found)
     return 0;
 }
 
+#if 0
 int StormFuncs::match(std::deque<std::string> &imgkeys,
         std::deque<cv::detail::MatchesInfo> &matches)
 {
@@ -156,6 +157,7 @@ int StormFuncs::match(std::deque<std::string> &imgkeys,
 
     return do_match(features, matches);
 }
+#endif
 
 int StormFuncs::montage(std::deque<std::string> &image_keys,
         std::string &montage_key)
@@ -363,6 +365,7 @@ int StormFuncs::do_match_on(
     return 0;
 }
 
+#if 0
 int StormFuncs::do_match(std::deque<cv::detail::ImageFeatures> &features,
         std::deque<cv::detail::MatchesInfo> &matches)
 {
@@ -424,6 +427,7 @@ int StormFuncs::do_match(std::deque<cv::detail::ImageFeatures> &features,
 
     return 0;
 }
+#endif
 
 inline int StormFuncs::unmarshal(cv::detail::ImageFeatures &cv_feat,
         const storm::ImageFeatures &fobj)
