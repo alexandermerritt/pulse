@@ -171,7 +171,6 @@ int StormFuncs::feature(std::string &image_key, int &found)
     return 0;
 }
 
-#if 0
 int StormFuncs::match(std::deque<std::string> &imgkeys,
         std::deque<cv::detail::MatchesInfo> &matches)
 {
@@ -197,7 +196,6 @@ int StormFuncs::match(std::deque<std::string> &imgkeys,
 
     return 0;
 }
-#endif
 
 int StormFuncs::montage(std::deque<std::string> &image_keys,
         std::string &montage_key)
