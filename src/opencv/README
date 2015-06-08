@@ -1,8 +1,58 @@
+
 ----------------------------------------------------------------------
--- Environment configuration
+-- 1.a Launch Memcached
 ----------------------------------------------------------------------
 
-ZooKeeper ----------------------------------------
+    git clone https://github.com/alexandermerritt/memcached.git
+    git checkout -b 1.4.20 1.4.20
+    (there is a "v1.4.20" branch.. don't use that)
+
+./run.sh will launch an instance on that machine, listening to the IB
+port. Other scripts in there help with launching on other machines,
+restart-memc.sh
+
+----------------------------------------------------------------------
+-- 1.b Environment configuration
+----------------------------------------------------------------------
+
+----------------------------------------------------------------------
+-- 1.b.1 NFS
+----------------------------------------------------------------------
+
+This directory is available on kid2-7 (more can be added) to host
+shared installs, config files, etc.
+
+    /opt/ifrit-nfs/cercs-kid
+
+# mkdir -p /opt/ifrit-nfs
+
+You can mount ifrit NFS via
+
+# mount ifrit.cc.gt.atl.ga.us:/opt/share -t nfs4 -o rw,proto=tcp,port=2049,vers=4,clientaddr=130.207.110.12,addr=143.215.131.185 0 0 /opt/ifrit-nfs
+# grep ifrit /etc/mtab >> /etc/fstab
+
+(make SURE that is >> and NOT > otherwise fstab will be overwritten)
+
+Configure your environment variables (bash, sh, zsh):
+
+KIDNFS=/opt/ifrit-nfs/cercs-kid
+PATH=$KIDNFS/local/bin:$PATH
+oldldpath=$LD_LIBRARY_PATH
+# i have stuff installed to my home dir, too
+LD_LIBRARY_PATH=$HOME/local/lib
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$KIDNFS/local/lib64
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$KIDNFS/local/lib
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$oldldpath
+# pkg-config needs to know about the .pc files for building the code
+PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$HOME/local/lib/pkgconfig:$KIDNFS/local/lib/pkgconfig
+export PATH
+export LD_LIBRARY_PATH
+export PKG_CONFIG_PATH
+
+----------------------------------------------------------------------
+-- 1.b.2 Zookeeper
+----------------------------------------------------------------------
 
 Configuration file is kept in the conf/ directory. No need to move it
 anywhere else when using downloaded tarball. Data and log directories
@@ -17,13 +67,21 @@ clientPort=2181
 server.1=10.0.0.2:2888:3888
 # zoo.cfg ------
 
-Snapshots etc are in a directory called version-2/
+Snapshots etc are in a directory called version-2/ which can be
+deleted when zookeeper is halted, to clean its persistent state.
 
-supervisord -------------------------------------
+----------------------------------------------------------------------
+-- 1.b.3 Supervisord
+----------------------------------------------------------------------
+
+Install storm and nimbus. In the NFS-mounted directory, these should
+already exist, which you can use instead.
 
 Place all the services under watch by this so you don't have to
 restart manually when it fails. Also, sending supervisord SIGHUP
 causes it to restart all services automatically.
+
+This should be done on all machines hosting storm and zookeeper.
 
 killall -s SIGHUP supervisord
 
@@ -85,9 +143,113 @@ logfile_maxbytes=1MB
 logfile_backups=10
 # supervisord.conf ------------
 
+To check: 
+
+$ storm list
+
 ----------------------------------------------------------------------
--- Running the code
+-- 1.c JNI library linkage
 ----------------------------------------------------------------------
 
-TBD
+Into a file called:
+    /etc/ld.so.conf.d/ifrit-ldpath.conf
 
+put the following, so that Storm/Java can locate the JNILinker library
+
+/opt/ifrit-nfs/cercs-kid/local/lib64
+/opt/ifrit-nfs/cercs-kid/local/lib
+
+You'll need to copy the libjnilinker.so library to one of these after
+building it (below).
+
+----------------------------------------------------------------------
+-- 2.a Prepare social data
+----------------------------------------------------------------------
+
+Download files from Stanford's SNAP. They exist on
+ifrit/shiva/kid[2-7] on the NFS mount in
+
+    users/alex/benchmarks/image-data/graphdata/stanford/gplus
+
+The file name is <anon-userid>.<type> where .edges is the graph data.
+More information about layout is provided by the SNAP website.
+
+Also download a lot of images from somewhere... I put them into
+
+    users/alex/benchmarks/image-data/images/flickr/crawled/(social|people)/
+
+inputs/ contains files which are a sequence of paths to the graph data
+(the file name minus the extension):
+
+    inputs/ego_gplus_paths.in       List of files to graph content
+    inputs/flickr_social_paths.in   List of images
+
+The graph data is quite large, so I created a smaller set of files to
+load instead:
+
+    sort -R < inputs/ego_gplus_paths.in | head -n 10 > inputs/ego_gplus_paths-ID.in
+
+You can do the same for the list of images:
+
+    sort -R < inputs/flickr_social_paths.in | head n 64 > inputs/flickr_social_paths-ID.in
+
+Convert graph data to objects in the KVS - run a marshaling code to
+generate a huge protobuf blob which can be loaded into the KVS. This
+is the script:
+
+    ./generate-data.sh <ID>
+
+where <ID> is the name you gave when truncating the data, above. The
+script will build the program to do the parsing of the graph content,
+creating protobufs using the protobuf API.
+
+The .pb files in input/ can be used by the loader program to inject
+them into a KVS (memcached is used here).
+
+----------------------------------------------------------------------
+-- 2.b Load social data into Memcached
+----------------------------------------------------------------------
+
+Memcached should be running on some servers.
+
+Edit the first line in pulse.conf to configure the string used by
+memcached's library for connecting to the servers.
+
+    ./load-data.sh <ID>
+
+This script should create a graph-ids.txt file containging the keys of
+vertex objects in the graph store which the storm topology uses (or
+you can use yourself). It is needed because it is non-obvious to
+figure out what the key values are. This file is copied into the Storm
+jar when the jar is built, by means of copying it into the resources/
+directory.
+
+----------------------------------------------------------------------
+-- 3.a Code arrangement
+----------------------------------------------------------------------
+
+Storm (j) -> JNI (j) -> JNI (c) -> StormFuncs (c) -> OpenCV
+  ^           ^          ^              ^        \-> Memcached
+  |           |          |              | StormFuncs.cpp
+  |           |          + JNILinker.cc
+  |           + JNILinker.java
+  + SearchTopology.java
+
+The makefile builds these all separately. The JNILinker (both j and c)
+have test codes to test they work, like:
+
+                                      StormFuncsTest -> StormFuncs
+    LinkerTest (j) -> JNILinker (j) -> JNILinker (c) -> StormFuncs
+
+You can use the test codes to see how they use the layers.
+
+The topology is configured in the SearchTopology.java in the main()
+method, and configuration options are at the top of the file. There is
+basically no actual code in Java, as the functionality is exported to
+the C/C++ layers.
+
+----------------------------------------------------------------------
+-- 3.b Run the topology
+----------------------------------------------------------------------
+
+./run_topology.sh

@@ -8,12 +8,13 @@ CONF=pulse.conf
 
 exec=./load_egonet
 
-size=$1
-graph=inputs/graph-$size.pb
-images=inputs/imagelist-$size.pb
+ID=$1
+graph=inputs/graph-$ID.pb
+images=inputs/imagelist-$ID.pb
 [[ ! -e $graph ]] && \
     echo "Error: file not found: $graph" && exit 1
 [[ ! -e $images ]] && \
     echo "Error: file not found: $images" && exit 1
+echo $exec load $graph $images $CONF
 $exec load $graph $images $CONF
 

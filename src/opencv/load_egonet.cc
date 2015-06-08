@@ -669,7 +669,7 @@ main(int argc, char *argv[])
 
         cout << endl << "\tDon't forget to copy the graph ids file " << endl
             << "\t\tinto the storm resources/ directory before" << endl
-            << "\t\tcreating the jar" << endl;
+            << "\t\tcreating the jar. 'make' will do this when building the jar." << endl;
     } else {
         usage();
         ret = -1;

@@ -7,8 +7,8 @@ HOST = $(shell hostname | cut -c 1-3)
 NFSDIR = /opt/ifrit-nfs/cercs-kid
 
 ifeq ($(HOST),kid)
-CC = gcc-4.8
-CXX = g++-4.8
+CC = clang
+CXX = clang++
 else
 CC = clang
 CXX = clang++
@@ -83,6 +83,7 @@ graph-ids.txt:	load_egonet
 
 CLASSES = *.class
 search.jar: libjnilinker.so .jar graph-ids.txt
+	mkdir -p resources
 	cp -vf libjnilinker.so resources/
 	cp -vf graph-ids.txt resources/
 	cp -vf pulse.conf resources/
@@ -150,7 +151,15 @@ load_egonet: load_egonet.o Objects.pb.cc Config.o
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LIBS)
 
 memctest:	memctest.o Objects.pb.cc
+	$(CXX) $(CXXFLAGS) $^ -o $@ -lmemcached -lrt
+
+feature-test:	feature-test.o
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LIBS)
+
+mget:	mget.o
+	$(CXX) $(CXXFLAGS) $^ -o $@ \
+	-L$(NFSDIR)/local/lib64 -L$(NFSDIR)/local/lib \
+	-lmemcached -lrt
 
 #
 # Misc
