@@ -1,0 +1,12 @@
+memcache.py is the python library for memcached
+It requires six, a compatibility library
+Both are small enough to directly include.
+This was done because RHEL is old and only has python2.6
+
+./read-images.py will open 'imagelist'. Each line is a path to an
+image object. It will dump out the image properties for each.
+
+./load-images.py will launch memcached with multiple 'factor' values
+and load images into the server to measure overall memory usage.
+Requires input file 'imagelist'.
+
