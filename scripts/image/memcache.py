@@ -974,9 +974,11 @@ class Client(threading.local):
                 val = comp_val
 
         #  silently do not store if value length exceeds maximum
+        # [AMM] do NOT ignore this! bad bad developers
         if (self.server_max_value_length != 0 and
                 len(val) > self.server_max_value_length):
-            return(0)
+            raise RuntimeError('Object too large.'
+                    + ' Modify SERVER_MAX_VALUE_LENGTH')
 
         return (flags, len(val), val)
 
