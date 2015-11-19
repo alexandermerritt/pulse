@@ -15,6 +15,13 @@ MEMC_PORT       = '11211'
 MEMC_MAX_MEM    = '16384' # in MiB
 
 PATH_INPUT_FILE = 'imagelist'
+# images.inria
+# images.lfw
+# images.oxbldg
+# images.phototour
+
+# Prevent the python client from choking on large objects.
+memcache.SERVER_MAX_VALUE_LENGTH = 20 * 2**20
 
 def launch_mc(factor):
     cmd = [PATH_TO_MEMC,
@@ -61,7 +68,10 @@ def load_all():
             with open(path, 'rb') as p:
                 buf = p.read()
                 #print(str(len(buf)) + ' ' + path)
-                mc.set(path, buf)
+                name = path.split('/')[-1]
+                ret = mc.set(path, buf)
+                if ret == 0:
+                    raise RuntimeError('failed to set key ' + path)
                 disk_bytes += len(buf)
     #print('server rss ' + str(server_rss()))
     mc.disconnect_all()
@@ -71,12 +81,13 @@ def run_test():
     disk_bytes = load_all()
     rss_bytes = server_rss()
 
-    #print('disk_bytes ' + str(disk_bytes))
-    #print('rss_bytes ' + str(rss_bytes))
+    # Sanity check
     if rss_bytes < disk_bytes:
+        print('RSS ' + str(rss_bytes))
+        print('DSK ' + str(disk_bytes))
         raise Exception('RSS less than sum of file sizes')
 
-    eff = round(rss_bytes / disk_bytes, 2)
+    eff = round(rss_bytes / disk_bytes, 4)
     print( str(factor)
             + ' ' + str(disk_bytes)
             + ' ' + str(rss_bytes)
@@ -89,6 +100,5 @@ for factor in factors:
     p = launch_mc(factor)
     run_test()
     p.terminate()
-    p.kill()
     time.sleep(2) # let kernel cleanup sockets
 
