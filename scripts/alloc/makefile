@@ -1,9 +1,9 @@
 CXX := clang++-3.7
-CXXFLAGS := -O0 -g -Wall -Wextra -std=c++11  -fdiagnostics-color=auto -pedantic\
-	-Wno-unused-parameter -Wno-unused-function
+CXXFLAGS := -O3 -g -Wall -Wextra -std=c++11  -fdiagnostics-color=auto -pedantic\
+	-Wno-unused-parameter -Wno-unused-function -Wno-unused-variable
 LDFLAGS := -L/usr/lib64 -L/usr/lib/x86_64-linux-gnu
 
-DEPS := makefile
+DEPS := makefile bitops.h
 TARGETS := libctest jetest tctest sutest hoardtest
 
 .PHONY:	all

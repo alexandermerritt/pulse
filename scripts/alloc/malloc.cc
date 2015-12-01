@@ -12,10 +12,15 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "bitops.h"
+
 using namespace std;
 
 #define MB  (1UL<<20)
 #define GB  (1UL<<30)
+
+#define PAGE_SHIFT  12
+#define PAGE_MASK   ((1<<PAGE_SHIFT)-1)
 
 typedef struct { int len; uintptr_t addr; } loc;
 
@@ -196,89 +201,108 @@ class LiveSet
 {
     public:
 
-        LiveSet(long bytes) : max_live(bytes), live(0L), gen(rd()) {
-            // begin with a large quantity to avoid remapping later
+        LiveSet(long bytes) : max_live(bytes), live(0L),
+                            locs(nullptr), sizes(nullptr),
+                            gen(rd()) {
+            if (bytes < 1)
+                throw runtime_error("LiveSet with empty set?");
             nlocs = static_cast<long>(200*1e6);
             locs = (uintptr_t*)map_alloc(nlocs*sizeof(*locs));
             sizes = (uint32_t*)map_alloc(nlocs*sizeof(*sizes));
-            assert(locs);
-            assert(sizes);
+            //alloc_mask = bitops_alloc(nlocs);
+            //assert( locs && sizes && alloc_mask );
+            assert( locs && sizes );
         }
 
         ~LiveSet() {
             freeAll();
             munmap(locs, nlocs*sizeof(*locs));
             munmap(sizes, nlocs*sizeof(*sizes));
-            locs = nullptr;
-            sizes = nullptr;
+            //bitops_free(alloc_mask);
         }
 
         void fillFixed(uint32_t objsize) {
+            // if object size too small, we may need more slots to
+            // reach max_live
             if ((nlocs * objsize) < max_live)
                 resize(1.2*max_live/objsize);
             for (long n = 0; n < nlocs; n++) {
                 assert( locs[n] = (uintptr_t)malloc(objsize) );
                 sizes[n] = objsize;
+                //bitops_set(alloc_mask, nlocs, n);
                 live += objsize;
                 if (live >= max_live)
                     break;
             }
         }
 
-        // add new objects. if we exceed our allowance, delete random objects
-        // until we are within allowance again.
+        // add new objects. if we exceed our allowance, delete random
+        // objects until we are within allowance again.
         void injectFixed(long n, uint32_t objsize) {
             long idx;
             if (n == 0)
                 return;
+            drop();
             for ( ; n > 0; n--) {
-                // if we run out of slots, it means we need more metadata to be
-                // able to reach max_live
-                while ((idx = findNext()) < 0) // FIXME O(n)
+                // if we cannot find an unused slot, increase our ptr
+                // array to accomodate more (drop ensures we stay
+                // within max_live)
+                while ((idx = findNext()) < 0)
                     resize(1.2*max_live/objsize);
                 assert( locs[idx] = (uintptr_t)malloc(objsize) );
                 sizes[idx] = objsize;
+                //bitops_set(alloc_mask, nlocs, idx);
                 live += objsize;
-                if (live >= max_live)
-                    drop();
-                assert( live < max_live );
+                drop();
             }
         }
 
         void addDist(long mean, long std) {
+            // TODO
             // random_device rd;
             // mt19937 gen(rd());
             // uniform_int_distribution<long> d(mean, std);
         }
 
         void freeAll() {
-            for (long n = 0; n < nlocs; n++)
+            for (long n = 0; n < nlocs; n++) {
                 if (locs[n]) {
                     free((void*)locs[n]);
                     locs[n] = sizes[n] = 0;
                 }
+            }
             live = 0L;
+            //bitops_setall(alloc_mask, nlocs, 0);
         }
 
-        static inline size_t round4K(size_t val) { return ((val>>12)+1)<<12; }
+        static inline size_t ceil4K(size_t val) {
+            long pgs = (val>>PAGE_SHIFT);
+            pgs += (val & PAGE_MASK) ? 1 : 0;
+            return (pgs<<PAGE_SHIFT);
+        }
 
         size_t overhead() {
-            return round4K(nlocs * sizeof(*locs))
-                + round4K(nlocs * sizeof(*sizes))
-                + round4K(sizeof(LiveSet));
+            return ceil4K(nlocs*sizeof(*locs))
+                + ceil4K(nlocs*sizeof(*sizes))
+                + ceil4K(nlocs*sizeof(bitchunk_t))
+                + ceil4K(sizeof(LiveSet));
         }
 
     private:
-        long max_live, live;
-        uintptr_t *locs;
-        uint32_t *sizes;
-        long nlocs;
+        long max_live, live;    // working set max and current, bytes
+
+        long nlocs;             // quantity of pointers we track
+        uintptr_t *locs;        // array with nlocs items
+        uint32_t *sizes;        // array with nlocs items
+        bitset_t alloc_mask;    // bitmask with nlocs bits
+
         random_device rd;
         mt19937 gen;
 
         LiveSet();
 
         long findNext() {
+
             for (long n = 0; n < nlocs; n++)
                 if (!locs[n])
                     return n;
@@ -301,6 +325,8 @@ class LiveSet
 
         // free objects at random until we are below max
         void drop() {
+            if (live < max_live)
+                return;
             uniform_int_distribution<long> dist(0, nlocs-1);
             long idx;
             while (max_live >= live) {
@@ -359,6 +385,49 @@ int testlive(int narg, char *args[])
 
     return 0;
 }
+
+void printbits(bitset_t *set, off_t maxc)
+{
+    for (off_t i = 0; i < maxc && i < (set->nbits>>6); i++)
+        printf("%016lx ", set->map[i]);
+    printf("\n");
+}
+
+void testbitops()
+{
+    bitset_t set;
+    off_t maxc = 9, pos;
+
+    assert( !bitops_alloc(&set, 1) );
+
+    printbits(&set, maxc);
+
+    bitops_set(&set, 1);
+    bitops_set(&set, 2);
+    bitops_set(&set, 3);
+
+    printbits(&set, maxc);
+
+    printf("\n-----\n");
+
+    bitops_setall(&set, 1);
+    printbits(&set, maxc);
+    bitops_setall(&set, 0);
+    printbits(&set, maxc);
+
+    printf("\n-----\n");
+
+    bitops_set(&set, 513);
+    printbits(&set, maxc);
+    pos = bitops_ffset(&set);
+    printf("pos %ld\n", pos);
+
+    bitops_clear(&set, 513);
+    printbits(&set, maxc);
+    pos = bitops_ffset(&set);
+    printf("pos %ld\n", pos);
+}
+
 int main(int narg, char *args[])
 {
     if (mlockall(MCL_FUTURE) || mlockall(MCL_CURRENT)) {
@@ -367,5 +436,6 @@ int main(int narg, char *args[])
     }
     //return testinput(narg, args);
     //return testdist(narg, args);
-    return testlive(narg, args);
+    //return testlive(narg, args);
+    testbitops();
 }
