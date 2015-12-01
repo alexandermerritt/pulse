@@ -31,7 +31,7 @@
  *
  * Bitsets ordered like so:
  *      +---+---+---+---+
- *      |n-1|  ...  | 0 |
+ *      | 0 |  ...  |n-1|
  *      +---+---+---+---+
  * The 'bit' parameter is zero-based.
  */
