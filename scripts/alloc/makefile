@@ -1,5 +1,5 @@
 CXX := clang++-3.7
-CXXFLAGS := -O3 -g -Wall -Wextra -std=c++11  -fdiagnostics-color=auto -pedantic\
+CXXFLAGS := -O3 -Wall -Wextra -std=c++11  -fdiagnostics-color=auto -pedantic\
 	-Wno-unused-parameter -Wno-unused-function -Wno-unused-variable
 LDFLAGS := -L/usr/lib64 -L/usr/lib/x86_64-linux-gnu
 
