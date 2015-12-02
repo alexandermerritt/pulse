@@ -33,6 +33,7 @@ static inline void clear_line(void)
     fflush(stdout);
 }
 
+// returns bytes
 long get_rss(void)
 {
     long rss;
@@ -152,56 +153,6 @@ int testinput(int narg, char *args[])
     return 0;
 }
 
-#if 0
-int testdist(int narg, char *args[])
-{
-    random_device rd;
-    mt19937 gen(rd());
-    normal_distribution<float> d1(15000, 1000);
-    //normal_distribution<float> d2(15000, 1000);
-    struct timespec clk1, clk2;
-
-    const size_t total_sz = 1UL<<33;
-    size_t max_vals = 2*(total_sz / 15000), nvals = 0;
-
-    size_t locs_sz = max_vals * sizeof(loc);
-    loc *locs = (loc*)map_alloc(locs_sz);
-    assert(locs);
-
-    size_t accum(0);
-    //printf("total_sz %lu\n", total_sz);
-
-    clock_gettime(CLOCK_REALTIME, &clk1);
-    for (nvals = 0; nvals < max_vals; nvals++) {
-        locs[nvals].len  = static_cast<int>( d1(gen) );
-        locs[nvals].addr = (uintptr_t)malloc( locs[nvals].len );
-        assert(locs[nvals].addr);
-        memset((void*)locs[nvals].addr, 0, locs[nvals].len);
-        if (nvals % 1000 == 0) {
-            clear_line();
-            printf("# %2.1f %%", 100.f * accum / total_sz);
-        }
-        if ((accum += locs[nvals].len) > total_sz)
-            break;
-    }
-    clock_gettime(CLOCK_REALTIME, &clk2);
-    printf("\n");
-
-    long d = (clk2.tv_sec * 1e9 + clk2.tv_nsec)
-        - (clk1.tv_sec * 1e9 + clk1.tv_nsec);
-
-    long rss = get_rss(), actual = rss-locs_sz;
-    cout << "total rss overhead msec" << endl;
-    cout << total_sz;
-    cout << " " << actual;
-    cout << " " << (static_cast<float>(actual)/total_sz);
-    cout << " " << (float)d/1e6;
-    cout << endl;
-
-    return 0;
-}
-#endif
-
 class LiveSet
 {
     public:
@@ -216,9 +167,6 @@ class LiveSet
             locs = (uintptr_t*)map_alloc(nlocs*sizeof(*locs));
             sizes = (uint32_t*)map_alloc(nlocs*sizeof(*sizes));
             assert( locs && sizes );
-
-            //freelist = new array<off_t, flmax>();
-            //assert( freelist );
             freelist.fill(-1);
             fltop = 0L;
         }
@@ -227,7 +175,6 @@ class LiveSet
             freeAll();
             munmap(locs, nlocs*sizeof(*locs));
             munmap(sizes, nlocs*sizeof(*sizes));
-            //delete freelist;
         }
 
         void fillFixed(uint32_t objsize) {
@@ -249,7 +196,6 @@ class LiveSet
 
         // add new objects. if we exceed our allowance, delete random
         // objects until we are within allowance again.
-        // Must invoke some fill method before invoking this!
         void injectFixed(long n, uint32_t objsize) {
             off_t idx;
             if (n == 0)
@@ -269,13 +215,34 @@ class LiveSet
                 live += objsize;
                 nobjs++;
                 // print progress
-                if ((nn%10000L)==0) {
+                if ((nn%100000L)==0) {
                     clear_line(); printf("# %3.3lf %%  ",
                         (float)nn*100/n); fflush(stdout);
                 }
                 drop(objsize<<2);
             }
             printf("\n");
+        }
+
+        // free objects at random until we are below max
+        void drop(off_t atleast = 0UL) {
+            if (live <= (max_live - atleast))
+                return;
+            long idx;
+            while (live > (max_live - atleast)) {
+                idx = dist(gen) % last_idx; // should hit most of the time
+                if (locs[idx]) {
+                    free((void*)locs[idx]);
+                    live -= sizes[idx];
+                    if (fltop >= flmax)
+                        throw runtime_error("Exceeded freelist");
+                    freelist[fltop++] = idx;
+                    nobjs--;
+                    locs[idx] = sizes[idx] = 0;
+                } else {
+                    drop_misses++;
+                }
+            }
         }
 
         void addDist(long mean, long std) {
@@ -306,22 +273,17 @@ class LiveSet
         size_t overhead() {
             return ceil4K(nlocs*sizeof(*locs))
                 + ceil4K(nlocs*sizeof(*sizes))
-                //+ ceil4K(flmax*sizeof(off_t)) // if allocated on heap
                 + ceil4K(sizeof(LiveSet));
         }
 
         long get_nobjs(void) { return nobjs; }
-        long get_live(void) { return live; }
-        long get_maxlive(void) { return max_live; }
-        long get_drops(void) { return drop_misses; }
+        long get_live(void)  { return live; }
 
     private:
         long max_live, live;    // working set max and current, bytes
         long nobjs;             // pointers allocated
         long last_idx, drop_misses;
 
-        // locs and sizes are going to be nearly always non-NULL
-        // so we maintain a freelist of recently free'd locations
         constexpr static long nlocs = ((long)200e6);    // quantity of pointers we track
         uintptr_t *locs;        // array with nlocs items
         uint32_t *sizes;        // array with nlocs items
@@ -335,44 +297,6 @@ class LiveSet
         uniform_int_distribution<long> dist;
 
         LiveSet();
-
-        void resize(long nlocs_) {
-            throw runtime_error("resize needed");
-#if 0
-            if (nlocs_ <= nlocs)
-                return;
-            void *p = (uintptr_t*)map_remap(locs,
-                    nlocs*sizeof(*locs), nlocs_*sizeof(*locs));
-            if (!p) throw runtime_error("remap failed");
-            locs = (uintptr_t*)p;
-            p = (uintptr_t*)map_remap(sizes,
-                    nlocs*sizeof(*sizes), nlocs_*sizeof(*sizes));
-            if (!p) throw runtime_error("remap failed");
-            sizes = (uint32_t*)p;
-            nlocs = nlocs_;
-#endif
-        }
-
-        // free objects at random until we are below max
-        void drop(off_t atleast = 0UL) {
-            if (live <= (max_live - atleast))
-                return;
-            long idx;
-            while (live > (max_live - atleast)) {
-                idx = dist(gen) % last_idx; // should hit most of the time
-                if (locs[idx]) {
-                    free((void*)locs[idx]);
-                    live -= sizes[idx];
-                    if (fltop >= flmax)
-                        throw runtime_error("Exceeded freelist");
-                    freelist[fltop++] = idx;
-                    nobjs--;
-                    locs[idx] = sizes[idx] = 0;
-                } else {
-                    drop_misses++;
-                }
-            }
-        }
 };
 
 // modeled after synthetic workload from: Rumble et al. FAST'14
@@ -384,7 +308,9 @@ int testlive(int narg, char *args[])
     const long live = 1L<<30;
     const long wss = 1L<<32;
     const uint32_t objsize = 100, objsize2 = 130;
+    const float dropPct = 90;
 
+    // must allocate liveset on heap because freelist array is huge
     assert( liveset = new LiveSet(live) );
 
     // FIXME how to subtract out ELF segments, globals, SO objects?
@@ -392,19 +318,24 @@ int testlive(int narg, char *args[])
 
     printf("cmd testname-sz rss-MB eff\n");
 
-    cout << "# fillFixed " << objsize << endl;
-    liveset->fillFixed(objsize);
     cout << "# injectFixed " << objsize << endl;
-    liveset->injectFixed(wss/objsize - liveset->get_nobjs(), objsize);
+    liveset->injectFixed(wss/objsize, objsize);
     rss = get_rss() - liveset->overhead();
-    eff = rss/live;
+    eff = rss/liveset->get_live();
     printf("%16s %16s-%04d %12.3f %12.5f\n",
             args[0], "injectFixed", objsize, rss/MB, eff);
+
+    cout << "# drop " << (live*dropPct/100./(1<<20)) << " MiB" << endl;
+    liveset->drop( live * (dropPct/100) );
+    rss = get_rss() - liveset->overhead();
+    eff = rss/liveset->get_live();
+    printf("%16s %16s-%04d %12.3f %12.5f\n",
+            args[0], "drop", (int)dropPct, rss/MB, eff);
 
     cout << "# injectFixed " << objsize2 << endl;
     liveset->injectFixed(wss/objsize2, objsize2);
     rss = get_rss() - liveset->overhead();
-    eff = rss/live;
+    eff = rss/liveset->get_live();
     printf("%16s %16s-%04d %12.3f %12.5f\n",
             args[0], "injectFixed", objsize2, rss/MB, eff);
 
@@ -412,73 +343,6 @@ int testlive(int narg, char *args[])
 
     return 0;
 }
-
-#if 0
-void printbits(bitset_t *set, off_t maxc)
-{
-    for (off_t i = 0; i < maxc && i < (set->nbits>>6); i++)
-        printf("%016lx ", set->map[i]);
-    printf("\n");
-}
-
-// prints only first chunk of pgmap
-void printpgbits(bitset_t *set)
-{
-    printf("%016lx ", set->pgmap[0]);
-    printf("\n");
-}
-
-void testbitops()
-{
-    bitset_t set;
-    off_t maxc = 9, pos;
-
-    assert( !bitops_alloc(&set, 1) );
-
-    printbits(&set, maxc);
-
-    bitops_set(&set, 1);
-    bitops_set(&set, 2);
-    bitops_set(&set, 3);
-
-    printbits(&set, maxc);
-
-    printf("\n-----\n");
-
-    bitops_setall(&set, 1);
-    printbits(&set, maxc);
-    bitops_setall(&set, 0);
-    printbits(&set, maxc);
-
-    printf("\n-----\n");
-
-    bitops_set(&set, 513);
-    printbits(&set, maxc);
-    pos = bitops_ffset(&set);
-    printf("pos %ld\n", pos);
-    assert(pos == 513);
-
-    bitops_clear(&set, 513);
-    printbits(&set, maxc);
-    pos = bitops_ffset(&set);
-    printf("pos %ld\n", pos);
-    assert(pos == -1);
-
-    printf("\n----- test pagemap bits: set all\n");
-
-    bitops_setall(&set, 1);
-    printbits(&set, maxc);
-    printf("pagemap bits:\n");
-    printpgbits(&set);
-
-    printf("\n----- test pagemap bits: unset one\n");
-    bitops_clear(&set, 128);
-    printbits(&set, maxc);
-    printf("pagemap bits:\n");
-    printpgbits(&set);
-
-}
-#endif
 
 int main(int narg, char *args[])
 {
@@ -489,5 +353,4 @@ int main(int narg, char *args[])
     //return testinput(narg, args);
     //return testdist(narg, args);
     return testlive(narg, args);
-    //testbitops();
 }
