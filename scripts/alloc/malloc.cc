@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 using namespace std;
 
@@ -22,7 +23,12 @@ using namespace std;
 #define PAGE_SHIFT  12
 #define PAGE_MASK   ((1UL<<PAGE_SHIFT)-1)
 
-typedef struct { int len; uintptr_t addr; } loc;
+static inline long ceil4K(long bytes)
+{
+    long pgs = bytes >> PAGE_SHIFT;
+    pgs += !!(bytes & PAGE_MASK);
+    return (pgs << PAGE_SHIFT);
+}
 
 static inline void clear_line(void)
 {
@@ -31,12 +37,17 @@ static inline void clear_line(void)
     fflush(stdout);
 }
 
-// returns bytes
-long get_rss(void)
+typedef enum {
+    STAT_VMSIZE = 23,
+    STAT_RSS = 24,
+} statfield_t;
+
+// getstat(STAT_VMSIZE)
+// getstat(STAT_RSS, 12)        because RSS is reported in pages
+long getstat(statfield_t t, size_t shift = 0UL)
 {
-    long rss;
+    long value;
     string line;
-    const int field = 24; // RSS
     array<char, 512> cline;
     pid_t pid = getpid();
     stringstream input;
@@ -46,10 +57,10 @@ long get_rss(void)
     getline(ifs, line);
     memcpy(cline.data(), line.c_str(), min(line.size(),cline.size()));
     strtok(cline.data(), " ");
-    for (int f = 0; f < field - 1; f++)
+    for (int f = 0; f < t - 1; f++)
         val = strtok(NULL, " ");
-    sscanf(val, "%ld", &rss);
-    return (rss<<12);
+    sscanf(val, "%ld", &value);
+    return (value<<shift);
 }
 
 static inline
@@ -66,25 +77,12 @@ void *map_alloc(size_t bytes)
     return v;
 }
 
-static inline
-void *map_remap(void* oldp, size_t oldb, size_t newb)
-{
-    void *newp = mremap(oldp, oldb, newb, MREMAP_MAYMOVE, -1, 0);
-    if (newp == MAP_FAILED) {
-        fprintf(stderr, "mremap: oldb = %lu newb = %lu\n",
-                oldb, newb);
-        perror("mremap");
-        return NULL;
-    }
-    return newp;
-}
-
 class LiveSet
 {
     public:
         LiveSet(long bytes)
             : max_live(bytes), live(0L),
-            last_idx(0), drop_misses(0),
+            last_idx(0),
             locs(nullptr), sizes(nullptr),
             fltop(0L), gen(rd()), dropRand(0, nlocs-1) {
             if (bytes < 1)
@@ -125,7 +123,7 @@ class LiveSet
                 nobjs++;
                 drop(objsize<<2);
                 // print progress
-                if (!(nn++%100000L)) {
+                if (!(nn++%10000L)) {
                     clear_line(); printf("# %3.3lf %%  ",
                         100.*(float)(total-injectSz)/total);
                     fflush(stdout);
@@ -134,24 +132,36 @@ class LiveSet
             printf("\n");
         }
 
+        void touch(void)
+        {
+            long sz;
+            sz = (nlocs*sizeof(locs));
+            for (long pg = 0; pg < (sz>>12); pg++)
+                (void)*((long*)((uintptr_t)locs + (pg<<12)));
+            sz = (nlocs*sizeof(sizes));
+            for (long pg = 0; pg < (sz>>12); pg++)
+                (void)*((long*)((uintptr_t)sizes + (pg<<12)));
+            sz = flmax * sizeof(off_t);
+            for (long pg = 0; pg < (sz>>12); pg++)
+                (void)*((long*)((uintptr_t)freelist.data() + (pg<<12)));
+        }
+
         // free objects at random until we are below threshold
         void drop(off_t atleast = 0UL) {
             if (live <= (max_live - atleast))
                 return;
             long idx;
             while (live > (max_live - atleast)) {
-                idx = dropRand(gen) % last_idx; // should hit most of the time
-                if (locs[idx]) {
-                    free((void*)locs[idx]);
-                    live -= sizes[idx];
-                    if (fltop >= flmax)
-                        throw runtime_error("Exceeded freelist");
-                    freelist[fltop++] = idx;
-                    nobjs--;
-                    locs[idx] = sizes[idx] = 0;
-                } else {
-                    drop_misses++;
-                }
+                idx = dropRand(gen) % last_idx;
+                if (!locs[idx])
+                    continue;
+                free((void*)locs[idx]);
+                live -= sizes[idx];
+                if (fltop >= flmax)
+                    throw runtime_error("Exceeded freelist");
+                freelist[fltop++] = idx;
+                nobjs--;
+                locs[idx] = sizes[idx] = 0;
             }
         }
 
@@ -169,12 +179,6 @@ class LiveSet
             last_idx = 0L;
         }
 
-        static inline size_t ceil4K(size_t val) {
-            long pgs = (val>>PAGE_SHIFT);
-            pgs += (val & PAGE_MASK) ? 1 : 0;
-            return (pgs<<PAGE_SHIFT);
-        }
-
         size_t overhead() {
             return ceil4K(nlocs*sizeof(*locs))
                 + ceil4K(nlocs*sizeof(*sizes))
@@ -185,15 +189,16 @@ class LiveSet
 
         long max_live, live;    // working set max and current, bytes
         long nobjs;             // pointers allocated
-        long last_idx, drop_misses;
+        long last_idx;          // bound in locs for locating pointers
 
-        constexpr static long nlocs = ((long)200e6);    // quantity of pointers we track
-        uintptr_t *locs;        // array with nlocs items
-        uint32_t *sizes;        // array with nlocs items
+        // quantity of pointers we track
+        constexpr static long nlocs = ((long)200e6);
+        uintptr_t *locs; // addresses of allocated objects
+        uint32_t *sizes; // sizes of allocated objects
 
     private:
-        constexpr static off_t flmax = nlocs>>2;
-        array<off_t, flmax> freelist;
+        constexpr static off_t flmax = nlocs;
+        array<off_t, flmax> freelist; // indexes of free slots in locs
         off_t fltop;
 
         random_device rd;
@@ -204,37 +209,31 @@ class LiveSet
 };
 
 //
-// Workloads from FAST'14 paper.
+// Modeled after synthetic workload from: Rumble et al. FAST'14
 //
+static random_device rd;
+static mt19937 gen(rd());
 auto W1before = [] () { return 100L; };
 auto W2before = W1before;
 auto W3before = W1before;
 auto W4before = [] () {
     const long m1 = 100, m2 = 150;
-    static random_device rd;
-    static mt19937 gen(rd());
     static uniform_int_distribution<long> d(m1, m2);
     return d(gen);
 };
 auto W5before = W4before;
 auto W6before = [] () {
     const long m1 = 100, m2 = 250;
-    static random_device rd;
-    static mt19937 gen(rd());
     static uniform_int_distribution<long> d(m1, m2);
     return d(gen);
 };
 auto W7before = [] () {
     const long m1 = 1000, m2 = 2000;
-    static random_device rd;
-    static mt19937 gen(rd());
     static uniform_int_distribution<long> d(m1, m2);
     return d(gen);
 };
 auto W8before = [] () {
     const long m1 = 50, m2 = 150;
-    static random_device rd;
-    static mt19937 gen(rd());
     static uniform_int_distribution<long> d(m1, m2);
     return d(gen);
 };
@@ -243,8 +242,6 @@ auto W2after  = [] () { return 130L; };
 auto W3after  = W2after;
 auto W4after  = [] () {
     const long m1 = 200, m2 = 250;
-    static random_device rd;
-    static mt19937 gen(rd());
     static uniform_int_distribution<long> d(m1, m2);
     return d(gen);
 };
@@ -252,66 +249,90 @@ auto W5after  = W4after;
 auto W6after  = W7before;
 auto W7after  = [] () {
     const long m1 = 1500, m2 = 2500;
-    static random_device rd;
-    static mt19937 gen(rd());
     static uniform_int_distribution<long> d(m1, m2);
     return d(gen);
 };
 auto W8after  = [] () {
     const long m1 = 5000, m2 = 15000;
-    static random_device rd;
-    static mt19937 gen(rd());
     static uniform_int_distribution<long> d(m1, m2);
     return d(gen);
 };
 
-void dumpstats(const char *name, LiveSet *liveset)
+void dumpstats(const char *prog, const char *test,
+        long injectwss, LiveSet *liveset)
 {
-    float rss = get_rss() - liveset->overhead();
-    float eff = rss/liveset->live;
-    printf("%16s %16s %12.3f %12.5f\n",
-            name, "W1", rss/MB, eff);
-}
-
-// modeled after synthetic workload from: Rumble et al. FAST'14
-int testlive(const char *name, long livewss, long injectwss)
-{
-    // must allocate liveset on heap because freelist array is huge
-    LiveSet *liveset(nullptr);
-    assert( liveset = new LiveSet(livewss) );
-    printf("# size of LiveSet: %lf MiB\n",
-            (float)sizeof(LiveSet)/(1<<20));
-    printf("# overhead of LiveSet: %lf MiB\n",
-            (float)liveset->overhead()/(1<<20));
-
-    printf("cmd testname-sz rss-MB eff\n");
-
-    liveset->injectValues(injectwss, W2before);
-    liveset->injectValues(injectwss, W2after);
-    dumpstats(name, liveset);
-    liveset->freeAll();
-
-    liveset->injectValues(injectwss, W2before);
-    liveset->injectValues(injectwss, W2after);
-    dumpstats(name, liveset);
-    liveset->freeAll();
-
-    liveset->injectValues(injectwss, W2before);
-    liveset->injectValues(injectwss, W2after);
-    dumpstats(name, liveset);
-    liveset->freeAll();
-
-    delete liveset;
-    return 0;
+    float mem = (float)getstat(STAT_VMSIZE);
+    float wss = mem - liveset->overhead();
+    float eff = wss/liveset->live;
+    printf("prog cmd live inject mem wss eff LSoverhead nobjs\n");
+    printf("%s %s %.2lf %.2lf %.2lf %.2lf %.4lf %.2lf %ld\n",
+            prog, test,
+            (float)liveset->live/MB,
+            (float)injectwss/MB,
+            mem/MB, wss/MB, eff,
+            (float)liveset->overhead()/MB, liveset->nobjs);
 }
 
 int main(int narg, char *args[])
 {
-    if (mlockall(MCL_FUTURE) || mlockall(MCL_CURRENT)) {
-        perror("mlockall");
-        return 1;
+    if (narg != 4) {
+        cerr << "Usage: " << *args
+            << " command live_wss inject_wss"
+            << endl << "\t(wss specified in MiB)"
+            << endl;
+        exit(1);
     }
-    long live_wss = 1UL<<29;
-    long inject_wss = 1UL<<31;
-    return testlive(args[0], live_wss, inject_wss);
+
+    string cmd(args[1]);
+    long livewss = strtoll(args[2], NULL, 10) * MB;
+    long injectwss = strtoll(args[3], NULL, 10) * MB;
+
+    // Must allocate liveset on heap because freelist array is huge.
+    // Additionally, do this outside of the purview of malloc.
+    LiveSet *liveset = 
+        new (map_alloc(sizeof(LiveSet))) LiveSet(livewss);
+
+    if (cmd == "w1") {
+        liveset->injectValues(injectwss, W1before);
+        dumpstats(*args, args[1], injectwss, liveset);
+    } else if (cmd == "w2") {
+        liveset->injectValues(injectwss, W2before);
+        liveset->injectValues(injectwss, W2after);
+        dumpstats(*args, args[1], injectwss, liveset);
+    } else if (cmd == "w3") {
+        liveset->injectValues(injectwss, W3before);
+        liveset->drop(livewss * 0.9);
+        liveset->injectValues(injectwss, W3after);
+        dumpstats(*args, args[1], injectwss, liveset);
+    } else if (cmd == "w4") {
+        liveset->injectValues(injectwss, W4before);
+        liveset->injectValues(injectwss, W4after);
+        dumpstats(*args, args[1], injectwss, liveset);
+    } else if (cmd == "w5") {
+        liveset->injectValues(injectwss, W5before);
+        liveset->drop(livewss * 0.9);
+        liveset->injectValues(injectwss, W5after);
+        dumpstats(*args, args[1], injectwss, liveset);
+    } else if (cmd == "w6") {
+        liveset->injectValues(injectwss, W6before);
+        liveset->drop(livewss * 0.5);
+        liveset->injectValues(injectwss, W6after);
+        dumpstats(*args, args[1], injectwss, liveset);
+    } else if (cmd == "w7") {
+        liveset->injectValues(injectwss, W7before);
+        liveset->drop(livewss * 0.9);
+        liveset->injectValues(injectwss, W7after);
+        dumpstats(*args, args[1], injectwss, liveset);
+    } else if (cmd == "w8") {
+        liveset->injectValues(injectwss, W8before);
+        liveset->drop(livewss * 0.9);
+        liveset->injectValues(injectwss, W8after);
+        dumpstats(*args, args[1], injectwss, liveset);
+    } else {
+        cerr << "Unknown workload to run." << endl;
+        exit(1);
+    }
+
+    return 0;
 }
+
