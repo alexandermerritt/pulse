@@ -3,6 +3,7 @@
 #include <sstream>
 #include <iostream>
 #include <array>
+#include <deque>
 #include <functional>
 
 #include <cassert>
@@ -99,9 +100,10 @@ class LiveSet
             munmap(sizes, nlocs*sizeof(*sizes));
         }
 
+        // long func(void)
         typedef function<long (void)> numGen_f;
 
-        void injectValues(long injectSz, numGen_f genf) {
+        void injectValues(numGen_f genf, long injectSz) {
             off_t idx, nn(0L), objsize, total(injectSz);
             if (injectSz < 1)
                 return;
@@ -114,7 +116,9 @@ class LiveSet
                     idx = freelist[--fltop];
                     assert( idx > -1 );
                 }
-                objsize = genf();
+                try { objsize = genf(); }
+                // throw this in your lambda to prematurely exit
+                catch (out_of_range &e) { break; }
                 assert( !locs[idx] );
                 assert( locs[idx] = (uintptr_t)malloc(objsize) );
                 sizes[idx] = objsize;
@@ -130,20 +134,6 @@ class LiveSet
                 }
             }
             printf("\n");
-        }
-
-        void touch(void)
-        {
-            long sz;
-            sz = (nlocs*sizeof(locs));
-            for (long pg = 0; pg < (sz>>12); pg++)
-                (void)*((long*)((uintptr_t)locs + (pg<<12)));
-            sz = (nlocs*sizeof(sizes));
-            for (long pg = 0; pg < (sz>>12); pg++)
-                (void)*((long*)((uintptr_t)sizes + (pg<<12)));
-            sz = flmax * sizeof(off_t);
-            for (long pg = 0; pg < (sz>>12); pg++)
-                (void)*((long*)((uintptr_t)freelist.data() + (pg<<12)));
         }
 
         // free objects at random until we are below threshold
@@ -273,6 +263,16 @@ void dumpstats(const char *prog, const char *test,
             (float)liveset->overhead()/MB, liveset->nobjs);
 }
 
+void sizes_on_stdin(deque<long> &values)
+{
+    string line;
+    long s;
+    while (cin >> line) {
+        s = strtoll(line.c_str(), NULL, 10);
+        values.push_back(s);
+    }
+}
+
 int main(int narg, char *args[])
 {
     if (narg != 4) {
@@ -293,40 +293,51 @@ int main(int narg, char *args[])
         new (map_alloc(sizeof(LiveSet))) LiveSet(livewss);
 
     if (cmd == "w1") {
-        liveset->injectValues(injectwss, W1before);
+        liveset->injectValues(W1before, injectwss);
         dumpstats(*args, args[1], injectwss, liveset);
     } else if (cmd == "w2") {
-        liveset->injectValues(injectwss, W2before);
-        liveset->injectValues(injectwss, W2after);
+        liveset->injectValues(W2before, injectwss);
+        liveset->injectValues(W2after, injectwss);
         dumpstats(*args, args[1], injectwss, liveset);
     } else if (cmd == "w3") {
-        liveset->injectValues(injectwss, W3before);
+        liveset->injectValues(W3before, injectwss);
         liveset->drop(livewss * 0.9);
-        liveset->injectValues(injectwss, W3after);
+        liveset->injectValues(W3after, injectwss);
         dumpstats(*args, args[1], injectwss, liveset);
     } else if (cmd == "w4") {
-        liveset->injectValues(injectwss, W4before);
-        liveset->injectValues(injectwss, W4after);
+        liveset->injectValues(W4before, injectwss);
+        liveset->injectValues(W4after, injectwss);
         dumpstats(*args, args[1], injectwss, liveset);
     } else if (cmd == "w5") {
-        liveset->injectValues(injectwss, W5before);
+        liveset->injectValues(W5before, injectwss);
         liveset->drop(livewss * 0.9);
-        liveset->injectValues(injectwss, W5after);
+        liveset->injectValues(W5after, injectwss);
         dumpstats(*args, args[1], injectwss, liveset);
     } else if (cmd == "w6") {
-        liveset->injectValues(injectwss, W6before);
+        liveset->injectValues(W6before, injectwss);
         liveset->drop(livewss * 0.5);
-        liveset->injectValues(injectwss, W6after);
+        liveset->injectValues(W6after, injectwss);
         dumpstats(*args, args[1], injectwss, liveset);
     } else if (cmd == "w7") {
-        liveset->injectValues(injectwss, W7before);
+        liveset->injectValues(W7before, injectwss);
         liveset->drop(livewss * 0.9);
-        liveset->injectValues(injectwss, W7after);
+        liveset->injectValues(W7after, injectwss);
         dumpstats(*args, args[1], injectwss, liveset);
     } else if (cmd == "w8") {
-        liveset->injectValues(injectwss, W8before);
+        liveset->injectValues(W8before, injectwss);
         liveset->drop(livewss * 0.9);
-        liveset->injectValues(injectwss, W8after);
+        liveset->injectValues(W8after, injectwss);
+        dumpstats(*args, args[1], injectwss, liveset);
+    } else if (cmd == "stdin") {
+        static deque<long> values;
+        sizes_on_stdin(values);
+        LiveSet::numGen_f vfn = [&] () -> long {
+            if (values.empty()) throw out_of_range("");
+            long v = values.front();
+            values.pop_front();
+            return v;
+        };
+        liveset->injectValues(vfn, injectwss);
         dumpstats(*args, args[1], injectwss, liveset);
     } else {
         cerr << "Unknown workload to run." << endl;
