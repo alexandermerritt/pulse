@@ -38,6 +38,7 @@
 
 using namespace std;
 
+#define KB  (1UL<<10)
 #define MB  (1UL<<20)
 #define GB  (1UL<<30)
 
@@ -94,7 +95,7 @@ void *map_alloc(size_t bytes)
         perror("mmap");
         return NULL;
     }
-    memset(v, 0, bytes);
+    mlock(v, bytes);
     return v;
 }
 
@@ -103,7 +104,7 @@ class LiveSet
     public:
         LiveSet(long bytes)
             : max_live(bytes), live(0L),
-            last_idx(0),
+            last_idx(0), clk(0),
             locs(nullptr), sizes(nullptr),
             fltop(0L), gen(rd()), dropRand(0, nlocs-1) {
             if (bytes < 1)
@@ -125,9 +126,13 @@ class LiveSet
 
         void injectValues(numGen_f genf, long injectSz) {
             off_t idx, nn(0L), objsize, total(injectSz);
+            struct timespec t1,t2;
+
             if (injectSz < 1)
                 return;
+
             drop(genf()<<2);
+
             while (injectSz > 0) {
                 if (fltop == 0) {
                     if ((idx = ++last_idx) >= nlocs)
@@ -136,16 +141,25 @@ class LiveSet
                     idx = freelist[--fltop];
                     assert( idx > -1 );
                 }
+
                 try { objsize = genf(); }
                 // throw this in your lambda to prematurely exit
                 catch (out_of_range &e) { break; }
                 assert( !locs[idx] );
+
+                clock_gettime(CLOCK_MONOTONIC, &t1);
                 assert( locs[idx] = (uintptr_t)malloc(objsize) );
+                clock_gettime(CLOCK_MONOTONIC, &t2);
+                clk += (t2.tv_sec *1e9 - t2.tv_nsec)
+                    - (t1.tv_sec *1e9 - t1.tv_nsec);
+
                 sizes[idx] = objsize;
                 live += objsize;
                 injectSz -= objsize;
                 nobjs++;
+
                 drop(objsize<<2);
+
                 // print progress
                 if (!(nn++%10000L)) {
                     clear_line(); printf("# %3.3lf %%  ",
@@ -200,6 +214,7 @@ class LiveSet
         long max_live, live;    // working set max and current, bytes
         long nobjs;             // pointers allocated
         long last_idx;          // bound in locs for locating pointers
+        long clk;
 
         // quantity of pointers we track
         constexpr static long nlocs = ((long)200e6);
@@ -218,11 +233,13 @@ class LiveSet
         LiveSet();
 };
 
+// Generator for the number lambda funcs to use.
+static random_device rd;
+static mt19937 gen(rd());
+
 //
 // Modeled after synthetic workload from: Rumble et al. FAST'14
 //
-static random_device rd;
-static mt19937 gen(rd());
 auto W1before = [] () { return 100L; };
 auto W2before = W1before;
 auto W3before = W1before;
@@ -274,13 +291,14 @@ void dumpstats(const char *prog, const char *test,
     float mem = (float)getstat(STAT_VMSIZE);
     float wss = mem - liveset->overhead();
     float eff = wss/liveset->live;
-    printf("prog cmd live inject mem wss eff LSoverhead nobjs\n");
-    printf("%s %s %.2lf %.2lf %.2lf %.2lf %.4lf %.2lf %ld\n",
+    printf("prog cmd live inject mem wss eff LSoverhead nobjs clk_ms\n");
+    printf("%s %s %.2lf %.2lf %.2lf %.2lf %.4lf %.2lf %ld %.3lf\n",
             prog, test,
             (float)liveset->live/MB,
             (float)injectwss/MB,
             mem/MB, wss/MB, eff,
-            (float)liveset->overhead()/MB, liveset->nobjs);
+            (float)liveset->overhead()/MB,
+            liveset->nobjs, liveset->clk/1e6);
 }
 
 void sizes_on_stdin(deque<long> &values)
@@ -314,40 +332,32 @@ int main(int narg, char *args[])
 
     if (cmd == "w1") {
         liveset->injectValues(W1before, injectwss);
-        dumpstats(*args, args[1], injectwss, liveset);
     } else if (cmd == "w2") {
         liveset->injectValues(W2before, injectwss);
         liveset->injectValues(W2after, injectwss);
-        dumpstats(*args, args[1], injectwss, liveset);
     } else if (cmd == "w3") {
         liveset->injectValues(W3before, injectwss);
         liveset->drop(livewss * 0.9);
         liveset->injectValues(W3after, injectwss);
-        dumpstats(*args, args[1], injectwss, liveset);
     } else if (cmd == "w4") {
         liveset->injectValues(W4before, injectwss);
         liveset->injectValues(W4after, injectwss);
-        dumpstats(*args, args[1], injectwss, liveset);
     } else if (cmd == "w5") {
         liveset->injectValues(W5before, injectwss);
         liveset->drop(livewss * 0.9);
         liveset->injectValues(W5after, injectwss);
-        dumpstats(*args, args[1], injectwss, liveset);
     } else if (cmd == "w6") {
         liveset->injectValues(W6before, injectwss);
         liveset->drop(livewss * 0.5);
         liveset->injectValues(W6after, injectwss);
-        dumpstats(*args, args[1], injectwss, liveset);
     } else if (cmd == "w7") {
         liveset->injectValues(W7before, injectwss);
         liveset->drop(livewss * 0.9);
         liveset->injectValues(W7after, injectwss);
-        dumpstats(*args, args[1], injectwss, liveset);
     } else if (cmd == "w8") {
         liveset->injectValues(W8before, injectwss);
         liveset->drop(livewss * 0.9);
         liveset->injectValues(W8after, injectwss);
-        dumpstats(*args, args[1], injectwss, liveset);
     } else if (cmd == "stdin") {
         static deque<long> values;
         sizes_on_stdin(values);
@@ -358,12 +368,34 @@ int main(int narg, char *args[])
             return v;
         };
         liveset->injectValues(vfn, injectwss);
-        dumpstats(*args, args[1], injectwss, liveset);
+    } else if (cmd == "img") {
+        LiveSet::numGen_f vfn1 = [] () -> long {
+            const long m1 = 25*KB, m2 = 500*KB;
+            static uniform_int_distribution<long> d(m1, m2);
+            return d(gen);
+        };
+        LiveSet::numGen_f vfn2 = [] () -> long {
+            const long m1 = 10*KB, m2 = 5000*KB;
+            static uniform_int_distribution<long> d(m1, m2);
+            return d(gen);
+        };
+        LiveSet::numGen_f vfn3 = [] () -> long {
+            static uniform_int_distribution<long> sm(25*KB, 500*KB);
+            static uniform_int_distribution<long> lg(250*KB, 5*MB);
+            static size_t o = 0UL;
+            if ((o++ % 100) == 0)
+                return lg(gen);
+            else
+                return sm(gen);
+        };
+        //liveset->injectValues(vfn1, injectwss);
+        //liveset->injectValues(vfn2, injectwss);
+        liveset->injectValues(vfn3, injectwss);
     } else {
         cerr << "Unknown workload to run." << endl;
         exit(1);
     }
-
+    dumpstats(*args, args[1], injectwss, liveset);
     return 0;
 }
 
