@@ -26,6 +26,8 @@
 #include <deque>
 #include <functional>
 
+#include <redox.hpp>
+
 #include <cassert>
 #include <cstddef>
 
@@ -37,6 +39,11 @@
 #include <string.h>
 
 using namespace std;
+
+static const string redis_dir("/opt/data/media/redis-3.0.5/src");
+static const string redis_srv("redis-server");
+static const string redis_cmd(redis_dir + "/" + redis_srv);
+static const string redis_conf(redis_dir + "/redis.conf");
 
 #define KB  (1UL<<10)
 #define MB  (1UL<<20)
@@ -66,12 +73,13 @@ typedef enum {
 
 // getstat(STAT_VMSIZE)
 // getstat(STAT_RSS, 12)        because RSS is reported in pages
-long getstat(statfield_t t, size_t shift = 0UL)
+long getstat(statfield_t t, size_t shift = 0UL, pid_t pid = 0)
 {
     long value;
     string line;
     array<char, 512> cline;
-    pid_t pid = getpid();
+    if (pid == 0)
+        pid = getpid(); // self
     stringstream input;
     const char *val = NULL;
     input << "/proc/" << pid << "/stat";
@@ -83,6 +91,17 @@ long getstat(statfield_t t, size_t shift = 0UL)
         val = strtok(NULL, " ");
     sscanf(val, "%ld", &value);
     return (value<<shift);
+}
+
+pid_t get_redis_pid(string pidfile = string("/var/run/redis/redis.pid"))
+{
+    pid_t pid;
+    ifstream ifs(pidfile);
+    if (!ifs.is_open())
+        throw runtime_error("Cannot open redis pid file");
+    ifs >> pid;
+    ifs.close();
+    return pid;
 }
 
 static inline
@@ -301,6 +320,81 @@ void dumpstats(const char *prog, const char *test,
             liveset->nobjs, liveset->clk/1e6);
 }
 
+void start_redis(void)
+{
+    char cmd[256];
+    int b = snprintf(cmd, 255, "%s %s",
+            redis_cmd.c_str(), redis_conf.c_str());
+    cmd[b] = '\0';
+    if (system(cmd))
+        throw runtime_error("Error starting redis");
+}
+
+void stop_redis(bool ignore = false)
+{
+    char cmd[64];
+    int b = snprintf(cmd, 63, "killall -q %s", redis_srv.c_str());
+    cmd[b] = '\0';
+    if (system(cmd) && !ignore)
+        throw runtime_error("Error stopping redis");
+}
+
+int doredis(int narg, char *args[])
+{
+    redox::Redox red;
+    struct timespec t1,t2;
+
+    if (narg != 4) {
+        cerr << "Usage: " << *args
+            << " cmd live_wss inject_wss"
+            << endl << "\t(wss specified in MiB)"
+            << endl;
+        exit(1);
+    }
+
+    stop_redis(true);
+    start_redis();
+    sleep(1);
+    if (!red.connectUnix())
+        throw runtime_error("Cannot connect to redis");
+
+    pid_t redis_pid = get_redis_pid();
+    float redis_initial = (float)getstat(STAT_VMSIZE, 0, redis_pid);
+
+    string cmd(args[1]);
+    // livewss is configured in redis.conf
+    long livewss = strtoll(args[2], NULL, 10) * MB;
+    long injectwss = strtoll(args[3], NULL, 10) * MB, amt = injectwss;
+
+    size_t ikey = 0, nkeys = 0;
+    string key(100, '0'), value(100, '0');
+    clock_gettime(CLOCK_MONOTONIC, &t1);
+    while (amt > 0) {
+        snprintf(&key[0], 99, "%lu", ikey++);
+        red.set(key, value);
+        amt -= 100;
+        nkeys++;
+    }
+    clock_gettime(CLOCK_MONOTONIC, &t2);
+    red.disconnect();
+
+    // account for the storage capacity of the keys, too
+    livewss += (nkeys * 100*sizeof(char));
+
+    float clk = (t2.tv_sec * 1e9 + t2.tv_nsec)
+        - (t1.tv_sec * 1e9 + t1.tv_nsec);
+    float mem = (float)getstat(STAT_VMSIZE, 0, redis_pid);
+    float wss = mem - redis_initial;
+    float eff = wss/livewss;
+    printf("prog cmd live inject mem wss eff clk_ms\n");
+    printf("%s %s %.2lf %.2lf %.2lf %.2lf %.4lf %.3lf\n",
+            *args, cmd.c_str(), (float)livewss/MB, (float)injectwss/MB,
+            mem/MB, wss/MB, eff, clk/1e6);
+
+    stop_redis();
+    return 0;
+}
+
 void sizes_on_stdin(deque<long> &values)
 {
     string line;
@@ -313,6 +407,10 @@ void sizes_on_stdin(deque<long> &values)
 
 int main(int narg, char *args[])
 {
+    string name(*args);
+    if (name == "./redistest")
+        return doredis(narg, args);
+
     if (narg != 4) {
         cerr << "Usage: " << *args
             << " command live_wss inject_wss"
@@ -327,8 +425,10 @@ int main(int narg, char *args[])
 
     // Must allocate liveset on heap because freelist array is huge.
     // Additionally, do this outside of the purview of malloc.
-    LiveSet *liveset = 
-        new (map_alloc(sizeof(LiveSet))) LiveSet(livewss);
+    LiveSet *liveset(nullptr);
+
+    liveset = new (map_alloc(sizeof(LiveSet))) LiveSet(livewss);
+    assert( liveset );
 
     if (cmd == "w1") {
         liveset->injectValues(W1before, injectwss);

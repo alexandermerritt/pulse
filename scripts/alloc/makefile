@@ -1,10 +1,10 @@
 CXX := clang++-3.7
-CXXFLAGS := -O3 -Wall -Wextra -std=c++11  -fdiagnostics-color=auto -pedantic\
+CXXFLAGS := -O3 -ggdb -Wall -Wextra -std=c++11  -fdiagnostics-color=auto -pedantic\
 	-Wno-unused-parameter -Wno-unused-function -Wno-unused-variable
-LDFLAGS := -L/usr/lib64 -L/usr/lib/x86_64-linux-gnu
+LDFLAGS := -L/usr/lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/local/include -lredox
 
 DEPS := makefile
-TARGETS := libctest jetest tctest sutest hoardtest
+TARGETS := libctest jetest tctest sutest hoardtest redistest
 
 .PHONY:	all
 all:	$(TARGETS)
@@ -26,6 +26,9 @@ sutest:	malloc.o
 
 hoardtest:	malloc.o
 	$(CXX) -o $@ $< $(LDFLAGS) -lhoard
+
+redistest:	libctest
+	ln -sf $< $@
 
 clean:
 	rm -f *.o $(TARGETS)
