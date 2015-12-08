@@ -1,7 +1,8 @@
 CXX := clang++-3.7
 CXXFLAGS := -O3 -ggdb -Wall -Wextra -std=c++11  -fdiagnostics-color=auto -pedantic\
 	-Wno-unused-parameter -Wno-unused-function -Wno-unused-variable
-LDFLAGS := -L/usr/lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/local/include -lredox
+LDFLAGS := -L/usr/lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/local/include
+LIBS := -lredox -lev
 
 DEPS := makefile
 TARGETS := libctest jetest tctest sutest hoardtest redistest
@@ -13,19 +14,19 @@ malloc.o:	malloc.cc $(DEPS)
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 libctest:	malloc.o
-	$(CXX) -o $@ $< $(LDFLAGS)
+	$(CXX) -o $@ $< $(LDFLAGS) $(LIBS)
 
 jetest:	malloc.o
-	$(CXX) -o $@ $< $(LDFLAGS) -ljemalloc
+	$(CXX) -o $@ $< $(LDFLAGS) -ljemalloc $(LIBS)
 
 tctest:	malloc.o
-	$(CXX) -o $@ $< $(LDFLAGS) -ltcmalloc_minimal
+	$(CXX) -o $@ $< $(LDFLAGS) -ltcmalloc_minimal $(LIBS)
 
 sutest:	malloc.o
-	$(CXX) -o $@ $< $(LDFLAGS) -lsupermalloc
+	$(CXX) -o $@ $< $(LDFLAGS) -lsupermalloc $(LIBS)
 
 hoardtest:	malloc.o
-	$(CXX) -o $@ $< $(LDFLAGS) -lhoard
+	$(CXX) -o $@ $< $(LDFLAGS) -lhoard $(LIBS)
 
 redistest:	libctest
 	ln -sf $< $@

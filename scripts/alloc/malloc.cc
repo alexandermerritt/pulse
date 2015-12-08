@@ -290,7 +290,7 @@ class RedisSet
 
         ~RedisSet() {
             disconnect();
-            //stopServer(true);
+            stopServer(true);
         }
 
         long getKeyLen(void) { return keylen; }
@@ -313,8 +313,10 @@ class RedisSet
                     string value(len, '0');
                     cmd.push_back(key.str());
                     cmd.push_back(value);
-                    injectSz -= len;
                     nn++;
+                    injectSz -= len;
+                    if (injectSz < 0)
+                        break;
                 }
                 redis.commandSync(cmd);
 #if 0
