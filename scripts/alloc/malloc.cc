@@ -22,9 +22,12 @@
 #include <random>
 #include <sstream>
 #include <iostream>
+#include <memory>
 #include <array>
 #include <deque>
 #include <functional>
+#include <iomanip>
+#include <map>
 
 #include <redox.hpp>
 
@@ -40,10 +43,18 @@
 
 using namespace std;
 
-static const string redis_dir("/opt/data/media/redis-3.0.5/src");
-static const string redis_srv("redis-server");
-static const string redis_cmd(redis_dir + "/" + redis_srv);
-static const string redis_conf(redis_dir + "/redis.conf");
+// Make sure to configure redis with some policy to drop values if max
+// memory limit has been reached, for example:
+//      maxmemory-policy allkeys-random
+// That way we can keep a live fixed-size working set while injecting
+// large amounts of objects.
+
+// We assume redis.conf to use is also in this directory.
+// Daemonize the service. Set a memory limit, and make sure the limit
+// is known to an instance of RedisSet.
+#define REDIS_DIR "/opt/data/media/redis-3.0.5/src"
+#define REDIS_CONF_FILE REDIS_DIR "/redis.conf"
+#define REDIS_PID_FILE "/var/run/redis/redis.pid"
 
 #define KB  (1UL<<10)
 #define MB  (1UL<<20)
@@ -91,17 +102,6 @@ long getstat(statfield_t t, size_t shift = 0UL, pid_t pid = 0)
         val = strtok(NULL, " ");
     sscanf(val, "%ld", &value);
     return (value<<shift);
-}
-
-pid_t get_redis_pid(string pidfile = string("/var/run/redis/redis.pid"))
-{
-    pid_t pid;
-    ifstream ifs(pidfile);
-    if (!ifs.is_open())
-        throw runtime_error("Cannot open redis pid file");
-    ifs >> pid;
-    ifs.close();
-    return pid;
 }
 
 static inline
@@ -252,6 +252,237 @@ class LiveSet
         LiveSet();
 };
 
+class RedisSet
+{
+    public:
+        size_t clk; // cumulative time spent writing values (nanosec)
+        pid_t pid;
+        long livewss; // scraped from redis.conf automatically
+        string redis_dir, redis_srv, redis_cmd;
+        long initMemSize;
+
+        // Next key to use (converted to string).
+        // Values never reused.
+        size_t ikey = 0;
+
+        RedisSet(long klen = 32)
+            : clk(0), pid(-1), livewss(0),
+            redis_dir(REDIS_DIR),
+            redis_srv("redis-server"),
+            redis_cmd(redis_dir + "/" + redis_srv),
+            initMemSize(0),
+            keylen(klen)
+        {
+            stopServer(true);
+            readConfig();
+            startServer();
+            connect();
+            // Subtract this out of the "wasted" memory calculations.
+            // It includes the library mappings, code, globals, etc.
+            initMemSize = getVMSize();
+            // Just some ad-hoc sanity check, make sure redis isn't
+            // mmap'ing enormous buffers in advance.  If it does, one
+            // cause might be the specific malloc library
+            // implementation it links with.
+            if (initMemSize > (64L<<20))
+                throw runtime_error("Redis init VM size > 64MB (why?)");
+        }
+
+        ~RedisSet() {
+            disconnect();
+            //stopServer(true);
+        }
+
+        long getKeyLen(void) { return keylen; }
+        void setKeyLen(long klen) { keylen = klen; }
+
+        void injectValues(LiveSet::numGen_f genf, long injectSz) {
+            struct timespec t1,t2;
+            long total = injectSz, nn = 0;
+            ostringstream key;
+            vector<string> cmd;
+
+            const long batch_amt = 1024;
+            while (injectSz > 0) {
+                cmd.clear();
+                cmd.push_back("MSET");
+                for (int ii = 0; ii < batch_amt; ii++) {
+                    key.str(string());
+                    key << setfill('0') << setw(keylen) << ikey++;
+                    long len = genf();
+                    string value(len, '0');
+                    cmd.push_back(key.str());
+                    cmd.push_back(value);
+                    injectSz -= len;
+                    nn++;
+                }
+                redis.commandSync(cmd);
+#if 0
+                clock_gettime(CLOCK_MONOTONIC, &t1);
+                if (!redis.set(key.str(), value))
+                    throw runtime_error("Error writing value to Redis");
+                clock_gettime(CLOCK_MONOTONIC, &t2);
+                clk += (t2.tv_sec * 1e9 + t2.tv_nsec)
+                    - (t1.tv_sec * 1e9 + t1.tv_nsec);
+                injectSz -= len;
+                nn++;
+#endif
+
+                // print progress
+                if (!(nn%10000L)) {
+                    clear_line(); printf("# %3.3lf %%  ",
+                        100.*(float)(total-injectSz)/total);
+                    fflush(stdout);
+                }
+            }
+            printf("\n");
+        }
+
+        pid_t readPID(string pidfile = REDIS_PID_FILE) {
+            if (pid > -1)
+                return pid;
+            ifstream ifs(pidfile);
+            if (!ifs.is_open())
+                throw runtime_error("Cannot open redis pid file");
+            ifs >> pid;
+            ifs.close();
+            return pid;
+        }
+
+        float getVMSize(void) {
+            if (pid < 0)
+                readPID();
+            return (float)getstat(STAT_VMSIZE, 0, pid);
+        }
+
+        // Expect the response something like this:
+        //      # Keyspace
+        // for no keys, or for > 0 keys:
+        //      # Keyspace
+        //      dbN:keys=52,expires=0,avg_ttl=0,keysize=0,objsize=0
+        //      [...]
+        // where N is some integer. keysize and objsize were added by
+        // me in a hacked patch to redis, and aren't part of the
+        // standard Redis implementation.
+        map<string,long> * getInfoKeyspace(void) {
+            map<string,long> *m = nullptr;
+            string line;
+            vector<string> cmd;
+            stringstream ss;
+            size_t loc;
+
+            assert( (m = new map<string,long>()) );
+
+            cmd.push_back("info");
+            cmd.push_back("keyspace");
+            auto &cmdObj = redis.commandSync<string>(cmd);
+            ss = stringstream(cmdObj.reply());
+            cmdObj.free();
+
+            while (getline(ss, line)) {
+                if (line.empty())
+                    continue;
+                if (line.find("db") != 0)
+                    continue;
+                // all information in one line
+                for (int i = 0; i < 3; i++) {
+                    string s;
+                    switch (i) {
+                        case 0: { s = "keys"; }; break;
+                        case 1: { s = "keysize"; }; break;
+                        case 2: { s = "objsize"; }; break;
+                    }
+                    if (string::npos == (loc = line.find(s)))
+                        throw runtime_error("Unexpected Redis keyspace line");
+                    string chop = line.substr(loc + s.size() + 1); // +1 for =
+                    long v = strtoll(chop.c_str(), NULL, 10);
+                    pair<string,long> p(s,v);
+                    m->insert(p);
+                }
+            }
+
+            return m;
+        }
+
+    private:
+        redox::Redox redis;
+        size_t keylen;
+
+        void startServer(void)
+        {
+            char cmd[256];
+            int b = snprintf(cmd, 255, "%s %s",
+                    redis_cmd.c_str(), REDIS_CONF_FILE);
+            cmd[b] = '\0';
+            if (system(cmd))
+                throw runtime_error("Error starting redis");
+            sleep(1); // give time to write PID file
+            readPID();
+        }
+
+        void stopServer(bool ignore = false)
+        {
+            char cmd[64];
+            int b = snprintf(cmd, 63, "killall -q %s", redis_srv.c_str());
+            cmd[b] = '\0';
+            if (system(cmd) && !ignore)
+                throw runtime_error("Error stopping redis");
+            sleep(1);
+        }
+
+        void connect(void) {
+            if (!redis.connectUnix())
+                throw runtime_error("Cannot connect to redis");
+        }
+
+        void disconnect(void) {
+            redis.disconnect();
+        }
+
+        void readConfig(string conffile = REDIS_CONF_FILE) {
+            ifstream ifs(conffile);
+            if (!ifs.is_open())
+                throw runtime_error("Error opening conf file");
+            string line;
+            while (getline(ifs, line)) {
+                if (line.empty())
+                    continue;
+                if (line.at(0) == '#')
+                    continue;
+                // split line
+                string key, value;
+                stringstream ss;
+                ss << line;
+                ss >> key;
+                // extract memory parameter
+                if (key == "maxmemory") {
+                    ss >> value;
+                    livewss = strtoll(value.c_str(), NULL, 10);
+                    size_t i = value.find_first_of("kKmMgG");
+                    if (i == string::npos)
+                        return; // unit is bytes
+                    string unit(value.substr(i));
+                    for (size_t c = 0; c < unit.size(); c++)
+                        unit[c] = tolower(unit[c]);
+                    long factor = 0;
+                    if (unit == "k") { factor = (long)1e3; }
+                    else if (unit == "m") { factor = (long)1e6; }
+                    else if (unit == "g") { factor = (long)1e9; }
+                    else if (unit == "kb") { factor = KB; }
+                    else if (unit == "mb") { factor = MB; }
+                    else if (unit == "gb") { factor = GB; }
+                    else {
+                        throw runtime_error("Cannot determine "
+                                "Redis memory limit unit from conf");
+                    }
+                    livewss *= factor;
+                    break; // skip remainder of config
+                }
+            }
+            ifs.close();
+        }
+};
+
 // Generator for the number lambda funcs to use.
 static random_device rd;
 static mt19937 gen(rd());
@@ -320,78 +551,82 @@ void dumpstats(const char *prog, const char *test,
             liveset->nobjs, liveset->clk/1e6);
 }
 
-void start_redis(void)
+void dumpstats(const char *test,
+        long injectwss, RedisSet *redis)
 {
-    char cmd[256];
-    int b = snprintf(cmd, 255, "%s %s",
-            redis_cmd.c_str(), redis_conf.c_str());
-    cmd[b] = '\0';
-    if (system(cmd))
-        throw runtime_error("Error starting redis");
-}
-
-void stop_redis(bool ignore = false)
-{
-    char cmd[64];
-    int b = snprintf(cmd, 63, "killall -q %s", redis_srv.c_str());
-    cmd[b] = '\0';
-    if (system(cmd) && !ignore)
-        throw runtime_error("Error stopping redis");
+    map<string,long> *info = redis->getInfoKeyspace();
+    // don't subtract the initial vmsize as the code, stack,
+    // libraries, etc. all do count against memory efficiency..
+    float mem = (float)redis->getVMSize(); // - redis->initMemSize;
+    float wss = info->at("keysize") + info->at("objsize");
+    // NOTE: with redis.conf configured for a maximum memory limit, we
+    // calculate efficiency opposite to something which does not have
+    // a limit, namely, ONCE FULL and redis has begun to evict keys to
+    // accomodate new ones, the vmsize will be greater than the sum of
+    // keys + objects combined
+    float eff = mem/wss;
+    // live is maxmemory configured in redis.conf
+    printf("prog cmd live inject mem wss eff nobjs clk_ms\n");
+    printf("redis %s %.2lf %.2lf %.2lf %.2lf %.4lf %ld %.3lf\n",
+            test, (float)redis->livewss/MB, (float)injectwss/MB,
+            mem/MB, wss/MB, eff,
+            info->at("keys"), redis->clk/1e6);
+    delete info;
 }
 
 int doredis(int narg, char *args[])
 {
-    redox::Redox red;
-    struct timespec t1,t2;
+    RedisSet *redis;
+    long keymem, injectwss;
 
-    if (narg != 4) {
+    if (narg != 3) {
         cerr << "Usage: " << *args
-            << " cmd live_wss inject_wss"
+            << " cmd inject_wss"
             << endl << "\t(wss specified in MiB)"
+            << endl << "\t(max mem limit and behavior configured in redis.conf)"
             << endl;
         exit(1);
     }
 
-    stop_redis(true);
-    start_redis();
-    sleep(1);
-    if (!red.connectUnix())
-        throw runtime_error("Cannot connect to redis");
+    redis = new RedisSet();
+    assert( redis );
 
-    pid_t redis_pid = get_redis_pid();
-    float redis_initial = (float)getstat(STAT_VMSIZE, 0, redis_pid);
+    cout << "# redis maxmemory: "
+        << redis->livewss / MB << " MiB"
+        << " vmsize: "
+        << getstat(STAT_VMSIZE, 0, redis->pid) / MB << " MiB"
+        << " rss: "
+        << getstat(STAT_RSS, 12, redis->pid) / MB << " MiB"
+        << endl;
 
     string cmd(args[1]);
-    // livewss is configured in redis.conf
-    long livewss = strtoll(args[2], NULL, 10) * MB;
-    long injectwss = strtoll(args[3], NULL, 10) * MB, amt = injectwss;
+    injectwss = strtoll(args[2], NULL, 10) * MB;
 
-    size_t ikey = 0, nkeys = 0;
-    string key(100, '0'), value(100, '0');
-    clock_gettime(CLOCK_MONOTONIC, &t1);
-    while (amt > 0) {
-        snprintf(&key[0], 99, "%lu", ikey++);
-        red.set(key, value);
-        amt -= 100;
-        nkeys++;
+    if (cmd == "w1") {
+        redis->injectValues(W1before, injectwss);
+    } else if (cmd == "w8") {
+        redis->injectValues(W8before, injectwss);
+        redis->injectValues(W8after, injectwss);
+    } else if (cmd == "image") {
+        LiveSet::numGen_f vfn = [] () -> long {
+            static uniform_int_distribution<long> sm(25*KB, 500*KB);
+            //static uniform_int_distribution<long> lg(250*KB, 5*MB);
+            //static size_t o = 0UL;
+            //if ((o++ % 100) == 0)
+                //return lg(gen);
+            //else
+                //return sm(gen);
+            return sm(gen);
+        };
+        redis->injectValues(vfn, injectwss);
+    } else {
+        cerr << "Unknown workload to run." << endl;
+        exit(1);
     }
-    clock_gettime(CLOCK_MONOTONIC, &t2);
-    red.disconnect();
 
-    // account for the storage capacity of the keys, too
-    livewss += (nkeys * 100*sizeof(char));
+    dumpstats(args[1], injectwss, redis);
 
-    float clk = (t2.tv_sec * 1e9 + t2.tv_nsec)
-        - (t1.tv_sec * 1e9 + t1.tv_nsec);
-    float mem = (float)getstat(STAT_VMSIZE, 0, redis_pid);
-    float wss = mem - redis_initial;
-    float eff = wss/livewss;
-    printf("prog cmd live inject mem wss eff clk_ms\n");
-    printf("%s %s %.2lf %.2lf %.2lf %.2lf %.4lf %.3lf\n",
-            *args, cmd.c_str(), (float)livewss/MB, (float)injectwss/MB,
-            mem/MB, wss/MB, eff, clk/1e6);
-
-    stop_redis();
+    delete redis;
     return 0;
 }
 
