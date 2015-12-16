@@ -56,6 +56,9 @@ using namespace std;
 #define REDIS_CONF_FILE REDIS_DIR "/redis.conf"
 #define REDIS_PID_FILE "/var/run/redis/redis.pid"
 
+#define REDIS_BATCH_COUNT   128
+#define REDIS_SYNC_EVERY    10
+
 #define KB  (1UL<<10)
 #define MB  (1UL<<20)
 #define GB  (1UL<<30)
@@ -303,7 +306,7 @@ class RedisSet
             vector<string> cmd;
             bool done = false;
 
-            const long batch_amt = 512;
+            const long batch_amt = REDIS_BATCH_COUNT;
             while (injectSz > 0 && !done) {
                 cmd.clear();
                 cmd.push_back("MSET");
@@ -329,7 +332,7 @@ class RedisSet
 
                 // enqueue some commands asynchronously
                 static size_t flip = 0;
-                if (!(flip++ % 10))
+                if (!(flip++ % REDIS_SYNC_EVERY))
                     redis.commandSync(cmd);
                 else
                     redis.command(cmd);
