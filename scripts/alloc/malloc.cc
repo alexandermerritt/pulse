@@ -298,27 +298,41 @@ class RedisSet
 
         void injectValues(LiveSet::numGen_f genf, long injectSz) {
             struct timespec t1,t2;
-            long total = injectSz, nn = 0;
+            long len, total = injectSz, nn = 0;
             ostringstream key;
             vector<string> cmd;
+            bool done = false;
 
-            const long batch_amt = 1024;
-            while (injectSz > 0) {
+            const long batch_amt = 512;
+            while (injectSz > 0 && !done) {
                 cmd.clear();
                 cmd.push_back("MSET");
-                for (int ii = 0; ii < batch_amt; ii++) {
+                size_t batch_len = 0;
+                for (int ii = 0; ii < batch_amt; ii++, nn++) {
+                    try { len = genf(); }
+                    // throw this in your lambda to prematurely exit
+                    catch (out_of_range &e) { done=true; break; }
                     key.str(string());
                     key << setfill('0') << setw(keylen) << ikey++;
-                    long len = genf();
                     string value(len, '0');
                     cmd.push_back(key.str());
                     cmd.push_back(value);
-                    nn++;
                     injectSz -= len;
                     if (injectSz < 0)
                         break;
+                    batch_len += len;
+                    if (batch_len > (1*MB))
+                        break;
                 }
-                redis.commandSync(cmd);
+                if (cmd.empty())
+                    break;
+
+                // enqueue some commands asynchronously
+                static size_t flip = 0;
+                if (!(flip++ % 10))
+                    redis.commandSync(cmd);
+                else
+                    redis.command(cmd);
 #if 0
                 clock_gettime(CLOCK_MONOTONIC, &t1);
                 if (!redis.set(key.str(), value))
@@ -338,6 +352,31 @@ class RedisSet
                 }
             }
             printf("\n");
+        }
+
+        // drop(0.9) removes 90% of current capacity by reducing the
+        // maxmemory config parameter temporarily
+        void drop(float drop_pct) {
+            long dropmem = (long)(livewss * (1.-drop_pct));
+            vector<string> cmd;
+            cmd.push_back("CONFIG");
+            cmd.push_back("SET");
+            cmd.push_back("maxmemory");
+
+            printf("# dropping from %.2f to %.2f MiB\n",
+                    (float)livewss/MB, (float)dropmem/MB);
+
+            cmd.push_back(to_string(dropmem));
+            redis.commandSync(cmd);
+
+            // trigger release of memory by inserting key
+            string key("delete me soon please"), &value(key);
+            redis.set(key, value);
+            redis.del(key);
+
+            cmd.pop_back();
+            cmd.push_back(to_string(livewss));
+            redis.commandSync(cmd);
         }
 
         pid_t readPID(string pidfile = REDIS_PID_FILE) {
@@ -537,11 +576,13 @@ auto W8after  = [] () {
     return d(gen);
 };
 
-void dumpstats(const char *prog, const char *test,
-        long injectwss, LiveSet *liveset)
+// addl is any additional memory usage we wish to subtract (e.g. which
+// may be used for tracking or expmt setup outside of liveset)
+void dumpstatsL(const char *prog, const char *test,
+        long injectwss, LiveSet *liveset, long addl = 0)
 {
     float mem = (float)getstat(STAT_VMSIZE);
-    float wss = mem - liveset->overhead();
+    float wss = mem - liveset->overhead() - addl;
     float eff = wss/liveset->live;
     printf("prog cmd live inject mem wss eff LSoverhead nobjs clk_ms\n");
     printf("%s %s %.2lf %.2lf %.2lf %.2lf %.4lf %.2lf %ld %.3lf\n",
@@ -568,14 +609,26 @@ void dumpstats(const char *test,
     // keys + objects combined
     float eff = mem/wss;
     // live is maxmemory configured in redis.conf
-    printf("prog cmd live inject mem wss eff nobjs clk_ms\n");
-    printf("redis %s %.2lf %.2lf %.2lf %.2lf %.4lf %ld %.3lf\n",
+    printf("prog cmd live inject mem wss eff nobjs\n");
+    printf("redis %s %.2lf %.2lf %.2lf %.2lf %.4lf %ld\n",
             test, (float)redis->livewss/MB, (float)injectwss/MB,
-            mem/MB, wss/MB, eff,
-            info->at("keys"), redis->clk/1e6);
+            mem/MB, wss/MB, eff, info->at("keys"));
     delete info;
 }
 
+void sizes_on_stdin(deque<long> &values)
+{
+    string line;
+    long s;
+    while (cin >> line) {
+        s = strtoll(line.c_str(), NULL, 10);
+        values.push_back(s);
+    }
+}
+
+// we can carelessly allocate memory in this process when evaluting
+// redis, because redis is in another process (and we are not
+// measuring self)
 int doredis(int narg, char *args[])
 {
     RedisSet *redis;
@@ -593,6 +646,7 @@ int doredis(int narg, char *args[])
     redis = new RedisSet();
     assert( redis );
 
+#if 0
     cout << "# redis maxmemory: "
         << redis->livewss / MB << " MiB"
         << " vmsize: "
@@ -600,15 +654,49 @@ int doredis(int narg, char *args[])
         << " rss: "
         << getstat(STAT_RSS, 12, redis->pid) / MB << " MiB"
         << endl;
+#endif
 
     string cmd(args[1]);
     injectwss = strtoll(args[2], NULL, 10) * MB;
 
     if (cmd == "w1") {
         redis->injectValues(W1before, injectwss);
+    } else if (cmd == "w2") {
+        redis->injectValues(W2before, injectwss);
+        redis->injectValues(W2after, injectwss);
+    } else if (cmd == "w3") {
+        redis->injectValues(W3before, injectwss);
+        redis->drop(0.9);
+        redis->injectValues(W3after, injectwss);
+    } else if (cmd == "w4") {
+        redis->injectValues(W4before, injectwss);
+        redis->injectValues(W4after, injectwss);
+    } else if (cmd == "w5") {
+        redis->injectValues(W5before, injectwss);
+        redis->drop(0.9);
+        redis->injectValues(W5after, injectwss);
+    } else if (cmd == "w6") {
+        redis->injectValues(W6before, injectwss);
+        redis->drop(0.5);
+        redis->injectValues(W6after, injectwss);
+    } else if (cmd == "w7") {
+        redis->injectValues(W7before, injectwss);
+        redis->drop(0.9);
+        redis->injectValues(W7after, injectwss);
     } else if (cmd == "w8") {
         redis->injectValues(W8before, injectwss);
+        redis->drop(0.9);
         redis->injectValues(W8after, injectwss);
+    } else if (cmd == "stdin") {
+        static deque<long> values;
+        sizes_on_stdin(values);
+        LiveSet::numGen_f vfn = [&] () -> long {
+            if (values.empty()) throw out_of_range("");
+            long v = values.front();
+            values.pop_front();
+            return v;
+        };
+        redis->injectValues(vfn, injectwss);
     } else if (cmd == "image") {
         LiveSet::numGen_f vfn = [] () -> long {
             static uniform_int_distribution<long> sm(25*KB, 500*KB);
@@ -630,16 +718,6 @@ int doredis(int narg, char *args[])
 
     delete redis;
     return 0;
-}
-
-void sizes_on_stdin(deque<long> &values)
-{
-    string line;
-    long s;
-    while (cin >> line) {
-        s = strtoll(line.c_str(), NULL, 10);
-        values.push_back(s);
-    }
 }
 
 int main(int narg, char *args[])
@@ -666,6 +744,7 @@ int main(int narg, char *args[])
 
     liveset = new (map_alloc(sizeof(LiveSet))) LiveSet(livewss);
     assert( liveset );
+    long addl = 0L;
 
     if (cmd == "w1") {
         liveset->injectValues(W1before, injectwss);
@@ -697,7 +776,12 @@ int main(int narg, char *args[])
         liveset->injectValues(W8after, injectwss);
     } else if (cmd == "stdin") {
         static deque<long> values;
+        // FIXME we need to account for this structure when evaluting
+        // local heap allocator performance (or even subtract all
+        // vmsize)
+        float mem = (float)getstat(STAT_VMSIZE);
         sizes_on_stdin(values);
+        addl += ((float)getstat(STAT_VMSIZE) - mem);
         LiveSet::numGen_f vfn = [&] () -> long {
             if (values.empty()) throw out_of_range("");
             long v = values.front();
@@ -732,7 +816,7 @@ int main(int narg, char *args[])
         cerr << "Unknown workload to run." << endl;
         exit(1);
     }
-    dumpstats(*args, args[1], injectwss, liveset);
+    dumpstatsL(*args, args[1], injectwss, liveset, addl);
     return 0;
 }
 
