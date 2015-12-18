@@ -63,7 +63,10 @@ def getpage(method, options):
     rsp = et.fromstring(page)
     if rsp.attrib['stat'] == 'fail':
         msg = rsp[0].attrib['msg']
-        raise Exception('Flickr: ' + msg)
+        if 'photo not found' in msg.lower():
+            print('# not found: ' + urlstr)
+        else:
+            raise Exception('Flickr: ' + urlstr + ': ' + msg)
     return page
 
 # returns list of tags Flickr thinks are related
@@ -167,6 +170,9 @@ for pagen in range(1,npages+1):
         #         print('{} {} {} {}'.format(size['source'],
         #             size['width'], size['height'], imgid,
         #             ))
+
+        if len(sizes) == 0:
+            continue
 
         size = sizes[-1].attrib
         print('{} {} {} {}'.format(size['source'],
