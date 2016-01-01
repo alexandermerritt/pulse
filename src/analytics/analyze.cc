@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -26,6 +27,7 @@
 #define REDIS_IMG_KEY_DATA_SUFFIX ":data"
 // redis object, total images injected
 #define REDIS_IMG_COUNTER "num-images"
+#define REDIS_NOTIFY_CHANNEL "channel"
 
 using namespace std;
 
@@ -143,36 +145,47 @@ int redisBufferWriteBlob(redisContext *c, int *done,
     if (c->err)
         return REDIS_ERR;
 
-    if ((buflen - nwritten) > 0) {
+    while ((buflen - nwritten) > 0) {
         nwritten = write(c->fd,(void*)bufpos,buflen-nwritten);
         if (nwritten == -1) {
             if ((errno == EAGAIN && !(c->flags & REDIS_BLOCK)) || (errno == EINTR)) {
                 /* Try again later */
+                goto out;
             } else {
                 // __redisSetError(c,REDIS_ERR_IO,NULL);
                 return REDIS_ERR;
             }
         } else if (nwritten > 0) {
-            bufpos -= nwritten;
+            bufpos += nwritten;
         }
     }
+out:
     if (done != NULL) *done = (nwritten == buflen);
     return REDIS_OK;
 }
 
-void publish(const string &ipath)
+static redisContext *redis;
+
+// returns number of images available
+int upload(const string &ipath)
 {
     ifstream ilist(ipath);
     size_t imgidx = 1;
     stringstream cmd;
     string path;
-    redisReply *reply;
-    int ret;
+    redisReply *reply = NULL;
+    int ret = 0, flags = 0, fd = -1;
+    struct stat statinfo;
+    size_t maplen = 0;
+    void *imgmap = NULL;
+
+    // Connecting to Redis with UNIX domain sockets can trigger
+    // SIGPIPE on writes. Ignore them and do error checking manually.
+    signal(SIGPIPE, SIG_IGN);
 
     if (!ilist.is_open())
         throw runtime_error(strerror(errno));
 
-    redisContext *redis;
     redis = redisConnectUnix(REDIS_UNIX_SOCK);
     if (!redis)
         throw runtime_error(strerror(errno));
@@ -195,20 +208,41 @@ void publish(const string &ipath)
         size_t slashpos = path.find_last_of("/");
         string fname = path.substr(slashpos+1);
 
+        cout << fname << endl;
+
+        // check if image already loaded
+        string key = REDIS_IMG_KEY_PREFIX;
+        key += to_string(imgidx);
+        key += REDIS_IMG_KEY_DATA_SUFFIX;
+        ret = redisAppendCommand(redis, "EXISTS %s", key.data());
+        if (ret != REDIS_OK)
+            throw runtime_error("redis exists failed");
+        ret = redisGetReply(redis, (void**)&reply);
+        if (ret != REDIS_OK)
+            throw runtime_error("redis getReply failed");
+        if (!reply)
+            throw runtime_error("redis reply is null");
+        assert( reply->type == REDIS_REPLY_INTEGER );
+        if (reply->integer == 1) {
+            freeReplyObject(reply);
+            goto update;
+        }
+        freeReplyObject(reply);
+
         // add the JPG binary: map in image, send to Redis
-        struct stat statinfo;
         if (stat(path.data(), &statinfo))
             throw runtime_error(strerror(errno));
-        size_t maplen = statinfo.st_size;
-        const int flags = MAP_SHARED | MAP_POPULATE;
-        int fd = open(path.data(), O_RDONLY);
+        maplen = statinfo.st_size;
+        flags = MAP_SHARED | MAP_POPULATE;
+        fd = open(path.data(), O_RDONLY);
         if (fd < 0)
             throw runtime_error(strerror(errno));
-        void *imgmap = mmap(NULL, maplen, PROT_READ, flags, fd, 0);
+        imgmap = mmap(NULL, maplen, PROT_READ, flags, fd, 0);
         if (imgmap == MAP_FAILED)
             throw runtime_error(strerror(errno));
 
-        ret = redisAppendCommand(redis, "set %s%d%s %b",
+#if 1
+        ret = redisAppendCommand(redis, "SET %s%d%s %b",
                 REDIS_IMG_KEY_PREFIX, imgidx,
                 REDIS_IMG_KEY_DATA_SUFFIX,
                 imgmap, maplen);
@@ -222,8 +256,14 @@ void publish(const string &ipath)
         assert( reply->type == REDIS_REPLY_STATUS );
         assert( 0 == strncmp(reply->str, "OK", 2) );
         freeReplyObject(reply);
-        // --- OR ---
-        // redisBufferWriteBlob()
+
+#else   // --- OR ---
+
+        // throws SIGPIPEs... I think Redis chops the connection.
+        int done;
+        assert( REDIS_OK == redisBufferWriteBlob(redis, &done, (void*)"SET alex ", 9) );
+        assert( REDIS_OK == redisBufferWriteBlob(redis, &done, imgmap, maplen) );
+#endif
 
         munmap(imgmap, maplen);
         imgmap = NULL;
@@ -237,7 +277,6 @@ void publish(const string &ipath)
             << " datakey " << REDIS_IMG_KEY_PREFIX << imgidx
             << REDIS_IMG_KEY_DATA_SUFFIX
             << " len " << statinfo.st_size;
-        cout << cmd.str() << endl;
         ret = redisAppendCommand(redis, cmd.str().data());
         if (ret != REDIS_OK)
             throw runtime_error("redis append failed");
@@ -250,6 +289,7 @@ void publish(const string &ipath)
         assert( 0 == strncmp(reply->str, "OK", 2) );
         freeReplyObject(reply);
 
+update:
         // update image counter
         cmd.str(string());
         cmd << "INCR " << REDIS_IMG_COUNTER;
@@ -267,9 +307,51 @@ void publish(const string &ipath)
     }
     ilist.close();
 
-    // append JPG to list - throttled
-    //cmd.str(string());
-    //cmd << "LPUSH " << REDIS_IMG_LIST << " " << path;
+    return --imgidx;
+}
+
+void publish(int nimages)
+{
+    redisReply *reply = NULL;
+    stringstream cmd;
+    int ret;
+
+    for (int i = 1; i < nimages; i++) {
+        // push item to list
+        cmd.str(string());
+        cmd << "LPUSH"
+            << " " << REDIS_IMG_LIST
+            << " " << REDIS_IMG_KEY_PREFIX << i;
+        ret = redisAppendCommand(redis, cmd.str().data());
+        if (ret != REDIS_OK)
+            throw runtime_error("redis lpush failed");
+        ret = redisGetReply(redis, (void**)&reply);
+        if (ret != REDIS_OK)
+            throw runtime_error("redis getReply failed");
+        if (!reply)
+            throw runtime_error("redis reply is null");
+        assert( reply->type == REDIS_REPLY_INTEGER );
+        freeReplyObject(reply);
+
+        // publish notification
+        cmd.str(string());
+        cmd << "PUBLISH"
+            << " " << REDIS_NOTIFY_CHANNEL
+            << " push-" << i;
+        ret = redisAppendCommand(redis, cmd.str().data());
+        if (ret != REDIS_OK)
+            throw runtime_error("redis publish failed");
+        ret = redisGetReply(redis, (void**)&reply);
+        if (ret != REDIS_OK)
+            throw runtime_error("redis getReply failed");
+        if (!reply)
+            throw runtime_error("redis reply is null");
+        assert( reply->type == REDIS_REPLY_INTEGER );
+        freeReplyObject(reply);
+
+        cout << i << " "; cout.flush();
+        sleep(1);
+    }
 }
 
 int main(int narg, char *args[])
@@ -281,7 +363,8 @@ int main(int narg, char *args[])
 
     Magick::InitializeMagick(*args);
 
-    publish(string(args[1]));
+    int nimages = upload(string(args[1]));
+    publish(nimages);
 
 #if 0
     vm = getstat(STAT_VMSIZE, 0, getpid());
