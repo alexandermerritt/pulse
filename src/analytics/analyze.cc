@@ -1,11 +1,16 @@
 #include <exception>
 #include <fstream>
 #include <iostream>
+#include <mutex>
+#include <vector>
+#include <array>
+#include <thread>
 
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -35,6 +40,9 @@ typedef enum {
     STAT_VMSIZE = 23,
     STAT_RSS = 24,
 } statfield_t;
+
+static const vector<int> scales =
+    { 75, 150, 240, 320, 640, 1024 };
 
 // getstat(STAT_VMSIZE)
 // getstat(STAT_RSS, 12)        because RSS is reported in pages
@@ -83,23 +91,180 @@ Magick::Blob* newBlob(const char *path)
     return blob;
 }
 
-// TODO create 2-6 smaller-scale images
-// "Flickr" or "Etsy" workload
-void rescale(const char *path) // FIXME change to key? or blob?
+void doConnect(struct redisContext **redis)
 {
-    Magick::Blob *blob = newBlob(path);
+    if (*redis)
+        return;
+    *redis = redisConnectUnix(REDIS_UNIX_SOCK);
+    if (!*redis)
+        throw runtime_error(strerror(errno));
+}
 
-    Magick::Image img;
-    img.read(*blob);
-    img.magick("JPG");
+static mutex notifyLock;
+static list<string> submsgs;
 
-    //img.rotate(90);
-    img.scale(Magick::Geometry(1024,1024));
-    //img.gaussianBlur(2, 3);
+void subscribeThread(void)
+{
+    redisReply *reply = NULL;
+    stringstream cmd;
+    int ret;
+    struct redisContext *redis = NULL;
 
-    //img.write("/tmp/magick.jpg");
+    doConnect(&redis);
 
-    delete blob;
+    cmd << "SUBSCRIBE " << REDIS_NOTIFY_CHANNEL;
+    ret = redisAppendCommand(redis, cmd.str().data());
+    if (ret != REDIS_OK)
+        throw runtime_error("redis subscribe failed");
+
+    while (true) {
+        string msg;
+        ret = redisGetReply(redis, (void**)&reply);
+        if (ret != REDIS_OK)
+            throw runtime_error("redis getReply failed");
+        if (!reply)
+            throw runtime_error("redis reply is null");
+        if (reply->type != REDIS_REPLY_ARRAY) {
+            cerr << __func__ << ": reply->type: " << reply->type << endl;
+            if (reply->str)
+                cerr << reply->str << endl;
+            sleep(1);
+            continue;
+        }
+
+        // check the reply
+        //      subscribe CHANNEL [01]
+        //      message   CHANNEL MSG
+        if (reply->elements < 3)
+            throw runtime_error("subscribe reply: too few elements");
+        struct redisReply **elems = reply->element;
+        assert( elems[0]->type == REDIS_REPLY_STRING );
+        string s(elems[0]->str);
+        if (s == "subscribe") {
+            s = string(elems[1]->str);
+            assert( s == REDIS_NOTIFY_CHANNEL );
+            assert( elems[2]->type == REDIS_REPLY_INTEGER );
+            assert( elems[2]->integer == 1 );
+            freeReplyObject(reply);
+            continue;
+        }
+
+        if (s != "message")
+            throw runtime_error("unknown subscribe response");
+
+        s = string(elems[1]->str);
+        assert( s == REDIS_NOTIFY_CHANNEL );
+        msg = string( elems[2]->str );
+
+        notifyLock.lock();
+        submsgs.push_back(msg);
+        notifyLock.unlock();
+
+        freeReplyObject(reply);
+    }
+}
+
+// "Flickr" or "Etsy" workload
+// create 2-6 smaller-scale images
+void doScale(void) // FIXME change to key? or blob?
+{
+    int ret, nimages;
+    stringstream cmd;
+    struct redisReply *reply = NULL;
+    struct redisContext *redis = NULL;
+
+    doConnect(&redis);
+
+    thread t(subscribeThread);
+    t.detach();
+
+    while (true) {
+        Magick::Blob inblob, outblob;
+        string key;
+
+        if (submsgs.size() == 0) {
+            sleep(1);
+            continue;
+        }
+        notifyLock.lock();
+        key = submsgs.front();
+        submsgs.pop_front();
+        notifyLock.unlock();
+
+        // pull the image object
+        cmd.str(string());
+        cmd << "GET " << key << REDIS_IMG_KEY_DATA_SUFFIX;
+        ret = redisAppendCommand(redis, cmd.str().data());
+        if (ret != REDIS_OK)
+            throw runtime_error("redis get failed");
+        ret = redisGetReply(redis, (void**)&reply);
+        if (ret != REDIS_OK)
+            throw runtime_error("redis getReply failed");
+        if (!reply)
+            throw runtime_error("redis reply is null");
+        if (reply->type != REDIS_REPLY_STRING ) {
+            cerr << __func__ << ": reply->type: " << reply->type << endl;
+            if (reply->str)
+                cerr << reply->str << endl;
+            continue;
+        }
+
+        inblob.updateNoCopy(reply->str, reply->len,
+                Magick::Blob::MallocAllocator);
+
+        // scale different sizes
+        for (int scale : scales) {
+            struct redisReply *rr;
+            Magick::Image img;
+            string scaleKey = key + "_" + to_string(scale)
+                + REDIS_IMG_KEY_DATA_SUFFIX;
+            cout << key << " " << scale << endl;
+
+            // check if exists
+            cmd.str(string());
+            cmd << "EXISTS " << scaleKey;
+            ret = redisAppendCommand(redis, cmd.str().data());
+            if (ret != REDIS_OK)
+                throw runtime_error("redis exists failed");
+            ret = redisGetReply(redis, (void**)&rr);
+            if (ret != REDIS_OK)
+                throw runtime_error("redis getReply failed");
+            if (!rr)
+                throw runtime_error("redis rr is null");
+            assert( rr->type == REDIS_REPLY_INTEGER );
+            if (rr->integer == 1)
+                continue;
+            freeReplyObject(rr);
+
+            // create thumbnail
+            img.read(inblob); // prob. makes a copy
+            if (img.rows() < scale && img.columns() < scale)
+                break;
+            img.thumbnail(Magick::Geometry(scale,scale));
+            img.magick("JPG");
+            img.write(&outblob);
+
+            // push to redis
+            ret = redisAppendCommand(redis, "SET %s %b",
+                    scaleKey.data(),
+                    outblob.data(), outblob.length());
+            if (ret != REDIS_OK)
+                throw runtime_error("redis SET failed");
+            ret = redisGetReply(redis, (void**)&rr);
+            if (ret != REDIS_OK)
+                throw runtime_error("redis getReply failed");
+            if (!rr)
+                throw runtime_error("redis rr is null");
+            assert( rr->type == REDIS_REPLY_STATUS );
+            assert( 0 == strncmp(rr->str, "OK", 2) );
+            freeReplyObject(rr);
+        }
+        // FIXME blob's destructor will free this (on next loop
+        // iteration), as it seems updateNoCopy takes ownership of the
+        // pointer directly.
+        reply->str = NULL; reply->len = 0;
+        freeReplyObject(reply);
+    }
 }
 
 void findSIFT(const char *path) // FIXME change to key? or blob?
@@ -133,6 +298,10 @@ void findHOG(const char *path) // FIXME change to key? or blob?
     //hog.detect(mat, locs);
 }
 
+//
+// work generator functions
+//
+
 // Need a way to write to Redis without copying the command buffer -
 // esp. for larger objects like images. This is similar to
 // redisBufferWrite but uses a user-supplied input buffer.
@@ -164,12 +333,9 @@ out:
     return REDIS_OK;
 }
 
-static redisContext *redis;
-
 // returns number of images available
-int upload(const string &ipath)
+int doUpload(void)
 {
-    ifstream ilist(ipath);
     size_t imgidx = 1;
     stringstream cmd;
     string path;
@@ -178,17 +344,13 @@ int upload(const string &ipath)
     struct stat statinfo;
     size_t maplen = 0;
     void *imgmap = NULL;
+    struct redisContext *redis = NULL;
+
+    doConnect(&redis);
 
     // Connecting to Redis with UNIX domain sockets can trigger
     // SIGPIPE on writes. Ignore them and do error checking manually.
     signal(SIGPIPE, SIG_IGN);
-
-    if (!ilist.is_open())
-        throw runtime_error(strerror(errno));
-
-    redis = redisConnectUnix(REDIS_UNIX_SOCK);
-    if (!redis)
-        throw runtime_error(strerror(errno));
 
     // reset counter
     cmd.str(string());
@@ -204,7 +366,7 @@ int upload(const string &ipath)
     freeReplyObject(reply);
 
     // add all images
-    while (ilist >> path) {
+    while (cin >> path) {
         size_t slashpos = path.find_last_of("/");
         string fname = path.substr(slashpos+1);
 
@@ -247,7 +409,7 @@ int upload(const string &ipath)
                 REDIS_IMG_KEY_DATA_SUFFIX,
                 imgmap, maplen);
         if (ret != REDIS_OK)
-            throw runtime_error("redis append failed");
+            throw runtime_error("redis set failed");
         ret = redisGetReply(redis, (void**)&reply);
         if (ret != REDIS_OK)
             throw runtime_error("redis getReply failed");
@@ -305,12 +467,11 @@ update:
 
         imgidx++;
     }
-    ilist.close();
 
     return --imgidx;
 }
 
-void publish(int nimages)
+void __publish(struct redisContext *redis, int nimages)
 {
     redisReply *reply = NULL;
     stringstream cmd;
@@ -337,7 +498,7 @@ void publish(int nimages)
         cmd.str(string());
         cmd << "PUBLISH"
             << " " << REDIS_NOTIFY_CHANNEL
-            << " push-" << i;
+            << " " << REDIS_IMG_KEY_PREFIX << i;
         ret = redisAppendCommand(redis, cmd.str().data());
         if (ret != REDIS_OK)
             throw runtime_error("redis publish failed");
@@ -354,6 +515,34 @@ void publish(int nimages)
     }
 }
 
+void doPublish(void)
+{
+    redisReply *reply = NULL;
+    stringstream cmd;
+    int ret, nimages;
+    struct redisContext *redis = NULL;
+
+    doConnect(&redis);
+
+    // read the counter to know how many to publish
+    cmd << "GET " << REDIS_IMG_COUNTER;
+    cout << cmd.str() << endl;
+    ret = redisAppendCommand(redis, cmd.str().data());
+    if (ret != REDIS_OK)
+        throw runtime_error("redis get failed");
+    ret = redisGetReply(redis, (void**)&reply);
+    if (ret != REDIS_OK)
+        throw runtime_error("redis getReply failed");
+    if (!reply)
+        throw runtime_error("redis reply is null");
+    assert( reply->type == REDIS_REPLY_STRING );
+    nimages = strtol(reply->str, NULL, 10);
+    freeReplyObject(reply);
+
+    cout << nimages << " images to publish" << endl;
+    __publish(redis, nimages);
+}
+
 int main(int narg, char *args[])
 {
     long vm, rss;
@@ -363,23 +552,16 @@ int main(int narg, char *args[])
 
     Magick::InitializeMagick(*args);
 
-    int nimages = upload(string(args[1]));
-    publish(nimages);
-
-#if 0
-    vm = getstat(STAT_VMSIZE, 0, getpid());
-    rss = getstat(STAT_RSS, 12, getpid());
-    cout << "vm  " << vm/MB << endl;
-    cout << "rss " << rss/MB << endl;
-
-    string line;
-    while (cin >> line) {
-        cout << line << endl;
-        //transform(args[1]);
-        //findSIFT(line.c_str());
-        findHOG(line.c_str());
+    string arg(args[1]);
+    if (arg == "upload") {
+        doUpload();
+    } else if (arg == "publish") {
+        doPublish();
+    } else if (arg == "scale") {
+        doScale();
+    } else {
+        cerr << "Command unknown" << endl;
+        return 1;
     }
-#endif
-
     return 0;
 }
