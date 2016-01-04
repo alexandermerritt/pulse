@@ -19,8 +19,11 @@
 
 #include <Magick++.h>
 #include <opencv2/opencv.hpp>
+#include <opensift/include/imgfeatures.h>
 #include <opensift/include/sift.h>
 #include <hiredis/hiredis.h>
+
+#include "cv/decoders.h"
 
 #define MB (1024. * 1024.)
 
@@ -30,6 +33,7 @@
 // image object key prefix
 #define REDIS_IMG_KEY_PREFIX "img-"
 #define REDIS_IMG_KEY_DATA_SUFFIX ":data"
+#define REDIS_FEAT_KEY_SUFFIX ":feat"
 // redis object, total images injected
 #define REDIS_IMG_COUNTER "num-images"
 #define REDIS_NOTIFY_CHANNEL "channel"
@@ -128,7 +132,6 @@ void subscribeThread(void)
             cerr << __func__ << ": reply->type: " << reply->type << endl;
             if (reply->str)
                 cerr << reply->str << endl;
-            sleep(1);
             continue;
         }
 
@@ -212,6 +215,12 @@ void doScale(void) // FIXME change to key? or blob?
         inblob.updateNoCopy(reply->str, reply->len,
                 Magick::Blob::MallocAllocator);
 
+        // FIXME blob's destructor will free this (on next loop
+        // iteration), as it seems updateNoCopy takes ownership of the
+        // pointer directly.
+        reply->str = NULL;
+        reply->len = 0;
+
         // scale different sizes
         for (int scale : scales) {
             struct redisReply *rr;
@@ -259,30 +268,102 @@ void doScale(void) // FIXME change to key? or blob?
             assert( 0 == strncmp(rr->str, "OK", 2) );
             freeReplyObject(rr);
         }
-        // FIXME blob's destructor will free this (on next loop
-        // iteration), as it seems updateNoCopy takes ownership of the
-        // pointer directly.
-        reply->str = NULL; reply->len = 0;
         freeReplyObject(reply);
     }
 }
 
-void findSIFT(const char *path) // FIXME change to key? or blob?
+void doSIFT(int scale = -1)
 {
-    struct feature *feat;
-    int n;
+    int ret, nimages;
+    stringstream cmd;
+    struct redisReply *reply = NULL;
+    struct redisContext *redis = NULL;
 
-    // TODO how to load from memory, not disk?
-    cv::Mat mat = cv::imread(path);
-    cv::Mat smaller;
+    if (scale >= (int)scales.size())
+        throw runtime_error(string(__func__)
+                + string(": scale too large"));
 
-    cv::resize(mat, smaller, cv::Size(), 0.7, 0.7);
-    IplImage img(smaller), *imgp = &img;
+    doConnect(&redis);
 
-    cout << "(SIFT)" << endl;
-    n = sift_features(&img, &feat);
+    thread t(subscribeThread);
+    t.detach();
 
-    free(feat);
+    while (true) {
+        Magick::Blob inblob, outblob;
+        string key;
+
+        if (submsgs.size() == 0) {
+            continue;
+        }
+        notifyLock.lock();
+        key = submsgs.front();
+        submsgs.pop_front();
+        notifyLock.unlock();
+
+        // pull the image object
+        cmd.str(string());
+        cmd << "GET " << key;
+        if (scale >= 0 && scale < (int)scales.size())
+            cmd << "_" << scales.at(scale);
+        cmd << REDIS_IMG_KEY_DATA_SUFFIX;
+        cout << cmd.str() << endl;
+        ret = redisAppendCommand(redis, cmd.str().data());
+        if (ret != REDIS_OK)
+            throw runtime_error("redis get failed");
+        ret = redisGetReply(redis, (void**)&reply);
+        if (ret != REDIS_OK)
+            throw runtime_error("redis getReply failed");
+        if (!reply)
+            throw runtime_error("redis reply is null");
+        if (reply->type != REDIS_REPLY_STRING ) {
+            cerr << __func__ << ": reply->type: " << reply->type << endl;
+            if (reply->str)
+                cerr << reply->str << endl;
+            continue;
+        }
+        cout << "  image size (enc)  " << reply->len << endl;
+
+        // Construct image object in opencv by decoding buffer.
+        // Find the features.
+        cv::Mat mat = jpeg::JPEGasMat(reply->str, reply->len);
+        IplImage img(mat);
+        freeReplyObject(reply); // release encoded image
+
+        cout << "  image size (dec)  "
+            << mat.total() * mat.elemSize()
+            << endl;
+
+        cout << "  detecting    ...  "; cout.flush();
+        struct feature *feat;
+        int n = sift_features(&img, &feat);
+        cout << n << endl;
+
+        // Send features to redis.  The features array is flat,
+        // so shove a single object into redis
+        string featKey = key;
+        if (scale >= 0 && scale < (int)scales.size())
+            featKey += "_" + to_string(scales.at(scale));
+        featKey += REDIS_FEAT_KEY_SUFFIX;
+        cout << "  sending feat size " << (n*sizeof(*feat)) << endl;
+        ret = redisAppendCommand(redis, "SET %s %b",
+                featKey.data(), feat, (n*sizeof(*feat)));
+        if (ret != REDIS_OK)
+            throw runtime_error("redis SET failed");
+        ret = redisGetReply(redis, (void**)&reply);
+        if (ret != REDIS_OK)
+            throw runtime_error("redis getReply failed");
+        if (!reply)
+            throw runtime_error("redis reply is null");
+        assert( reply->type == REDIS_REPLY_STATUS );
+        assert( 0 == strncmp(reply->str, "OK", 2) );
+        freeReplyObject(reply);
+
+        // one free seems sufficient -- feat.fwd_match etc. exist but are
+        // expected to be NULL, so single free is ok
+        free(feat);
+
+        cout << "ok " << key << endl;
+    }
 }
 
 void findHOG(const char *path) // FIXME change to key? or blob?
@@ -559,6 +640,8 @@ int main(int narg, char *args[])
         doPublish();
     } else if (arg == "scale") {
         doScale();
+    } else if (arg == "sift") {
+        doSIFT(scales.size()-1);
     } else {
         cerr << "Command unknown" << endl;
         return 1;
