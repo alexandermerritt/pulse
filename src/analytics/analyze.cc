@@ -34,6 +34,7 @@
 #define REDIS_IMG_KEY_PREFIX "img-"
 #define REDIS_IMG_KEY_DATA_SUFFIX ":data"
 #define REDIS_FEAT_KEY_SUFFIX ":feat"
+#define REDIS_HOG_KEY_SUFFIX ":hog"
 // redis object, total images injected
 #define REDIS_IMG_COUNTER "num-images"
 #define REDIS_NOTIFY_CHANNEL "channel"
@@ -300,6 +301,8 @@ void doSIFT(int scale = -1)
         submsgs.pop_front();
         notifyLock.unlock();
 
+        // TODO check exists already
+
         // pull the image object
         cmd.str(string());
         cmd << "GET " << key;
@@ -366,17 +369,116 @@ void doSIFT(int scale = -1)
     }
 }
 
-void findHOG(const char *path) // FIXME change to key? or blob?
+// much a copy/paste of doSIFT due to shared code...
+void doHOG(int scale = -1)
 {
-    // TODO how to load from memory, not disk?
-    cv::Mat mat = cv::imread(path), smaller;
-    cv::HOGDescriptor hog;
-    hog.setSVMDetector(cv::HOGDescriptor::getDefaultPeopleDetector());
-    vector<cv::Point> locs;
+    int ret, nimages;
+    stringstream cmd;
+    struct redisReply *reply = NULL;
+    struct redisContext *redis = NULL;
 
-    cv::resize(mat, smaller, cv::Size(), 0.7, 0.7);
-    hog.detect(smaller, locs);
-    //hog.detect(mat, locs);
+    if (scale >= (int)scales.size())
+        throw runtime_error(string(__func__)
+                + string(": scale too large"));
+
+    doConnect(&redis);
+
+    thread t(subscribeThread);
+    t.detach();
+
+    while (true) {
+        Magick::Blob inblob, outblob;
+        string key;
+
+        if (submsgs.size() == 0) {
+            continue;
+        }
+        notifyLock.lock();
+        key = submsgs.front();
+        submsgs.pop_front();
+        notifyLock.unlock();
+
+        // TODO check exists already
+
+        // pull the image object
+        cmd.str(string());
+        cmd << "GET " << key;
+        if (scale >= 0 && scale < (int)scales.size())
+            cmd << "_" << scales.at(scale);
+        cmd << REDIS_IMG_KEY_DATA_SUFFIX;
+        cout << cmd.str() << endl;
+        ret = redisAppendCommand(redis, cmd.str().data());
+        if (ret != REDIS_OK)
+            throw runtime_error("redis get failed");
+        ret = redisGetReply(redis, (void**)&reply);
+        if (ret != REDIS_OK)
+            throw runtime_error("redis getReply failed");
+        if (!reply)
+            throw runtime_error("redis reply is null");
+        if (reply->type != REDIS_REPLY_STRING ) {
+            cerr << __func__ << ": reply->type: " << reply->type << endl;
+            if (reply->str)
+                cerr << reply->str << endl;
+            continue;
+        }
+        cout << "  image size (enc)  " << reply->len << endl;
+
+        // Construct image object in opencv by decoding buffer.
+        // Find the features.
+        cv::Mat mat = jpeg::JPEGasMat(reply->str, reply->len);
+        freeReplyObject(reply); // release encoded image
+
+        cout << "  image size (dec)  "
+            << mat.total() * mat.elemSize()
+            << endl;
+
+        // TODO HOG detection TODO
+        cout << "  detecting    ...  "; cout.flush();
+        cv::HOGDescriptor hog;
+        hog.setSVMDetector(cv::HOGDescriptor::getDefaultPeopleDetector());
+        vector<cv::Rect> rects; // int x, y, width, height
+        vector<double> weights;
+        hog.detectMultiScale(mat, rects, weights);
+        cout << rects.size() << endl;
+        assert( weights.size() == rects.size() );
+
+        // Convert STL container to flat array.
+        // cv::Point has only int x,y, so can use a flattened buffer.
+        struct item { int x,y,w,h; double ww; } *hogbuf;
+        size_t hoglen = rects.size() * sizeof(*hogbuf);
+        hogbuf = (struct item*)malloc(hoglen);
+        assert( hogbuf );
+        for (int i = 0; i < rects.size(); i++) {
+            hogbuf[i].x = rects[i].x;
+            hogbuf[i].y = rects[i].y;
+            hogbuf[i].w = rects[i].width;
+            hogbuf[i].h = rects[i].height;
+            hogbuf[i].ww = weights[i];
+        }
+
+        // Send points to redis. Use single, flat object.
+        string hogKey = key;
+        if (scale >= 0 && scale < (int)scales.size())
+            hogKey += "_" + to_string(scales.at(scale));
+        hogKey += REDIS_HOG_KEY_SUFFIX;
+        cout << "  sending hog size  " << hoglen << endl;
+        ret = redisAppendCommand(redis, "SET %s %b",
+                hogKey.data(), hogbuf, hoglen);
+        if (ret != REDIS_OK)
+            throw runtime_error("redis SET failed");
+        ret = redisGetReply(redis, (void**)&reply);
+        if (ret != REDIS_OK)
+            throw runtime_error("redis getReply failed");
+        if (!reply)
+            throw runtime_error("redis reply is null");
+        assert( reply->type == REDIS_REPLY_STATUS );
+        assert( 0 == strncmp(reply->str, "OK", 2) );
+        freeReplyObject(reply);
+
+        free(hogbuf);
+
+        cout << "ok " << key << endl;
+    }
 }
 
 //
@@ -642,6 +744,8 @@ int main(int narg, char *args[])
         doScale();
     } else if (arg == "sift") {
         doSIFT(scales.size()-1);
+    } else if (arg == "hog") {
+        doHOG();
     } else {
         cerr << "Command unknown" << endl;
         return 1;
