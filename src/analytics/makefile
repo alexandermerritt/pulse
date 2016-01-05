@@ -4,8 +4,8 @@
 
 CC := clang-3.7
 CXX := clang++-3.7
-CFLAGS := -std=c11 -Wall -Wextra
-CXXFLAGS := -std=c++11 -Wall -Wextra -I/usr/include/GraphicsMagick -Ithirdparty
+CFLAGS := -std=c11 -Wall -Wextra -Wno-unused-variable
+CXXFLAGS := -std=c++11 -Wall -Wextra -I/usr/include/GraphicsMagick -Ithirdparty -Wno-unused-variable
 LDFLAGS :=
 GMCCLIBS := $(shell pkg-config --libs GraphicsMagick++)
 OCVLIBS := $(shell pkg-config --libs opencv)

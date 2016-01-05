@@ -19,6 +19,7 @@
 
 #include <Magick++.h>
 #include <opencv2/opencv.hpp>
+#include <opencv2/objdetect/objdetect.hpp>
 #include <opensift/include/imgfeatures.h>
 #include <opensift/include/sift.h>
 #include <hiredis/hiredis.h>
@@ -26,6 +27,9 @@
 #include "cv/decoders.h"
 
 #define MB (1024. * 1024.)
+
+// milliseconds in a nanosecond
+#define MS_nsec (1e3)
 
 #define REDIS_UNIX_SOCK "/var/run/redis/redis.sock"
 // list to hold newly injected images
@@ -35,9 +39,62 @@
 #define REDIS_IMG_KEY_DATA_SUFFIX ":data"
 #define REDIS_FEAT_KEY_SUFFIX ":feat"
 #define REDIS_HOG_KEY_SUFFIX ":hog"
+#define REDIS_FACE_KEY_SUFFIX ":face"
+#define REDIS_EYE_KEY_SUFFIX ":eye"
 // redis object, total images injected
 #define REDIS_IMG_COUNTER "num-images"
 #define REDIS_NOTIFY_CHANNEL "channel"
+
+// HAAR training sets
+enum {
+    HAAR_EYE = 0,
+    HAAR_EYES_BIG,
+    HAAR_EYES_SM,
+    HAAR_FACE_ALT2,
+    HAAR_FACE_ALT,
+    HAAR_FACE_ALTT,
+    HAAR_FACE,
+    HAAR_FACE_PROF,
+    HAAR_FULL_BODY,
+    HAAR_LEFT_EAR,
+    HAAR_LEFT_EYE,
+    HAAR_LEFT_EYE2,
+    HAAR_LOW_BODY,
+    HAAR_MOUTH,
+    HAAR_NOSE,
+    HAAR_RIGHT_EAR,
+    HAAR_RIGHT_EYE_2,
+    HAAR_RIGHT_EYE,
+    HAAR_SMILE,
+    HAAR_SPECS,
+    HAAR_UP_BODY,
+    HAAR_UP_BODY2,
+};
+#define HAAR_XML_BASEDIR "/usr/share/opencv/haarcascades"
+static const char *haar_xml[] = {
+    [HAAR_EYE]         = HAAR_XML_BASEDIR "/haarcascade_eye.xml",
+    [HAAR_EYES_BIG]    = HAAR_XML_BASEDIR "/haarcascade_mcs_eyepair_big.xml",
+    [HAAR_EYES_SM]     = HAAR_XML_BASEDIR "/haarcascade_mcs_eyepair_small.xml",
+    [HAAR_FACE_ALT2]   = HAAR_XML_BASEDIR "/haarcascade_frontalface_alt2.xml",
+    [HAAR_FACE_ALT]    = HAAR_XML_BASEDIR "/haarcascade_frontalface_alt.xml",
+    [HAAR_FACE_ALTT]   = HAAR_XML_BASEDIR "/haarcascade_frontalface_alt_tree.xml",
+    [HAAR_FACE]        = HAAR_XML_BASEDIR "/haarcascade_frontalface_default.xml",
+    [HAAR_FACE_PROF]   = HAAR_XML_BASEDIR "/haarcascade_profileface.xml",
+    [HAAR_FULL_BODY]   = HAAR_XML_BASEDIR "/haarcascade_fullbody.xml",
+    [HAAR_LEFT_EAR]    = HAAR_XML_BASEDIR "/haarcascade_mcs_leftear.xml",
+    [HAAR_LEFT_EYE]    = HAAR_XML_BASEDIR "/haarcascade_mcs_lefteye.xml",
+    [HAAR_LEFT_EYE2]   = HAAR_XML_BASEDIR "/haarcascade_lefteye_2splits.xml",
+    [HAAR_LOW_BODY]    = HAAR_XML_BASEDIR "/haarcascade_lowerbody.xml",
+    [HAAR_MOUTH]       = HAAR_XML_BASEDIR "/haarcascade_mcs_mouth.xml",
+    [HAAR_NOSE]        = HAAR_XML_BASEDIR "/haarcascade_mcs_nose.xml",
+    [HAAR_RIGHT_EAR]   = HAAR_XML_BASEDIR "/haarcascade_mcs_rightear.xml",
+    [HAAR_RIGHT_EYE_2] = HAAR_XML_BASEDIR "/haarcascade_righteye_2splits.xml",
+    [HAAR_RIGHT_EYE]   = HAAR_XML_BASEDIR "/haarcascade_mcs_righteye.xml",
+    [HAAR_SMILE]       = HAAR_XML_BASEDIR "/haarcascade_smile.xml",
+    [HAAR_SPECS]       = HAAR_XML_BASEDIR "/haarcascade_eye_tree_eyeglasses.xml",
+    [HAAR_UP_BODY]     = HAAR_XML_BASEDIR "/haarcascade_mcs_upperbody.xml",
+    [HAAR_UP_BODY2]    = HAAR_XML_BASEDIR "/haarcascade_upperbody.xml",
+};
 
 using namespace std;
 
@@ -46,7 +103,7 @@ typedef enum {
     STAT_RSS = 24,
 } statfield_t;
 
-static const vector<int> scales =
+static const vector<unsigned int> scales =
     { 75, 150, 240, 320, 640, 1024 };
 
 // getstat(STAT_VMSIZE)
@@ -182,8 +239,12 @@ void doScale(void) // FIXME change to key? or blob?
     thread t(subscribeThread);
     t.detach();
 
+    auto scales_(scales);
+    sort(scales_.begin(), scales_.end());
+    reverse(scales_.begin(), scales_.end());
+
     while (true) {
-        Magick::Blob inblob, outblob;
+        Magick::Blob blob;
         string key;
 
         if (submsgs.size() == 0) {
@@ -213,22 +274,32 @@ void doScale(void) // FIXME change to key? or blob?
             continue;
         }
 
-        inblob.updateNoCopy(reply->str, reply->len,
-                Magick::Blob::MallocAllocator);
+        blob.update(reply->str, reply->len);
+        //blob.updateNoCopy(reply->str, reply->len,
+                //Magick::Blob::MallocAllocator);
+        unsigned int r, c;
+        {
+            Magick::Image img;
+            img.ping(blob); // read header only
+            r = img.rows();
+            c = img.columns();
+        }
 
         // FIXME blob's destructor will free this (on next loop
         // iteration), as it seems updateNoCopy takes ownership of the
         // pointer directly.
-        reply->str = NULL;
-        reply->len = 0;
+        //reply->str = NULL;
+        //reply->len = 0;
 
         // scale different sizes
-        for (int scale : scales) {
+        for (unsigned int scale : scales_) {
             struct redisReply *rr;
             Magick::Image img;
             string scaleKey = key + "_" + to_string(scale)
                 + REDIS_IMG_KEY_DATA_SUFFIX;
-            cout << key << " " << scale << endl;
+            cout << key << " " << scale
+                << " " << c << " x " << r
+                << endl;
 
             // check if exists
             cmd.str(string());
@@ -247,17 +318,19 @@ void doScale(void) // FIXME change to key? or blob?
             freeReplyObject(rr);
 
             // create thumbnail
-            img.read(inblob); // prob. makes a copy
-            if (img.rows() < scale && img.columns() < scale)
-                break;
+            img.read(blob); // prob. makes a copy
+            if (r < scale && c < scale) {
+                cout << "  skipping" << endl;
+                continue;
+            }
             img.thumbnail(Magick::Geometry(scale,scale));
             img.magick("JPG");
-            img.write(&outblob);
+            img.write(&blob);
 
             // push to redis
             ret = redisAppendCommand(redis, "SET %s %b",
                     scaleKey.data(),
-                    outblob.data(), outblob.length());
+                    blob.data(), blob.length());
             if (ret != REDIS_OK)
                 throw runtime_error("redis SET failed");
             ret = redisGetReply(redis, (void**)&rr);
@@ -370,6 +443,139 @@ void doSIFT(int scale = -1)
 }
 
 // much a copy/paste of doSIFT due to shared code...
+void doCascade(int scale = -1)
+{
+    int ret, nimages;
+    stringstream cmd;
+    struct redisReply *reply = NULL;
+    struct redisContext *redis = NULL;
+
+    if (scale >= (int)scales.size())
+        throw runtime_error(string(__func__)
+                + string(": scale too large"));
+
+    doConnect(&redis);
+
+    thread t(subscribeThread);
+    t.detach();
+
+    while (true) {
+        string key;
+
+        if (submsgs.size() == 0) {
+            continue;
+        }
+        notifyLock.lock();
+        key = submsgs.front();
+        submsgs.pop_front();
+        notifyLock.unlock();
+
+        // TODO check exists already
+
+        // pull the image object
+        cmd.str(string());
+        cmd << "GET " << key;
+        if (scale >= 0 && scale < (int)scales.size())
+            cmd << "_" << scales.at(scale);
+        cmd << REDIS_IMG_KEY_DATA_SUFFIX;
+        cout << cmd.str() << endl;
+        ret = redisAppendCommand(redis, cmd.str().data());
+        if (ret != REDIS_OK)
+            throw runtime_error("redis get failed");
+        ret = redisGetReply(redis, (void**)&reply);
+        if (ret != REDIS_OK)
+            throw runtime_error("redis getReply failed");
+        if (!reply)
+            throw runtime_error("redis reply is null");
+        if (reply->type != REDIS_REPLY_STRING ) {
+            cerr << __func__ << ": reply->type: " << reply->type << endl;
+            if (reply->str)
+                cerr << reply->str << endl;
+            continue;
+        }
+        cout << "  image size (enc)  " << reply->len << endl;
+
+        // Construct image object in opencv by decoding buffer.
+        cv::Mat mat = jpeg::JPEGasMat(reply->str, reply->len);
+        freeReplyObject(reply); // release encoded image
+
+        cout << "  image size (dec)  "
+            << mat.total() * mat.elemSize()
+            << endl;
+
+        // Find multiple types of objects
+        vector<int> objs = {HAAR_FACE, HAAR_EYE, HAAR_MOUTH, HAAR_SPECS};
+        vector<string> objSuffix = {":face", ":eye", ":mouth", ":specs"};
+
+        for (size_t o = 0; o < objs.size(); o++) {
+            cout << "  detecting    ...  "; cout.flush();
+            vector<cv::Rect> rects;
+            cv::CascadeClassifier cas;
+
+            cas.load(haar_xml[o]);
+            cas.detectMultiScale(mat, rects, 1.1, 2,
+                    CV_HAAR_DO_ROUGH_SEARCH, Size(30,30));
+            cout << rects.size() << endl;
+
+#if 0
+            cout << "  detecting eyes ..."; cout.flush();
+            cas.load(haar_xml[HAAR_EYE]);
+            for (size_t f = 0; f < rects.size(); f++) {
+                cv::Point center(rects[f].x + rects[f].width*0.5,
+                        rects[f].y+rects[f].height*0.5 );
+                cv::ellipse(mat, center,
+                        Size(rects[f].width*0.5, rects[f].height*0.5),
+                        0, 0, 360, Scalar( 255, 0, 255 ), 4, 8, 0 );
+                Mat faceROI = mat( rects[f] );
+                cas.detectMultiScale(faceROI, eyes, 1.1, 2,
+                        CV_HAAR_SCALE_IMAGE, Size(30,30));
+                cout << " " << eyes.size(); cout.flush();
+            }
+            cout << endl;
+#endif
+
+            if (rects.size() < 1)
+                continue;
+
+            // Convert STL container to flat array.
+            struct item { int x,y,w,h; } *casbuf;
+            size_t caslen = rects.size() * sizeof(*casbuf);
+            casbuf = (struct item*)malloc(caslen);
+            assert( casbuf );
+            for (size_t i = 0; i < rects.size(); i++) {
+                casbuf[i].x = rects[i].x;
+                casbuf[i].y = rects[i].y;
+                casbuf[i].w = rects[i].width;
+                casbuf[i].h = rects[i].height;
+            }
+
+            // Send points to redis. Use single, flat object.
+            string casKey = key;
+            if (scale >= 0 && scale < (int)scales.size())
+                casKey += "_" + to_string(scales.at(scale));
+            casKey += objSuffix[o];
+            cout << "  sending size      " << caslen << endl;
+            ret = redisAppendCommand(redis, "SET %s %b",
+                    casKey.data(), casbuf, caslen);
+            if (ret != REDIS_OK)
+                throw runtime_error("redis SET failed");
+            ret = redisGetReply(redis, (void**)&reply);
+            if (ret != REDIS_OK)
+                throw runtime_error("redis getReply failed");
+            if (!reply)
+                throw runtime_error("redis reply is null");
+            assert( reply->type == REDIS_REPLY_STATUS );
+            assert( 0 == strncmp(reply->str, "OK", 2) );
+            freeReplyObject(reply);
+
+            free(casbuf);
+        }
+
+        cout << "ok " << key << endl;
+    }
+}
+
+// much a copy/paste of doSIFT due to shared code...
 void doHOG(int scale = -1)
 {
     int ret, nimages;
@@ -448,7 +654,7 @@ void doHOG(int scale = -1)
         size_t hoglen = rects.size() * sizeof(*hogbuf);
         hogbuf = (struct item*)malloc(hoglen);
         assert( hogbuf );
-        for (int i = 0; i < rects.size(); i++) {
+        for (size_t i = 0; i < rects.size(); i++) {
             hogbuf[i].x = rects[i].x;
             hogbuf[i].y = rects[i].y;
             hogbuf[i].w = rects[i].width;
@@ -485,6 +691,7 @@ void doHOG(int scale = -1)
 // work generator functions
 //
 
+#if 0
 // Need a way to write to Redis without copying the command buffer -
 // esp. for larger objects like images. This is similar to
 // redisBufferWrite but uses a user-supplied input buffer.
@@ -515,6 +722,7 @@ out:
     if (done != NULL) *done = (nwritten == buflen);
     return REDIS_OK;
 }
+#endif
 
 // returns number of images available
 int doUpload(void)
@@ -660,7 +868,7 @@ void __publish(struct redisContext *redis, int nimages)
     stringstream cmd;
     int ret;
 
-    for (int i = 1; i < nimages; i++) {
+    for (int i = 1; i < nimages+1; i++) {
         // push item to list
         cmd.str(string());
         cmd << "LPUSH"
@@ -694,7 +902,7 @@ void __publish(struct redisContext *redis, int nimages)
         freeReplyObject(reply);
 
         cout << i << " "; cout.flush();
-        sleep(1);
+        usleep(100*MS_nsec);
     }
 }
 
@@ -746,6 +954,9 @@ int main(int narg, char *args[])
         doSIFT(scales.size()-1);
     } else if (arg == "hog") {
         doHOG();
+    } else if (arg == "cas") {
+        //doCascade(scales.size()-1);
+        doCascade();
     } else {
         cerr << "Command unknown" << endl;
         return 1;
