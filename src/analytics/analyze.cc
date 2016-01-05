@@ -924,6 +924,12 @@ int main(int narg, char *args[])
     if (narg != 2)
         return 1;
 
+    if (getenv("QUIET")) {
+        int fd = open("/dev/null", O_RDWR);
+        dup2(fd, fileno(stdout));
+        close(fd);
+    }
+
     Magick::InitializeMagick(*args);
 
     string arg(args[1]);
