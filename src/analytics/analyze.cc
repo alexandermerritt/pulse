@@ -517,23 +517,6 @@ void doCascade(int scale = -1)
                     CV_HAAR_DO_ROUGH_SEARCH, Size(30,30));
             cout << rects.size() << endl;
 
-#if 0
-            cout << "  detecting eyes ..."; cout.flush();
-            cas.load(haar_xml[HAAR_EYE]);
-            for (size_t f = 0; f < rects.size(); f++) {
-                cv::Point center(rects[f].x + rects[f].width*0.5,
-                        rects[f].y+rects[f].height*0.5 );
-                cv::ellipse(mat, center,
-                        Size(rects[f].width*0.5, rects[f].height*0.5),
-                        0, 0, 360, Scalar( 255, 0, 255 ), 4, 8, 0 );
-                Mat faceROI = mat( rects[f] );
-                cas.detectMultiScale(faceROI, eyes, 1.1, 2,
-                        CV_HAAR_SCALE_IMAGE, Size(30,30));
-                cout << " " << eyes.size(); cout.flush();
-            }
-            cout << endl;
-#endif
-
             if (rects.size() < 1)
                 continue;
 
