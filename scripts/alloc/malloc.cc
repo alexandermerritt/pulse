@@ -56,8 +56,8 @@ using namespace std;
 #define REDIS_CONF_FILE REDIS_DIR "/redis.conf"
 #define REDIS_PID_FILE "/var/run/redis/redis.pid"
 
-#define REDIS_BATCH_COUNT   128
-#define REDIS_SYNC_EVERY    10
+#define REDIS_BATCH_COUNT   1
+#define REDIS_SYNC_EVERY    1
 
 #define KB  (1UL<<10)
 #define MB  (1UL<<20)
@@ -198,6 +198,8 @@ class LiveSet
                 return;
             long idx;
             while (live > (max_live - atleast)) {
+                if (last_idx <= 0)
+                    throw runtime_error("is max_live too small?");
                 idx = dropRand(gen) % last_idx;
                 if (!locs[idx])
                     continue;
@@ -348,7 +350,7 @@ class RedisSet
 #endif
 
                 // print progress
-                if (!(nn%10000L)) {
+                if (!(nn%1L)) {
                     clear_line(); printf("# %3.3lf %%  ",
                         100.*(float)(total-injectSz)/total);
                     fflush(stdout);
@@ -660,7 +662,7 @@ int doredis(int narg, char *args[])
 #endif
 
     string cmd(args[1]);
-    injectwss = strtoll(args[2], NULL, 10) * MB;
+    injectwss = strtoll(args[2], NULL, 10);
 
     if (cmd == "w1") {
         redis->injectValues(W1before, injectwss);
@@ -702,6 +704,7 @@ int doredis(int narg, char *args[])
         redis->injectValues(vfn, injectwss);
     } else if (cmd == "image") {
         LiveSet::numGen_f vfn = [] () -> long {
+            //static normal_distribution<long> sm(25*KB, 500*KB);
             static uniform_int_distribution<long> sm(25*KB, 500*KB);
             //static uniform_int_distribution<long> lg(250*KB, 5*MB);
             //static size_t o = 0UL;
@@ -738,8 +741,8 @@ int main(int narg, char *args[])
     }
 
     string cmd(args[1]);
-    long livewss = strtoll(args[2], NULL, 10) * MB;
-    long injectwss = strtoll(args[3], NULL, 10) * MB;
+    long livewss = strtoll(args[2], NULL, 10);
+    long injectwss = strtoll(args[3], NULL, 10);
 
     // Must allocate liveset on heap because freelist array is huge.
     // Additionally, do this outside of the purview of malloc.
@@ -778,17 +781,19 @@ int main(int narg, char *args[])
         liveset->drop(livewss * 0.9);
         liveset->injectValues(W8after, injectwss);
     } else if (cmd == "stdin") {
-        static deque<long> values;
-        // FIXME we need to account for this structure when evaluting
-        // local heap allocator performance (or even subtract all
-        // vmsize)
-        float mem = (float)getstat(STAT_VMSIZE);
-        sizes_on_stdin(values);
-        addl += ((float)getstat(STAT_VMSIZE) - mem);
-        LiveSet::numGen_f vfn = [&] () -> long {
-            if (values.empty()) throw out_of_range("");
-            long v = values.front();
-            values.pop_front();
+        // FIXME Some allocators preallocate memory during library
+        // initialization. Subtracting vmsize at this point would
+        // include this amount (incorrect measurements).
+        //float mem = (float)getstat(STAT_VMSIZE);
+        //addl += ((float)getstat(STAT_VMSIZE) - mem);
+        LiveSet::numGen_f vfn = [] () -> long {
+            string line;
+            long v;
+            if (!cin.eof() && cin >> line) {
+                v = strtoll(line.c_str(), NULL, 10);
+            } else {
+                throw out_of_range("no more stdin");
+            }
             return v;
         };
         liveset->injectValues(vfn, injectwss);
