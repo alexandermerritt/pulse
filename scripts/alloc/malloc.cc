@@ -817,9 +817,16 @@ int main(int narg, char *args[])
             else
                 return sm(gen);
         };
+        // http://vis-www.cs.umass.edu/lfw/
+        LiveSet::numGen_f LFW = [] () -> long {
+            const float lfw_min = 7648, lfw_max = 26450;
+            const float lfw_mean = 14234, lfw_sd = 2271;
+            static normal_distribution<float> d(lfw_mean, lfw_sd);
+            return d(gen);
+        };
         //liveset->injectValues(vfn1, injectwss);
         //liveset->injectValues(vfn2, injectwss);
-        liveset->injectValues(vfn3, injectwss);
+        liveset->injectValues(LFW, injectwss);
     } else {
         cerr << "Unknown workload to run." << endl;
         exit(1);
