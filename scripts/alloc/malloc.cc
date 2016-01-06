@@ -735,7 +735,7 @@ int main(int narg, char *args[])
     if (narg != 4) {
         cerr << "Usage: " << *args
             << " command live_wss inject_wss"
-            << endl << "\t(wss specified in MiB)"
+            << endl << "\t(wss specified in bytes)"
             << endl;
         exit(1);
     }
