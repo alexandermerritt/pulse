@@ -817,16 +817,37 @@ int main(int narg, char *args[])
             else
                 return sm(gen);
         };
+        //liveset->injectValues(vfn1, injectwss);
+        //liveset->injectValues(vfn2, injectwss);
+
         // http://vis-www.cs.umass.edu/lfw/
         LiveSet::numGen_f LFW = [] () -> long {
             const float lfw_min = 7648, lfw_max = 26450;
             const float lfw_mean = 14234, lfw_sd = 2271;
             static normal_distribution<float> d(lfw_mean, lfw_sd);
-            return d(gen);
+            long v = static_cast<long>(d(gen));
+            return v;
         };
-        //liveset->injectValues(vfn1, injectwss);
-        //liveset->injectValues(vfn2, injectwss);
-        liveset->injectValues(LFW, injectwss);
+        // decoded JPEG from LFW (all have same sizes)
+        LiveSet::numGen_f LFW2 = [] () -> long {
+            return 187500L;
+        };
+        //liveset->injectValues(LFW, injectwss);
+        //liveset->injectValues(LFW2, injectwss);
+
+        LiveSet::numGen_f LFWx = [] () -> long {
+            const float lfw_mean = 14234, lfw_sd = 2271;
+            static normal_distribution<float> d(lfw_mean, lfw_sd);
+            static uniform_real_distribution<float> g(1.1, 0.2);
+            static long i = 0L;
+            switch (i%2) {
+                case 0:
+                    return d(gen); // the image
+                default:
+                    return d(gen) * (187500L * g(gen)); // the analytics
+            }
+        };
+        liveset->injectValues(LFWx, injectwss);
     } else {
         cerr << "Unknown workload to run." << endl;
         exit(1);
