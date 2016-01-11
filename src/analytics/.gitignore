@@ -1,2 +1,4 @@
 cv/libcv.a
 cv/*.o
+cscope.*
+.ycm*
