@@ -1,3 +1,4 @@
+# Executed on HP's puff machine with OMP_NUM_THREADS=8
 img-1 1024 2048 x 1225
   decode time 47329
   scale time img-1_1024:data 28301

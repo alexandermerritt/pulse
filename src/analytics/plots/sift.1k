@@ -1,3 +1,4 @@
+# Executed on HP's puff machine with OMP_NUM_THREADS=8
 GET img-1_1024:data
   image size (enc)  100966
   decode time 6915
