@@ -1,0 +1,8072 @@
+GET img-1_1024:data
+  image size (enc)  100966
+  decode time 6915
+  image size (dec)  1883136
+  detecting    ...  1915
+  analysis time 1613479
+  sending feat size 2221400
+  hold time 1626581
+ok img-1
+GET img-2_1024:data
+  image size (enc)  109277
+  decode time 7447
+  image size (dec)  1993728
+  detecting    ...  2501
+  analysis time 2132682
+  sending feat size 2901160
+  hold time 2148423
+ok img-2
+GET img-3_1024:data
+  image size (enc)  71629
+  decode time 5198
+  image size (dec)  1615872
+  detecting    ...  1507
+  analysis time 1268706
+  sending feat size 1748120
+  hold time 1282954
+ok img-3
+GET img-4_1024:data
+  image size (enc)  98057
+  decode time 6307
+  image size (dec)  2098176
+  detecting    ...  3370
+  analysis time 2528089
+  sending feat size 3909200
+  hold time 2546278
+ok img-4
+GET img-5_1024:data
+  image size (enc)  166223
+  decode time 7820
+  image size (dec)  2098176
+  detecting    ...  8497
+  analysis time 5454946
+  sending feat size 9856520
+  hold time 5496788
+ok img-5
+GET img-6_1024:data
+  image size (enc)  221273
+  decode time 7654
+  image size (dec)  2098176
+  detecting    ...  5634
+  analysis time 3760606
+  sending feat size 6535440
+  hold time 3795719
+ok img-6
+GET img-7_1024:data
+  image size (enc)  179071
+  decode time 7794
+  image size (dec)  2098176
+  detecting    ...  4737
+  analysis time 3127014
+  sending feat size 5494920
+  hold time 3153746
+ok img-7
+GET img-8_1024:data
+  image size (enc)  96518
+  decode time 5957
+  image size (dec)  2095104
+  detecting    ...  646
+  analysis time 930457
+  sending feat size 749360
+  hold time 945743
+ok img-8
+GET img-9_1024:data
+  image size (enc)  208376
+  decode time 7521
+  image size (dec)  2098176
+  detecting    ...  16531
+  analysis time 9557013
+  sending feat size 19175960
+  hold time 9621236
+ok img-9
+GET img-10_1024:data
+  image size (enc)  59524
+  decode time 5420
+  image size (dec)  2098176
+  detecting    ...  863
+  analysis time 999935
+  sending feat size 1001080
+  hold time 1014796
+ok img-10
+GET img-11_1024:data
+  image size (enc)  144902
+  decode time 6429
+  image size (dec)  2098176
+  detecting    ...  2981
+  analysis time 2326284
+  sending feat size 3457960
+  hold time 2356798
+ok img-11
+GET img-12_1024:data
+  image size (enc)  105334
+  decode time 6936
+  image size (dec)  2101248
+  detecting    ...  2250
+  analysis time 1822911
+  sending feat size 2610000
+  hold time 1842050
+ok img-12
+GET img-13_1024:data
+  image size (enc)  53958
+  decode time 5604
+  image size (dec)  2101248
+  detecting    ...  965
+  analysis time 1096984
+  sending feat size 1119400
+  hold time 1112488
+ok img-13
+GET img-14_1024:data
+  image size (enc)  79508
+  decode time 5915
+  image size (dec)  1993728
+  detecting    ...  1611
+  analysis time 1426829
+  sending feat size 1868760
+  hold time 1444883
+ok img-14
+GET img-15_1024:data
+  image size (enc)  23171
+  decode time 4941
+  image size (dec)  1941504
+  detecting    ...  219
+  analysis time 583331
+  sending feat size 254040
+  hold time 596474
+ok img-15
+GET img-16_1024:data
+  image size (enc)  130097
+  decode time 7089
+  image size (dec)  2082816
+  detecting    ...  3107
+  analysis time 2339646
+  sending feat size 3604120
+  hold time 2362977
+ok img-16
+GET img-17_1024:data
+GET img-18_1024:data
+  image size (enc)  84581
+  decode time 6550
+  image size (dec)  2098176
+  detecting    ...  3259
+  analysis time 2430296
+  sending feat size 3780440
+  hold time 2453538
+ok img-18
+GET img-19_1024:data
+  image size (enc)  49742
+  decode time 5646
+  image size (dec)  2359296
+  detecting    ...  380
+  analysis time 801072
+  sending feat size 440800
+  hold time 816770
+ok img-19
+GET img-20_1024:data
+  image size (enc)  128794
+  decode time 6724
+  image size (dec)  2098176
+  detecting    ...  3015
+  analysis time 2234523
+  sending feat size 3497400
+  hold time 2258122
+ok img-20
+GET img-21_1024:data
+  image size (enc)  152044
+  decode time 6844
+  image size (dec)  2098176
+  detecting    ...  4064
+  analysis time 2763896
+  sending feat size 4714240
+  hold time 2786370
+ok img-21
+GET img-22_1024:data
+GET img-23_1024:data
+GET img-24_1024:data
+  image size (enc)  90310
+  decode time 6218
+  image size (dec)  2135040
+  detecting    ...  1747
+  analysis time 1623003
+  sending feat size 2026520
+  hold time 1641472
+ok img-24
+GET img-25_1024:data
+  image size (enc)  123017
+  decode time 6854
+  image size (dec)  2098176
+  detecting    ...  4505
+  analysis time 3187173
+  sending feat size 5225800
+  hold time 3220447
+ok img-25
+GET img-26_1024:data
+  image size (enc)  85409
+  decode time 7730
+  image size (dec)  2697216
+  detecting    ...  918
+  analysis time 1145005
+  sending feat size 1064880
+  hold time 1164750
+ok img-26
+GET img-27_1024:data
+GET img-28_1024:data
+  image size (enc)  120310
+  decode time 5963
+  image size (dec)  2088960
+  detecting    ...  3762
+  analysis time 2696882
+  sending feat size 4363920
+  hold time 2719225
+ok img-28
+GET img-29_1024:data
+  image size (enc)  56358
+  decode time 5637
+  image size (dec)  2322432
+  detecting    ...  295
+  analysis time 755881
+  sending feat size 342200
+  hold time 771286
+ok img-29
+GET img-30_1024:data
+  image size (enc)  116699
+  decode time 6770
+  image size (dec)  2098176
+  detecting    ...  3440
+  analysis time 2566154
+  sending feat size 3990400
+  hold time 2591163
+ok img-30
+GET img-31_1024:data
+  image size (enc)  119431
+  decode time 7571
+  image size (dec)  2359296
+  detecting    ...  3112
+  analysis time 2448952
+  sending feat size 3609920
+  hold time 2473847
+ok img-31
+GET img-32_1024:data
+  image size (enc)  107220
+  decode time 6337
+  image size (dec)  2098176
+  detecting    ...  1722
+  analysis time 1585113
+  sending feat size 1997520
+  hold time 1602696
+ok img-32
+GET img-33_1024:data
+  image size (enc)  120612
+  decode time 6394
+  image size (dec)  2098176
+  detecting    ...  2698
+  analysis time 2107150
+  sending feat size 3129680
+  hold time 2128555
+ok img-33
+GET img-34_1024:data
+  image size (enc)  102593
+  decode time 6113
+  image size (dec)  2098176
+  detecting    ...  2607
+  analysis time 2052062
+  sending feat size 3024120
+  hold time 2070973
+ok img-34
+GET img-35_1024:data
+  image size (enc)  151601
+  decode time 6337
+  image size (dec)  2082816
+  detecting    ...  5215
+  analysis time 3615360
+  sending feat size 6049400
+  hold time 3639788
+ok img-35
+GET img-36_1024:data
+  image size (enc)  47552
+  decode time 6100
+  image size (dec)  2359296
+  detecting    ...  530
+  analysis time 919792
+  sending feat size 614800
+  hold time 935968
+ok img-36
+GET img-37_1024:data
+  image size (enc)  212008
+  decode time 7230
+  image size (dec)  2095104
+  detecting    ...  4468
+  analysis time 3217332
+  sending feat size 5182880
+  hold time 3240873
+ok img-37
+GET img-38_1024:data
+  image size (enc)  69264
+  decode time 5125
+  image size (dec)  1769472
+  detecting    ...  2310
+  analysis time 1787106
+  sending feat size 2679600
+  hold time 1805030
+ok img-38
+GET img-39_1024:data
+  image size (enc)  209284
+  decode time 9327
+  image size (dec)  2359296
+  detecting    ...  8392
+  analysis time 5311598
+  sending feat size 9734720
+  hold time 5344778
+ok img-39
+GET img-40_1024:data
+  image size (enc)  148878
+  decode time 6518
+  image size (dec)  2101248
+  detecting    ...  1824
+  analysis time 1709985
+  sending feat size 2115840
+  hold time 1727959
+ok img-40
+GET img-41_1024:data
+  image size (enc)  170897
+  decode time 8037
+  image size (dec)  2092032
+  detecting    ...  5610
+  analysis time 3737216
+  sending feat size 6507600
+  hold time 3763719
+ok img-41
+GET img-42_1024:data
+  image size (enc)  184662
+  decode time 6958
+  image size (dec)  2098176
+  detecting    ...  3622
+  analysis time 2702217
+  sending feat size 4201520
+  hold time 2723979
+ok img-42
+GET img-43_1024:data
+  image size (enc)  308981
+  decode time 7587
+  image size (dec)  2515968
+  detecting    ...  3131
+  analysis time 2449297
+  sending feat size 3631960
+  hold time 2474843
+ok img-43
+GET img-44_1024:data
+  image size (enc)  116731
+  decode time 5450
+  image size (dec)  2070528
+  detecting    ...  1624
+  analysis time 1534055
+  sending feat size 1883840
+  hold time 1550718
+ok img-44
+GET img-45_1024:data
+  image size (enc)  110094
+  decode time 7700
+  image size (dec)  2359296
+  detecting    ...  2757
+  analysis time 2244777
+  sending feat size 3198120
+  hold time 2270037
+ok img-45
+GET img-46_1024:data
+  image size (enc)  137748
+  decode time 7486
+  image size (dec)  2095104
+  detecting    ...  3259
+  analysis time 2414709
+  sending feat size 3780440
+  hold time 2445874
+ok img-46
+GET img-47_1024:data
+  image size (enc)  233823
+  decode time 8980
+  image size (dec)  2359296
+  detecting    ...  6742
+  analysis time 4604399
+  sending feat size 7820720
+  hold time 4640822
+ok img-47
+GET img-48_1024:data
+GET img-49_1024:data
+  image size (enc)  198568
+  decode time 8564
+  image size (dec)  2098176
+  detecting    ...  5651
+  analysis time 3889672
+  sending feat size 6555160
+  hold time 3918204
+ok img-49
+GET img-50_1024:data
+  image size (enc)  194814
+  decode time 7536
+  image size (dec)  2098176
+  detecting    ...  5702
+  analysis time 3762415
+  sending feat size 6614320
+  hold time 3788915
+ok img-50
+GET img-51_1024:data
+  image size (enc)  173442
+  decode time 7297
+  image size (dec)  2098176
+  detecting    ...  4388
+  analysis time 3079445
+  sending feat size 5090080
+  hold time 3103997
+ok img-51
+GET img-52_1024:data
+  image size (enc)  146834
+  decode time 6515
+  image size (dec)  2098176
+  detecting    ...  4568
+  analysis time 3178843
+  sending feat size 5298880
+  hold time 3202410
+ok img-52
+GET img-53_1024:data
+  image size (enc)  116818
+  decode time 5770
+  image size (dec)  2088960
+  detecting    ...  907
+  analysis time 1000986
+  sending feat size 1052120
+  hold time 1016611
+ok img-53
+GET img-54_1024:data
+  image size (enc)  122996
+  decode time 7373
+  image size (dec)  2359296
+  detecting    ...  4348
+  analysis time 3033291
+  sending feat size 5043680
+  hold time 3057940
+ok img-54
+GET img-55_1024:data
+  image size (enc)  106363
+  decode time 6082
+  image size (dec)  2082816
+  detecting    ...  2479
+  analysis time 2142350
+  sending feat size 2875640
+  hold time 2161033
+ok img-55
+GET img-56_1024:data
+  image size (enc)  184918
+  decode time 7858
+  image size (dec)  2088960
+  detecting    ...  6653
+  analysis time 4318033
+  sending feat size 7717480
+  hold time 4352626
+ok img-56
+GET img-57_1024:data
+  image size (enc)  146728
+  decode time 6666
+  image size (dec)  2098176
+  detecting    ...  2716
+  analysis time 2127597
+  sending feat size 3150560
+  hold time 2149678
+ok img-57
+GET img-58_1024:data
+GET img-59_1024:data
+  image size (enc)  106363
+  decode time 7088
+  image size (dec)  2131968
+  detecting    ...  3215
+  analysis time 2376078
+  sending feat size 3729400
+  hold time 2399989
+ok img-59
+GET img-60_1024:data
+  image size (enc)  289833
+  decode time 11104
+  image size (dec)  2515968
+  detecting    ...  10240
+  analysis time 6607948
+  sending feat size 11878400
+  hold time 6647288
+ok img-60
+GET img-61_1024:data
+  image size (enc)  84162
+  decode time 6036
+  image size (dec)  2098176
+  detecting    ...  1474
+  analysis time 1480413
+  sending feat size 1709840
+  hold time 1497404
+ok img-61
+GET img-62_1024:data
+  image size (enc)  101366
+  decode time 5190
+  image size (dec)  1775616
+  detecting    ...  1322
+  analysis time 1207870
+  sending feat size 1533520
+  hold time 1222531
+ok img-62
+GET img-63_1024:data
+  image size (enc)  129981
+  decode time 7127
+  image size (dec)  2095104
+  detecting    ...  3593
+  analysis time 2669447
+  sending feat size 4167880
+  hold time 2695111
+ok img-63
+GET img-64_1024:data
+  image size (enc)  57009
+  decode time 5238
+  image size (dec)  1944576
+  detecting    ...  1454
+  analysis time 1295700
+  sending feat size 1686640
+  hold time 1311279
+ok img-64
+GET img-65_1024:data
+  image size (enc)  92889
+  decode time 5743
+  image size (dec)  2098176
+  detecting    ...  616
+  analysis time 912122
+  sending feat size 714560
+  hold time 927291
+ok img-65
+GET img-66_1024:data
+  image size (enc)  125996
+  decode time 6343
+  image size (dec)  2098176
+  detecting    ...  1414
+  analysis time 1358017
+  sending feat size 1640240
+  hold time 1375203
+ok img-66
+GET img-67_1024:data
+  image size (enc)  85732
+  decode time 4555
+  image size (dec)  1769472
+  detecting    ...  941
+  analysis time 1017800
+  sending feat size 1091560
+  hold time 1032218
+ok img-67
+GET img-68_1024:data
+  image size (enc)  62980
+  decode time 5748
+  image size (dec)  2098176
+  detecting    ...  1365
+  analysis time 1315102
+  sending feat size 1583400
+  hold time 1331585
+ok img-68
+GET img-69_1024:data
+  image size (enc)  67098
+  decode time 5407
+  image size (dec)  2098176
+  detecting    ...  339
+  analysis time 708963
+  sending feat size 393240
+  hold time 723303
+ok img-69
+GET img-70_1024:data
+  image size (enc)  83560
+  decode time 5425
+  image size (dec)  2088960
+  detecting    ...  290
+  analysis time 703095
+  sending feat size 336400
+  hold time 717321
+ok img-70
+GET img-71_1024:data
+  image size (enc)  108288
+  decode time 5968
+  image size (dec)  2098176
+  detecting    ...  1252
+  analysis time 1379385
+  sending feat size 1452320
+  hold time 1395886
+ok img-71
+GET img-72_1024:data
+  image size (enc)  99669
+  decode time 5917
+  image size (dec)  2178048
+  detecting    ...  992
+  analysis time 1176002
+  sending feat size 1150720
+  hold time 1192267
+ok img-72
+GET img-73_1024:data
+  image size (enc)  179291
+  decode time 7507
+  image size (dec)  2141184
+  detecting    ...  4509
+  analysis time 3151416
+  sending feat size 5230440
+  hold time 3176775
+ok img-73
+GET img-74_1024:data
+  image size (enc)  103338
+  decode time 5783
+  image size (dec)  2092032
+  detecting    ...  1137
+  analysis time 1325566
+  sending feat size 1318920
+  hold time 1341694
+ok img-74
+GET img-75_1024:data
+  image size (enc)  97600
+  decode time 6966
+  image size (dec)  2347008
+  detecting    ...  3357
+  analysis time 2535446
+  sending feat size 3894120
+  hold time 2560152
+ok img-75
+GET img-76_1024:data
+  image size (enc)  255741
+  decode time 10684
+  image size (dec)  3145728
+  detecting    ...  5708
+  analysis time 4324886
+  sending feat size 6621280
+  hold time 4360860
+ok img-76
+GET img-77_1024:data
+  image size (enc)  156536
+  decode time 7130
+  image size (dec)  1926144
+  detecting    ...  4974
+  analysis time 3249459
+  sending feat size 5769840
+  hold time 3273814
+ok img-77
+GET img-78_1024:data
+  image size (enc)  238102
+  decode time 9831
+  image size (dec)  2724864
+  detecting    ...  7658
+  analysis time 5164779
+  sending feat size 8883280
+  hold time 5200560
+ok img-78
+GET img-79_1024:data
+  image size (enc)  47502
+  decode time 4853
+  image size (dec)  1769472
+  detecting    ...  918
+  analysis time 997127
+  sending feat size 1064880
+  hold time 1010727
+ok img-79
+GET img-80_1024:data
+  image size (enc)  98393
+  decode time 4834
+  image size (dec)  1769472
+  detecting    ...  1350
+  analysis time 1225039
+  sending feat size 1566000
+  hold time 1239391
+ok img-80
+GET img-81_1024:data
+  image size (enc)  149634
+  decode time 6905
+  image size (dec)  2098176
+  detecting    ...  4900
+  analysis time 3245556
+  sending feat size 5684000
+  hold time 3271736
+ok img-81
+GET img-82_1024:data
+  image size (enc)  98435
+  decode time 6612
+  image size (dec)  2187264
+  detecting    ...  1489
+  analysis time 1459930
+  sending feat size 1727240
+  hold time 1477855
+ok img-82
+GET img-83_1024:data
+  image size (enc)  219737
+  decode time 8102
+  image size (dec)  2098176
+  detecting    ...  8792
+  analysis time 5296631
+  sending feat size 10198720
+  hold time 5341214
+ok img-83
+GET img-84_1024:data
+  image size (enc)  113748
+  decode time 7204
+  image size (dec)  2088960
+  detecting    ...  2387
+  analysis time 1898118
+  sending feat size 2768920
+  hold time 1917902
+ok img-84
+GET img-85_1024:data
+  image size (enc)  155279
+  decode time 6611
+  image size (dec)  2098176
+  detecting    ...  2745
+  analysis time 2203253
+  sending feat size 3184200
+  hold time 2225153
+ok img-85
+GET img-86_1024:data
+  image size (enc)  151953
+  decode time 7897
+  image size (dec)  2359296
+  detecting    ...  4925
+  analysis time 3375164
+  sending feat size 5713000
+  hold time 3403192
+ok img-86
+GET img-87_1024:data
+GET img-88_1024:data
+  image size (enc)  167466
+  decode time 6763
+  image size (dec)  2101248
+  detecting    ...  3224
+  analysis time 2554629
+  sending feat size 3739840
+  hold time 2577914
+ok img-88
+GET img-89_1024:data
+  image size (enc)  114575
+  decode time 6884
+  image size (dec)  2098176
+  detecting    ...  1414
+  analysis time 1348512
+  sending feat size 1640240
+  hold time 1366240
+ok img-89
+GET img-90_1024:data
+  image size (enc)  30026
+  decode time 5061
+  image size (dec)  2098176
+  detecting    ...  266
+  analysis time 639630
+  sending feat size 308560
+  hold time 653525
+ok img-90
+GET img-91_1024:data
+GET img-92_1024:data
+GET img-93_1024:data
+  image size (enc)  83976
+  decode time 6345
+  image size (dec)  2095104
+  detecting    ...  2596
+  analysis time 1913180
+  sending feat size 3011360
+  hold time 1933601
+ok img-93
+GET img-94_1024:data
+GET img-95_1024:data
+  image size (enc)  126380
+  decode time 7373
+  image size (dec)  2359296
+  detecting    ...  2593
+  analysis time 2142625
+  sending feat size 3007880
+  hold time 2163961
+ok img-95
+GET img-96_1024:data
+  image size (enc)  95020
+  decode time 6709
+  image size (dec)  2144256
+  detecting    ...  3220
+  analysis time 2343149
+  sending feat size 3735200
+  hold time 2367753
+ok img-96
+GET img-97_1024:data
+  image size (enc)  207169
+  decode time 7767
+  image size (dec)  2098176
+  detecting    ...  8787
+  analysis time 5444248
+  sending feat size 10192920
+  hold time 5476237
+ok img-97
+GET img-98_1024:data
+  image size (enc)  223253
+  decode time 8426
+  image size (dec)  2098176
+  detecting    ...  7177
+  analysis time 4767635
+  sending feat size 8325320
+  hold time 4804190
+ok img-98
+GET img-99_1024:data
+  image size (enc)  141647
+  decode time 7132
+  image size (dec)  2088960
+  detecting    ...  3908
+  analysis time 2744887
+  sending feat size 4533280
+  hold time 2767446
+ok img-99
+GET img-100_1024:data
+  image size (enc)  176900
+  decode time 7032
+  image size (dec)  2098176
+  detecting    ...  3825
+  analysis time 2840718
+  sending feat size 4437000
+  hold time 2864603
+ok img-100
+GET img-101_1024:data
+  image size (enc)  143423
+  decode time 6952
+  image size (dec)  2141184
+  detecting    ...  2656
+  analysis time 2169837
+  sending feat size 3080960
+  hold time 2190083
+ok img-101
+GET img-102_1024:data
+  image size (enc)  114810
+  decode time 6469
+  image size (dec)  2092032
+  detecting    ...  2945
+  analysis time 2202851
+  sending feat size 3416200
+  hold time 2226077
+ok img-102
+GET img-103_1024:data
+  image size (enc)  113403
+  decode time 6062
+  image size (dec)  2098176
+  detecting    ...  2415
+  analysis time 1942377
+  sending feat size 2801400
+  hold time 1961184
+ok img-103
+GET img-104_1024:data
+  image size (enc)  122633
+  decode time 7909
+  image size (dec)  2651136
+  detecting    ...  8678
+  analysis time 5232889
+  sending feat size 10066480
+  hold time 5267464
+ok img-104
+GET img-105_1024:data
+  image size (enc)  96058
+  decode time 4245
+  image size (dec)  1434624
+  detecting    ...  3430
+  analysis time 2225958
+  sending feat size 3978800
+  hold time 2245053
+ok img-105
+GET img-106_1024:data
+  image size (enc)  132162
+  decode time 7618
+  image size (dec)  2095104
+  detecting    ...  4011
+  analysis time 2885844
+  sending feat size 4652760
+  hold time 2909935
+ok img-106
+GET img-107_1024:data
+  image size (enc)  145557
+  decode time 6522
+  image size (dec)  2098176
+  detecting    ...  2289
+  analysis time 1980727
+  sending feat size 2655240
+  hold time 1999692
+ok img-107
+GET img-108_1024:data
+  image size (enc)  121462
+  decode time 6831
+  image size (dec)  2098176
+  detecting    ...  3031
+  analysis time 2362651
+  sending feat size 3515960
+  hold time 2386490
+ok img-108
+GET img-109_1024:data
+  image size (enc)  120995
+  decode time 6570
+  image size (dec)  2454528
+  detecting    ...  2226
+  analysis time 1991301
+  sending feat size 2582160
+  hold time 2011490
+ok img-109
+GET img-110_1024:data
+  image size (enc)  73295
+  decode time 6736
+  image size (dec)  2515968
+  detecting    ...  520
+  analysis time 976728
+  sending feat size 603200
+  hold time 994306
+ok img-110
+GET img-111_1024:data
+  image size (enc)  70423
+  decode time 6680
+  image size (dec)  2515968
+  detecting    ...  441
+  analysis time 840018
+  sending feat size 511560
+  hold time 857365
+ok img-111
+GET img-112_1024:data
+GET img-113_1024:data
+  image size (enc)  98993
+  decode time 5933
+  image size (dec)  1920000
+  detecting    ...  2454
+  analysis time 1978998
+  sending feat size 2846640
+  hold time 1998142
+ok img-113
+GET img-114_1024:data
+  image size (enc)  283161
+  decode time 8258
+  image size (dec)  1886208
+  detecting    ...  8189
+  analysis time 5208873
+  sending feat size 9499240
+  hold time 5238327
+ok img-114
+GET img-115_1024:data
+  image size (enc)  153537
+  decode time 10245
+  image size (dec)  3145728
+  detecting    ...  3777
+  analysis time 2998170
+  sending feat size 4381320
+  hold time 3019941
+ok img-115
+GET img-116_1024:data
+  image size (enc)  101732
+  decode time 6886
+  image size (dec)  2098176
+  detecting    ...  1870
+  analysis time 1626003
+  sending feat size 2169200
+  hold time 1645667
+ok img-116
+GET img-117_1024:data
+  image size (enc)  151459
+  decode time 6443
+  image size (dec)  2101248
+  detecting    ...  2603
+  analysis time 2196359
+  sending feat size 3019480
+  hold time 2215852
+ok img-117
+GET img-118_1024:data
+  image size (enc)  102230
+  decode time 6083
+  image size (dec)  2098176
+  detecting    ...  1934
+  analysis time 1679766
+  sending feat size 2243440
+  hold time 1697629
+ok img-118
+GET img-119_1024:data
+  image size (enc)  171248
+  decode time 7006
+  image size (dec)  2098176
+  detecting    ...  5932
+  analysis time 3734522
+  sending feat size 6881120
+  hold time 3762075
+ok img-119
+GET img-120_1024:data
+GET img-121_1024:data
+  image size (enc)  53786
+  decode time 4524
+  image size (dec)  1769472
+  detecting    ...  92
+  analysis time 464734
+  sending feat size 106720
+  hold time 476631
+ok img-121
+GET img-122_1024:data
+  image size (enc)  179288
+  decode time 7053
+  image size (dec)  2098176
+  detecting    ...  4805
+  analysis time 3383247
+  sending feat size 5573800
+  hold time 3408006
+ok img-122
+GET img-123_1024:data
+  image size (enc)  190449
+  decode time 7929
+  image size (dec)  2098176
+  detecting    ...  4371
+  analysis time 3088549
+  sending feat size 5070360
+  hold time 3114423
+ok img-123
+GET img-124_1024:data
+  image size (enc)  119463
+  decode time 6801
+  image size (dec)  2125824
+  detecting    ...  3059
+  analysis time 2323965
+  sending feat size 3548440
+  hold time 2347261
+ok img-124
+GET img-125_1024:data
+GET img-126_1024:data
+  image size (enc)  66855
+  decode time 6731
+  image size (dec)  2359296
+  detecting    ...  813
+  analysis time 1058947
+  sending feat size 943080
+  hold time 1076716
+ok img-126
+GET img-127_1024:data
+  image size (enc)  132216
+  decode time 6562
+  image size (dec)  2098176
+  detecting    ...  1645
+  analysis time 1615508
+  sending feat size 1908200
+  hold time 1635163
+ok img-127
+GET img-128_1024:data
+  image size (enc)  114184
+  decode time 6336
+  image size (dec)  2098176
+  detecting    ...  2765
+  analysis time 1957109
+  sending feat size 3207400
+  hold time 1979048
+ok img-128
+GET img-129_1024:data
+GET img-130_1024:data
+  image size (enc)  164108
+  decode time 7015
+  image size (dec)  1689600
+  detecting    ...  4702
+  analysis time 3250921
+  sending feat size 5454320
+  hold time 3282459
+ok img-130
+GET img-131_1024:data
+  image size (enc)  208972
+  decode time 8107
+  image size (dec)  2178048
+  detecting    ...  5129
+  analysis time 3542176
+  sending feat size 5949640
+  hold time 3568773
+ok img-131
+GET img-132_1024:data
+  image size (enc)  114122
+  decode time 6541
+  image size (dec)  2098176
+  detecting    ...  2380
+  analysis time 1927527
+  sending feat size 2760800
+  hold time 1947406
+ok img-132
+GET img-133_1024:data
+  image size (enc)  75855
+  decode time 6069
+  image size (dec)  2098176
+  detecting    ...  2029
+  analysis time 1777161
+  sending feat size 2353640
+  hold time 1795234
+ok img-133
+GET img-134_1024:data
+  image size (enc)  70606
+  decode time 5075
+  image size (dec)  1772544
+  detecting    ...  1797
+  analysis time 1584347
+  sending feat size 2084520
+  hold time 1599804
+ok img-134
+GET img-135_1024:data
+  image size (enc)  96080
+  decode time 6060
+  image size (dec)  2098176
+  detecting    ...  2091
+  analysis time 1784986
+  sending feat size 2425560
+  hold time 1804241
+ok img-135
+GET img-136_1024:data
+  image size (enc)  166635
+  decode time 7346
+  image size (dec)  2098176
+  detecting    ...  4925
+  analysis time 3392160
+  sending feat size 5713000
+  hold time 3422947
+ok img-136
+GET img-137_1024:data
+  image size (enc)  151409
+  decode time 6845
+  image size (dec)  2098176
+  detecting    ...  3343
+  analysis time 2452968
+  sending feat size 3877880
+  hold time 2476739
+ok img-137
+GET img-138_1024:data
+  image size (enc)  81783
+  decode time 6247
+  image size (dec)  2092032
+  detecting    ...  1897
+  analysis time 1679701
+  sending feat size 2200520
+  hold time 1697689
+ok img-138
+GET img-139_1024:data
+  image size (enc)  148192
+  decode time 6521
+  image size (dec)  2098176
+  detecting    ...  4326
+  analysis time 3148074
+  sending feat size 5018160
+  hold time 3171908
+ok img-139
+GET img-140_1024:data
+  image size (enc)  161233
+  decode time 7017
+  image size (dec)  2098176
+  detecting    ...  3812
+  analysis time 2808830
+  sending feat size 4421920
+  hold time 2831210
+ok img-140
+GET img-141_1024:data
+  image size (enc)  151614
+  decode time 7384
+  image size (dec)  2098176
+  detecting    ...  4067
+  analysis time 2941040
+  sending feat size 4717720
+  hold time 2965307
+ok img-141
+GET img-142_1024:data
+  image size (enc)  148705
+  decode time 7611
+  image size (dec)  2098176
+  detecting    ...  2912
+  analysis time 2311766
+  sending feat size 3377920
+  hold time 2333965
+ok img-142
+GET img-143_1024:data
+  image size (enc)  236154
+  decode time 5476
+  image size (dec)  2098176
+  detecting    ...  655
+  analysis time 936935
+  sending feat size 759800
+  hold time 951952
+ok img-143
+GET img-144_1024:data
+GET img-145_1024:data
+  image size (enc)  122244
+  decode time 6798
+  image size (dec)  2098176
+  detecting    ...  3984
+  analysis time 2950198
+  sending feat size 4621440
+  hold time 2972685
+ok img-145
+GET img-146_1024:data
+  image size (enc)  190771
+  decode time 9031
+  image size (dec)  2313216
+  detecting    ...  4143
+  analysis time 3160916
+  sending feat size 4805880
+  hold time 3187891
+ok img-146
+GET img-147_1024:data
+  image size (enc)  103511
+  decode time 5900
+  image size (dec)  1766400
+  detecting    ...  3258
+  analysis time 2280911
+  sending feat size 3779280
+  hold time 2302206
+ok img-147
+GET img-148_1024:data
+  image size (enc)  61356
+  decode time 5498
+  image size (dec)  2092032
+  detecting    ...  315
+  analysis time 888627
+  sending feat size 365400
+  hold time 905725
+ok img-148
+GET img-149_1024:data
+  image size (enc)  40930
+  decode time 6369
+  image size (dec)  1827840
+  detecting    ...  494
+  analysis time 1078282
+  sending feat size 573040
+  hold time 1089351
+ok img-149
+GET img-150_1024:data
+  image size (enc)  88034
+  decode time 9752
+  image size (dec)  2125824
+  detecting    ...  1558
+  analysis time 1862154
+  sending feat size 1807280
+  hold time 1883165
+ok img-150
+GET img-151_1024:data
+  image size (enc)  218887
+  decode time 9275
+  image size (dec)  2356224
+  detecting    ...  7836
+  analysis time 5396659
+  sending feat size 9089760
+  hold time 5429104
+ok img-151
+GET img-152_1024:data
+  image size (enc)  183608
+  decode time 6853
+  image size (dec)  2098176
+  detecting    ...  3743
+  analysis time 2778905
+  sending feat size 4341880
+  hold time 2800940
+ok img-152
+GET img-153_1024:data
+  image size (enc)  120130
+  decode time 6795
+  image size (dec)  2098176
+  detecting    ...  5135
+  analysis time 3453924
+  sending feat size 5956600
+  hold time 3479817
+ok img-153
+GET img-154_1024:data
+  image size (enc)  110816
+  decode time 6599
+  image size (dec)  2098176
+  detecting    ...  3729
+  analysis time 2662445
+  sending feat size 4325640
+  hold time 2684214
+ok img-154
+GET img-155_1024:data
+  image size (enc)  144982
+  decode time 9831
+  image size (dec)  3145728
+  detecting    ...  4888
+  analysis time 3728279
+  sending feat size 5670080
+  hold time 3761291
+ok img-155
+GET img-156_1024:data
+  image size (enc)  141767
+  decode time 6514
+  image size (dec)  2098176
+  detecting    ...  3077
+  analysis time 2343883
+  sending feat size 3569320
+  hold time 2366515
+ok img-156
+GET img-157_1024:data
+  image size (enc)  94349
+  decode time 6345
+  image size (dec)  2088960
+  detecting    ...  1632
+  analysis time 1540396
+  sending feat size 1893120
+  hold time 1558002
+ok img-157
+GET img-158_1024:data
+  image size (enc)  92709
+  decode time 7077
+  image size (dec)  2359296
+  detecting    ...  1671
+  analysis time 1584022
+  sending feat size 1938360
+  hold time 1604441
+ok img-158
+GET img-159_1024:data
+  image size (enc)  105903
+  decode time 6060
+  image size (dec)  1870848
+  detecting    ...  2414
+  analysis time 1960502
+  sending feat size 2800240
+  hold time 1978453
+ok img-159
+GET img-160_1024:data
+  image size (enc)  194378
+  decode time 7729
+  image size (dec)  2098176
+  detecting    ...  8802
+  analysis time 5395894
+  sending feat size 10210320
+  hold time 5427980
+ok img-160
+GET img-161_1024:data
+  image size (enc)  128865
+  decode time 6888
+  image size (dec)  2098176
+  detecting    ...  5446
+  analysis time 3699443
+  sending feat size 6317360
+  hold time 3730619
+ok img-161
+GET img-162_1024:data
+  image size (enc)  233030
+  decode time 8844
+  image size (dec)  2098176
+  detecting    ...  4552
+  analysis time 3317381
+  sending feat size 5280320
+  hold time 3344769
+ok img-162
+GET img-163_1024:data
+  image size (enc)  142359
+  decode time 7992
+  image size (dec)  2359296
+  detecting    ...  1970
+  analysis time 1818259
+  sending feat size 2285200
+  hold time 1838187
+ok img-163
+GET img-164_1024:data
+  image size (enc)  163036
+  decode time 6350
+  image size (dec)  1886208
+  detecting    ...  4058
+  analysis time 2712604
+  sending feat size 4707280
+  hold time 2735042
+ok img-164
+GET img-165_1024:data
+GET img-166_1024:data
+  image size (enc)  181386
+  decode time 7045
+  image size (dec)  2104320
+  detecting    ...  5236
+  analysis time 3754897
+  sending feat size 6073760
+  hold time 3780177
+ok img-166
+GET img-167_1024:data
+  image size (enc)  39603
+  decode time 5470
+  image size (dec)  2095104
+  detecting    ...  873
+  analysis time 964994
+  sending feat size 1012680
+  hold time 981869
+ok img-167
+GET img-168_1024:data
+  image size (enc)  120799
+  decode time 6577
+  image size (dec)  2082816
+  detecting    ...  2853
+  analysis time 2190446
+  sending feat size 3309480
+  hold time 2207345
+ok img-168
+GET img-169_1024:data
+  image size (enc)  127139
+  decode time 6902
+  image size (dec)  2098176
+  detecting    ...  1756
+  analysis time 1541264
+  sending feat size 2036960
+  hold time 1559637
+ok img-169
+GET img-170_1024:data
+  image size (enc)  32337
+  decode time 4568
+  image size (dec)  1769472
+  detecting    ...  315
+  analysis time 601229
+  sending feat size 365400
+  hold time 609247
+ok img-170
+GET img-171_1024:data
+  image size (enc)  233957
+  decode time 8653
+  image size (dec)  2098176
+  detecting    ...  7536
+  analysis time 4933043
+  sending feat size 8741760
+  hold time 4976624
+ok img-171
+GET img-172_1024:data
+  image size (enc)  170189
+  decode time 8021
+  image size (dec)  2095104
+  detecting    ...  4600
+  analysis time 3317799
+  sending feat size 5336000
+  hold time 3343292
+ok img-172
+GET img-173_1024:data
+  image size (enc)  99152
+  decode time 7844
+  image size (dec)  2617344
+  detecting    ...  3100
+  analysis time 2475683
+  sending feat size 3596000
+  hold time 2501919
+ok img-173
+GET img-174_1024:data
+GET img-175_1024:data
+  image size (enc)  239751
+  decode time 9349
+  image size (dec)  2359296
+  detecting    ...  10609
+  analysis time 6764938
+  sending feat size 12306440
+  hold time 6801281
+ok img-175
+GET img-176_1024:data
+  image size (enc)  164338
+  decode time 7663
+  image size (dec)  2098176
+  detecting    ...  2690
+  analysis time 2261985
+  sending feat size 3120400
+  hold time 2282857
+ok img-176
+GET img-177_1024:data
+  image size (enc)  79909
+  decode time 6100
+  image size (dec)  2098176
+  detecting    ...  2158
+  analysis time 1771895
+  sending feat size 2503280
+  hold time 1790228
+ok img-177
+GET img-178_1024:data
+  image size (enc)  147663
+  decode time 6202
+  image size (dec)  2098176
+  detecting    ...  3308
+  analysis time 2441568
+  sending feat size 3837280
+  hold time 2472185
+ok img-178
+GET img-179_1024:data
+GET img-180_1024:data
+  image size (enc)  50078
+  decode time 5871
+  image size (dec)  2095104
+  detecting    ...  350
+  analysis time 783719
+  sending feat size 406000
+  hold time 798600
+ok img-180
+GET img-181_1024:data
+  image size (enc)  133691
+  decode time 7162
+  image size (dec)  2098176
+  detecting    ...  3891
+  analysis time 2857136
+  sending feat size 4513560
+  hold time 2879739
+ok img-181
+GET img-182_1024:data
+  image size (enc)  53815
+  decode time 4919
+  image size (dec)  1815552
+  detecting    ...  400
+  analysis time 670570
+  sending feat size 464000
+  hold time 678945
+ok img-182
+GET img-183_1024:data
+  image size (enc)  175873
+  decode time 8106
+  image size (dec)  2095104
+  detecting    ...  2763
+  analysis time 2157889
+  sending feat size 3205080
+  hold time 2183116
+ok img-183
+GET img-184_1024:data
+  image size (enc)  114547
+  decode time 6337
+  image size (dec)  2098176
+  detecting    ...  2682
+  analysis time 2116372
+  sending feat size 3111120
+  hold time 2135932
+ok img-184
+GET img-185_1024:data
+  image size (enc)  136051
+  decode time 7566
+  image size (dec)  2236416
+  detecting    ...  7155
+  analysis time 4844591
+  sending feat size 8299800
+  hold time 4880694
+ok img-185
+GET img-186_1024:data
+  image size (enc)  147243
+  decode time 6531
+  image size (dec)  2088960
+  detecting    ...  3587
+  analysis time 2625006
+  sending feat size 4160920
+  hold time 2648985
+ok img-186
+GET img-187_1024:data
+  image size (enc)  118109
+  decode time 6077
+  image size (dec)  2101248
+  detecting    ...  1323
+  analysis time 1291516
+  sending feat size 1534680
+  hold time 1308195
+ok img-187
+GET img-188_1024:data
+  image size (enc)  135747
+  decode time 7674
+  image size (dec)  2359296
+  detecting    ...  4495
+  analysis time 3273415
+  sending feat size 5214200
+  hold time 3299469
+ok img-188
+GET img-189_1024:data
+GET img-190_1024:data
+  image size (enc)  147908
+  decode time 6256
+  image size (dec)  2082816
+  detecting    ...  2522
+  analysis time 2015303
+  sending feat size 2925520
+  hold time 2034448
+ok img-190
+GET img-191_1024:data
+  image size (enc)  118420
+  decode time 7082
+  image size (dec)  2098176
+  detecting    ...  3502
+  analysis time 2594158
+  sending feat size 4062320
+  hold time 2618548
+ok img-191
+GET img-192_1024:data
+  image size (enc)  166216
+  decode time 6805
+  image size (dec)  2104320
+  detecting    ...  5048
+  analysis time 3277820
+  sending feat size 5855680
+  hold time 3302478
+ok img-192
+GET img-193_1024:data
+GET img-194_1024:data
+  image size (enc)  225610
+  decode time 7520
+  image size (dec)  2088960
+  detecting    ...  7298
+  analysis time 4831429
+  sending feat size 8465680
+  hold time 4861103
+ok img-194
+GET img-195_1024:data
+  image size (enc)  147110
+  decode time 6508
+  image size (dec)  2088960
+  detecting    ...  2500
+  analysis time 1996550
+  sending feat size 2900000
+  hold time 2015955
+ok img-195
+GET img-196_1024:data
+  image size (enc)  126930
+  decode time 6541
+  image size (dec)  2098176
+  detecting    ...  1667
+  analysis time 1486795
+  sending feat size 1933720
+  hold time 1504718
+ok img-196
+GET img-197_1024:data
+  image size (enc)  95685
+  decode time 9044
+  image size (dec)  3145728
+  detecting    ...  2036
+  analysis time 1958659
+  sending feat size 2361760
+  hold time 1984751
+ok img-197
+GET img-198_1024:data
+  image size (enc)  103164
+  decode time 5902
+  image size (dec)  2098176
+  detecting    ...  1990
+  analysis time 1695578
+  sending feat size 2308400
+  hold time 1713439
+ok img-198
+GET img-199_1024:data
+  image size (enc)  185887
+  decode time 7525
+  image size (dec)  2082816
+  detecting    ...  5788
+  analysis time 3762643
+  sending feat size 6714080
+  hold time 3790366
+ok img-199
+GET img-200_1024:data
+  image size (enc)  95827
+  decode time 7727
+  image size (dec)  2623488
+  detecting    ...  2820
+  analysis time 2368475
+  sending feat size 3271200
+  hold time 2393936
+ok img-200
+GET img-201_1024:data
+  image size (enc)  106648
+  decode time 8667
+  image size (dec)  2970624
+  detecting    ...  515
+  analysis time 1041907
+  sending feat size 597400
+  hold time 1063532
+ok img-201
+GET img-202_1024:data
+  image size (enc)  101854
+  decode time 6271
+  image size (dec)  2107392
+  detecting    ...  1452
+  analysis time 1420991
+  sending feat size 1684320
+  hold time 1438105
+ok img-202
+GET img-203_1024:data
+GET img-204_1024:data
+  image size (enc)  73717
+  decode time 6246
+  image size (dec)  2095104
+  detecting    ...  2008
+  analysis time 1631886
+  sending feat size 2329280
+  hold time 1651046
+ok img-204
+GET img-205_1024:data
+  image size (enc)  108082
+  decode time 6271
+  image size (dec)  2098176
+  detecting    ...  2109
+  analysis time 1768449
+  sending feat size 2446440
+  hold time 1786882
+ok img-205
+GET img-206_1024:data
+  image size (enc)  71294
+  decode time 6798
+  image size (dec)  2515968
+  detecting    ...  279
+  analysis time 777802
+  sending feat size 323640
+  hold time 795034
+ok img-206
+GET img-207_1024:data
+  image size (enc)  161476
+  decode time 7017
+  image size (dec)  2098176
+  detecting    ...  4563
+  analysis time 3253765
+  sending feat size 5293080
+  hold time 3279207
+ok img-207
+GET img-208_1024:data
+  image size (enc)  85225
+  decode time 6187
+  image size (dec)  2098176
+  detecting    ...  1206
+  analysis time 1246628
+  sending feat size 1398960
+  hold time 1263522
+ok img-208
+GET img-209_1024:data
+  image size (enc)  79345
+  decode time 5831
+  image size (dec)  1766400
+  detecting    ...  1754
+  analysis time 1437810
+  sending feat size 2034640
+  hold time 1454241
+ok img-209
+GET img-210_1024:data
+  image size (enc)  79532
+  decode time 5234
+  image size (dec)  1769472
+  detecting    ...  792
+  analysis time 901133
+  sending feat size 918720
+  hold time 910556
+ok img-210
+GET img-211_1024:data
+  image size (enc)  168219
+  decode time 7987
+  image size (dec)  2239488
+  detecting    ...  2823
+  analysis time 2274785
+  sending feat size 3274680
+  hold time 2300001
+ok img-211
+GET img-212_1024:data
+  image size (enc)  65638
+  decode time 5201
+  image size (dec)  2082816
+  detecting    ...  777
+  analysis time 954335
+  sending feat size 901320
+  hold time 969527
+ok img-212
+GET img-213_1024:data
+  image size (enc)  163084
+  decode time 7118
+  image size (dec)  2098176
+  detecting    ...  5091
+  analysis time 3586094
+  sending feat size 5905560
+  hold time 3612233
+ok img-213
+GET img-214_1024:data
+  image size (enc)  202391
+  decode time 9388
+  image size (dec)  2515968
+  detecting    ...  6174
+  analysis time 4410029
+  sending feat size 7161840
+  hold time 4442247
+ok img-214
+GET img-215_1024:data
+GET img-216_1024:data
+  image size (enc)  150407
+  decode time 6497
+  image size (dec)  2101248
+  detecting    ...  3657
+  analysis time 2697252
+  sending feat size 4242120
+  hold time 2718784
+ok img-216
+GET img-217_1024:data
+  image size (enc)  294302
+  decode time 12146
+  image size (dec)  3145728
+  detecting    ...  7846
+  analysis time 5681220
+  sending feat size 9101360
+  hold time 5720500
+ok img-217
+GET img-218_1024:data
+  image size (enc)  292498
+  decode time 9633
+  image size (dec)  2110464
+  detecting    ...  6956
+  analysis time 4559870
+  sending feat size 8068960
+  hold time 4597652
+ok img-218
+GET img-219_1024:data
+  image size (enc)  28565
+  decode time 5004
+  image size (dec)  2098176
+  detecting    ...  96
+  analysis time 548584
+  sending feat size 111360
+  hold time 562572
+ok img-219
+GET img-220_1024:data
+  image size (enc)  112397
+  decode time 7570
+  image size (dec)  2248704
+  detecting    ...  4252
+  analysis time 2935104
+  sending feat size 4932320
+  hold time 2959397
+ok img-220
+GET img-221_1024:data
+  image size (enc)  164244
+  decode time 7449
+  image size (dec)  2095104
+  detecting    ...  5326
+  analysis time 3633060
+  sending feat size 6178160
+  hold time 3660496
+ok img-221
+GET img-222_1024:data
+  image size (enc)  83340
+  decode time 6050
+  image size (dec)  2245632
+  detecting    ...  744
+  analysis time 1023390
+  sending feat size 863040
+  hold time 1039682
+ok img-222
+GET img-223_1024:data
+  image size (enc)  279772
+  decode time 8478
+  image size (dec)  2098176
+  detecting    ...  9745
+  analysis time 5930005
+  sending feat size 11304200
+  hold time 5964424
+ok img-223
+GET img-224_1024:data
+  image size (enc)  113566
+  decode time 8839
+  image size (dec)  3145728
+  detecting    ...  1614
+  analysis time 1806558
+  sending feat size 1872240
+  hold time 1830512
+ok img-224
+GET img-225_1024:data
+  image size (enc)  103974
+  decode time 6336
+  image size (dec)  2082816
+  detecting    ...  1722
+  analysis time 1570561
+  sending feat size 1997520
+  hold time 1588322
+ok img-225
+GET img-226_1024:data
+  image size (enc)  333700
+  decode time 12511
+  image size (dec)  2743296
+  detecting    ...  3525
+  analysis time 3064528
+  sending feat size 4089000
+  hold time 3097161
+ok img-226
+GET img-227_1024:data
+  image size (enc)  132031
+  decode time 7524
+  image size (dec)  2098176
+  detecting    ...  2711
+  analysis time 2097828
+  sending feat size 3144760
+  hold time 2120628
+ok img-227
+GET img-228_1024:data
+  image size (enc)  127962
+  decode time 6838
+  image size (dec)  2098176
+  detecting    ...  5627
+  analysis time 3859495
+  sending feat size 6527320
+  hold time 3886887
+ok img-228
+GET img-229_1024:data
+  image size (enc)  362449
+  decode time 9984
+  image size (dec)  2098176
+  detecting    ...  4810
+  analysis time 3565056
+  sending feat size 5579600
+  hold time 3592542
+ok img-229
+GET img-230_1024:data
+  image size (enc)  55425
+  decode time 5279
+  image size (dec)  2098176
+  detecting    ...  120
+  analysis time 578577
+  sending feat size 139200
+  hold time 592529
+ok img-230
+GET img-231_1024:data
+  image size (enc)  106704
+  decode time 8079
+  image size (dec)  3145728
+  detecting    ...  1056
+  analysis time 1351322
+  sending feat size 1224960
+  hold time 1366162
+ok img-231
+GET img-232_1024:data
+  image size (enc)  71544
+  decode time 4072
+  image size (dec)  1287168
+  detecting    ...  1612
+  analysis time 1204655
+  sending feat size 1869920
+  hold time 1217084
+ok img-232
+GET img-233_1024:data
+  image size (enc)  117703
+  decode time 7330
+  image size (dec)  2178048
+  detecting    ...  4802
+  analysis time 3353935
+  sending feat size 5570320
+  hold time 3387969
+ok img-233
+GET img-234_1024:data
+  image size (enc)  136220
+  decode time 6676
+  image size (dec)  2098176
+  detecting    ...  3004
+  analysis time 2346868
+  sending feat size 3484640
+  hold time 2364238
+ok img-234
+GET img-235_1024:data
+  image size (enc)  73008
+  decode time 6626
+  image size (dec)  2098176
+  detecting    ...  431
+  analysis time 780594
+  sending feat size 499960
+  hold time 796348
+ok img-235
+GET img-236_1024:data
+GET img-237_1024:data
+  image size (enc)  123660
+  decode time 6262
+  image size (dec)  2098176
+  detecting    ...  1177
+  analysis time 1305250
+  sending feat size 1365320
+  hold time 1321992
+ok img-237
+GET img-238_1024:data
+  image size (enc)  169620
+  decode time 6165
+  image size (dec)  1714176
+  detecting    ...  5281
+  analysis time 3492543
+  sending feat size 6125960
+  hold time 3515585
+ok img-238
+GET img-239_1024:data
+  image size (enc)  51270
+  decode time 5704
+  image size (dec)  2110464
+  detecting    ...  1470
+  analysis time 1356851
+  sending feat size 1705200
+  hold time 1373681
+ok img-239
+GET img-240_1024:data
+  image size (enc)  94704
+  decode time 6369
+  image size (dec)  2098176
+  detecting    ...  2439
+  analysis time 1999007
+  sending feat size 2829240
+  hold time 2018185
+ok img-240
+GET img-241_1024:data
+  image size (enc)  137878
+  decode time 6469
+  image size (dec)  2098176
+  detecting    ...  2473
+  analysis time 1908244
+  sending feat size 2868680
+  hold time 1927567
+ok img-241
+GET img-242_1024:data
+  image size (enc)  131172
+  decode time 6941
+  image size (dec)  2359296
+  detecting    ...  1567
+  analysis time 1546852
+  sending feat size 1817720
+  hold time 1565967
+ok img-242
+GET img-243_1024:data
+  image size (enc)  127798
+  decode time 6646
+  image size (dec)  2098176
+  detecting    ...  2495
+  analysis time 2147162
+  sending feat size 2894200
+  hold time 2166724
+ok img-243
+GET img-244_1024:data
+  image size (enc)  115545
+  decode time 5966
+  image size (dec)  1766400
+  detecting    ...  6197
+  analysis time 3924699
+  sending feat size 7188520
+  hold time 3949175
+ok img-244
+GET img-245_1024:data
+  image size (enc)  136532
+  decode time 6976
+  image size (dec)  2082816
+  detecting    ...  5959
+  analysis time 3789225
+  sending feat size 6912440
+  hold time 3816435
+ok img-245
+GET img-246_1024:data
+GET img-247_1024:data
+  image size (enc)  75432
+  decode time 6325
+  image size (dec)  2098176
+  detecting    ...  508
+  analysis time 814607
+  sending feat size 589280
+  hold time 830637
+ok img-247
+GET img-248_1024:data
+  image size (enc)  147832
+  decode time 7808
+  image size (dec)  2098176
+  detecting    ...  3718
+  analysis time 2790318
+  sending feat size 4312880
+  hold time 2813305
+ok img-248
+GET img-249_1024:data
+  image size (enc)  156567
+  decode time 7526
+  image size (dec)  2098176
+  detecting    ...  3565
+  analysis time 2637133
+  sending feat size 4135400
+  hold time 2663755
+ok img-249
+GET img-250_1024:data
+  image size (enc)  103447
+  decode time 6519
+  image size (dec)  2098176
+  detecting    ...  1873
+  analysis time 1630349
+  sending feat size 2172680
+  hold time 1648859
+ok img-250
+GET img-251_1024:data
+GET img-252_1024:data
+  image size (enc)  94470
+  decode time 6945
+  image size (dec)  2098176
+  detecting    ...  2455
+  analysis time 2019186
+  sending feat size 2847800
+  hold time 2038939
+ok img-252
+GET img-253_1024:data
+  image size (enc)  92722
+  decode time 5261
+  image size (dec)  1769472
+  detecting    ...  1033
+  analysis time 1014668
+  sending feat size 1198280
+  hold time 1030134
+ok img-253
+GET img-254_1024:data
+  image size (enc)  124713
+  decode time 5972
+  image size (dec)  2088960
+  detecting    ...  1169
+  analysis time 1224205
+  sending feat size 1356040
+  hold time 1240659
+ok img-254
+GET img-255_1024:data
+  image size (enc)  90767
+  decode time 6278
+  image size (dec)  2095104
+  detecting    ...  2964
+  analysis time 2342345
+  sending feat size 3438240
+  hold time 2364549
+ok img-255
+GET img-256_1024:data
+  image size (enc)  173403
+  decode time 8508
+  image size (dec)  2359296
+  detecting    ...  5319
+  analysis time 3746296
+  sending feat size 6170040
+  hold time 3766108
+ok img-256
+GET img-257_1024:data
+  image size (enc)  141348
+  decode time 8039
+  image size (dec)  2098176
+  detecting    ...  4603
+  analysis time 3309523
+  sending feat size 5339480
+  hold time 3334930
+ok img-257
+GET img-258_1024:data
+  image size (enc)  166405
+  decode time 7494
+  image size (dec)  2101248
+  detecting    ...  4662
+  analysis time 3202777
+  sending feat size 5407920
+  hold time 3229430
+ok img-258
+GET img-259_1024:data
+  image size (enc)  90826
+  decode time 6592
+  image size (dec)  2098176
+  detecting    ...  1657
+  analysis time 1561165
+  sending feat size 1922120
+  hold time 1579128
+ok img-259
+GET img-260_1024:data
+  image size (enc)  148864
+  decode time 6275
+  image size (dec)  2088960
+  detecting    ...  2710
+  analysis time 2041678
+  sending feat size 3143600
+  hold time 2063198
+ok img-260
+GET img-261_1024:data
+  image size (enc)  213396
+  decode time 8504
+  image size (dec)  2098176
+  detecting    ...  9485
+  analysis time 5924488
+  sending feat size 11002600
+  hold time 5958243
+ok img-261
+GET img-262_1024:data
+  image size (enc)  141937
+  decode time 7358
+  image size (dec)  2098176
+  detecting    ...  5505
+  analysis time 3728876
+  sending feat size 6385800
+  hold time 3756359
+ok img-262
+GET img-263_1024:data
+GET img-264_1024:data
+  image size (enc)  66348
+  decode time 6393
+  image size (dec)  2095104
+  detecting    ...  1310
+  analysis time 1392021
+  sending feat size 1519600
+  hold time 1409541
+ok img-264
+GET img-265_1024:data
+GET img-266_1024:data
+  image size (enc)  87120
+  decode time 6274
+  image size (dec)  2098176
+  detecting    ...  900
+  analysis time 1099202
+  sending feat size 1044000
+  hold time 1115483
+ok img-266
+GET img-267_1024:data
+  image size (enc)  79896
+  decode time 5909
+  image size (dec)  2098176
+  detecting    ...  883
+  analysis time 1034361
+  sending feat size 1024280
+  hold time 1050270
+ok img-267
+GET img-268_1024:data
+  image size (enc)  106418
+  decode time 6166
+  image size (dec)  2098176
+  detecting    ...  1280
+  analysis time 1287479
+  sending feat size 1484800
+  hold time 1304330
+ok img-268
+GET img-269_1024:data
+  image size (enc)  120783
+  decode time 5927
+  image size (dec)  2098176
+  detecting    ...  1224
+  analysis time 1316404
+  sending feat size 1419840
+  hold time 1332934
+ok img-269
+GET img-270_1024:data
+GET img-271_1024:data
+GET img-272_1024:data
+  image size (enc)  155453
+  decode time 7414
+  image size (dec)  2359296
+  detecting    ...  4235
+  analysis time 3058476
+  sending feat size 4912600
+  hold time 3083082
+ok img-272
+GET img-273_1024:data
+  image size (enc)  209321
+  decode time 8291
+  image size (dec)  2098176
+  detecting    ...  5446
+  analysis time 3790528
+  sending feat size 6317360
+  hold time 3818977
+ok img-273
+GET img-274_1024:data
+  image size (enc)  213854
+  decode time 8092
+  image size (dec)  2098176
+  detecting    ...  5797
+  analysis time 3910166
+  sending feat size 6724520
+  hold time 3938520
+ok img-274
+GET img-275_1024:data
+  image size (enc)  152401
+  decode time 6467
+  image size (dec)  2101248
+  detecting    ...  3316
+  analysis time 2662331
+  sending feat size 3846560
+  hold time 2685999
+ok img-275
+GET img-276_1024:data
+  image size (enc)  76988
+  decode time 6462
+  image size (dec)  2359296
+  detecting    ...  1690
+  analysis time 1583334
+  sending feat size 1960400
+  hold time 1602556
+ok img-276
+GET img-277_1024:data
+  image size (enc)  87483
+  decode time 6404
+  image size (dec)  2098176
+  detecting    ...  837
+  analysis time 1100107
+  sending feat size 970920
+  hold time 1116745
+ok img-277
+GET img-278_1024:data
+  image size (enc)  170939
+  decode time 7578
+  image size (dec)  2098176
+  detecting    ...  4124
+  analysis time 2852377
+  sending feat size 4783840
+  hold time 2877000
+ok img-278
+GET img-279_1024:data
+GET img-280_1024:data
+  image size (enc)  154734
+  decode time 7274
+  image size (dec)  2101248
+  detecting    ...  4929
+  analysis time 3551399
+  sending feat size 5717640
+  hold time 3576780
+ok img-280
+GET img-281_1024:data
+  image size (enc)  275514
+  decode time 9432
+  image size (dec)  2095104
+  detecting    ...  8826
+  analysis time 5727760
+  sending feat size 10238160
+  hold time 5762094
+ok img-281
+GET img-282_1024:data
+  image size (enc)  100026
+  decode time 6037
+  image size (dec)  2098176
+  detecting    ...  1117
+  analysis time 1389787
+  sending feat size 1295720
+  hold time 1408984
+ok img-282
+GET img-283_1024:data
+GET img-284_1024:data
+  image size (enc)  145490
+  decode time 8394
+  image size (dec)  2006016
+  detecting    ...  6178
+  analysis time 4728996
+  sending feat size 7166480
+  hold time 4758272
+ok img-284
+GET img-285_1024:data
+  image size (enc)  104336
+  decode time 6626
+  image size (dec)  2098176
+  detecting    ...  3804
+  analysis time 2638079
+  sending feat size 4412640
+  hold time 2660115
+ok img-285
+GET img-286_1024:data
+  image size (enc)  63494
+  decode time 5822
+  image size (dec)  2101248
+  detecting    ...  958
+  analysis time 1139385
+  sending feat size 1111280
+  hold time 1155358
+ok img-286
+GET img-287_1024:data
+  image size (enc)  226947
+  decode time 7902
+  image size (dec)  2098176
+  detecting    ...  7045
+  analysis time 4563527
+  sending feat size 8172200
+  hold time 4600037
+ok img-287
+GET img-288_1024:data
+GET img-289_1024:data
+GET img-290_1024:data
+  image size (enc)  74251
+  decode time 6106
+  image size (dec)  2088960
+  detecting    ...  1013
+  analysis time 1113208
+  sending feat size 1175080
+  hold time 1129554
+ok img-290
+GET img-291_1024:data
+  image size (enc)  107912
+  decode time 8670
+  image size (dec)  3145728
+  detecting    ...  2592
+  analysis time 2396536
+  sending feat size 3006720
+  hold time 2414607
+ok img-291
+GET img-292_1024:data
+  image size (enc)  101740
+  decode time 6990
+  image size (dec)  2098176
+  detecting    ...  1329
+  analysis time 1273017
+  sending feat size 1541640
+  hold time 1290792
+ok img-292
+GET img-293_1024:data
+  image size (enc)  75764
+  decode time 6102
+  image size (dec)  2098176
+  detecting    ...  985
+  analysis time 1196770
+  sending feat size 1142600
+  hold time 1213036
+ok img-293
+GET img-294_1024:data
+  image size (enc)  116739
+  decode time 5328
+  image size (dec)  1769472
+  detecting    ...  2027
+  analysis time 1593954
+  sending feat size 2351320
+  hold time 1614440
+ok img-294
+GET img-295_1024:data
+GET img-296_1024:data
+  image size (enc)  131204
+  decode time 6499
+  image size (dec)  2098176
+  detecting    ...  2014
+  analysis time 1729007
+  sending feat size 2336240
+  hold time 1747632
+ok img-296
+GET img-297_1024:data
+GET img-298_1024:data
+  image size (enc)  170327
+  decode time 6901
+  image size (dec)  2101248
+  detecting    ...  3909
+  analysis time 2789230
+  sending feat size 4534440
+  hold time 2811771
+ok img-298
+GET img-299_1024:data
+  image size (enc)  182474
+  decode time 6795
+  image size (dec)  2098176
+  detecting    ...  4045
+  analysis time 2876967
+  sending feat size 4692200
+  hold time 2900737
+ok img-299
+GET img-300_1024:data
+  image size (enc)  171450
+  decode time 8327
+  image size (dec)  2359296
+  detecting    ...  15383
+  analysis time 8988304
+  sending feat size 17844280
+  hold time 9030984
+ok img-300
+GET img-301_1024:data
+GET img-302_1024:data
+  image size (enc)  152525
+  decode time 6342
+  image size (dec)  2098176
+  detecting    ...  3783
+  analysis time 2907605
+  sending feat size 4388280
+  hold time 2929287
+ok img-302
+GET img-303_1024:data
+  image size (enc)  142417
+  decode time 6572
+  image size (dec)  2098176
+  detecting    ...  2187
+  analysis time 1833744
+  sending feat size 2536920
+  hold time 1853234
+ok img-303
+GET img-304_1024:data
+  image size (enc)  205516
+  decode time 8113
+  image size (dec)  2070528
+  detecting    ...  5632
+  analysis time 3099316
+  sending feat size 6533120
+  hold time 3126054
+ok img-304
+GET img-305_1024:data
+  image size (enc)  122128
+  decode time 6272
+  image size (dec)  2098176
+  detecting    ...  2604
+  analysis time 2153228
+  sending feat size 3020640
+  hold time 2167925
+ok img-305
+GET img-306_1024:data
+GET img-307_1024:data
+GET img-308_1024:data
+  image size (enc)  111116
+  decode time 7579
+  image size (dec)  2211840
+  detecting    ...  2429
+  analysis time 2083341
+  sending feat size 2817640
+  hold time 2104168
+ok img-308
+GET img-309_1024:data
+  image size (enc)  166923
+  decode time 7668
+  image size (dec)  2098176
+  detecting    ...  7198
+  analysis time 4755493
+  sending feat size 8349680
+  hold time 4791982
+ok img-309
+GET img-310_1024:data
+  image size (enc)  66798
+  decode time 5780
+  image size (dec)  2082816
+  detecting    ...  1332
+  analysis time 1388366
+  sending feat size 1545120
+  hold time 1404959
+ok img-310
+GET img-311_1024:data
+GET img-312_1024:data
+  image size (enc)  194645
+  decode time 7183
+  image size (dec)  2092032
+  detecting    ...  4721
+  analysis time 3431742
+  sending feat size 5476360
+  hold time 3457556
+ok img-312
+GET img-313_1024:data
+GET img-314_1024:data
+  image size (enc)  134203
+  decode time 6710
+  image size (dec)  2082816
+  detecting    ...  3714
+  analysis time 2686729
+  sending feat size 4308240
+  hold time 2708627
+ok img-314
+GET img-315_1024:data
+  image size (enc)  48480
+  decode time 5632
+  image size (dec)  2098176
+  detecting    ...  247
+  analysis time 688883
+  sending feat size 286520
+  hold time 703449
+ok img-315
+GET img-316_1024:data
+  image size (enc)  121937
+  decode time 6905
+  image size (dec)  2101248
+  detecting    ...  4285
+  analysis time 2962856
+  sending feat size 4970600
+  hold time 2987322
+ok img-316
+GET img-317_1024:data
+  image size (enc)  144544
+  decode time 8963
+  image size (dec)  3145728
+  detecting    ...  3581
+  analysis time 3031569
+  sending feat size 4153960
+  hold time 3061988
+ok img-317
+GET img-318_1024:data
+GET img-319_1024:data
+  image size (enc)  30216
+  decode time 4972
+  image size (dec)  2098176
+  detecting    ...  372
+  analysis time 690041
+  sending feat size 431520
+  hold time 704226
+ok img-319
+GET img-320_1024:data
+  image size (enc)  128309
+  decode time 8345
+  image size (dec)  2580480
+  detecting    ...  2607
+  analysis time 2272508
+  sending feat size 3024120
+  hold time 2290649
+ok img-320
+GET img-321_1024:data
+  image size (enc)  125902
+  decode time 7630
+  image size (dec)  2098176
+  detecting    ...  3959
+  analysis time 2946591
+  sending feat size 4592440
+  hold time 2969995
+ok img-321
+GET img-322_1024:data
+GET img-323_1024:data
+GET img-324_1024:data
+  image size (enc)  65935
+  decode time 6094
+  image size (dec)  2214912
+  detecting    ...  1832
+  analysis time 1819148
+  sending feat size 2125120
+  hold time 1832002
+ok img-324
+GET img-325_1024:data
+  image size (enc)  101993
+  decode time 5712
+  image size (dec)  1769472
+  detecting    ...  1420
+  analysis time 1303514
+  sending feat size 1647200
+  hold time 1319039
+ok img-325
+GET img-326_1024:data
+  image size (enc)  89274
+  decode time 5974
+  image size (dec)  2098176
+  detecting    ...  1648
+  analysis time 1506328
+  sending feat size 1911680
+  hold time 1523733
+ok img-326
+GET img-327_1024:data
+  image size (enc)  183653
+  decode time 8148
+  image size (dec)  2359296
+  detecting    ...  6607
+  analysis time 4532661
+  sending feat size 7664120
+  hold time 4569268
+ok img-327
+GET img-328_1024:data
+  image size (enc)  80169
+  decode time 6686
+  image size (dec)  2101248
+  detecting    ...  1443
+  analysis time 1406550
+  sending feat size 1673880
+  hold time 1424657
+ok img-328
+GET img-329_1024:data
+  image size (enc)  143845
+  decode time 8294
+  image size (dec)  2359296
+  detecting    ...  3925
+  analysis time 3018123
+  sending feat size 4553000
+  hold time 3043903
+ok img-329
+GET img-330_1024:data
+  image size (enc)  54403
+  decode time 5640
+  image size (dec)  2098176
+  detecting    ...  598
+  analysis time 838306
+  sending feat size 693680
+  hold time 848380
+ok img-330
+GET img-331_1024:data
+  image size (enc)  90712
+  decode time 6551
+  image size (dec)  2098176
+  detecting    ...  945
+  analysis time 1109194
+  sending feat size 1096200
+  hold time 1125932
+ok img-331
+GET img-332_1024:data
+  image size (enc)  100143
+  decode time 6236
+  image size (dec)  2098176
+  detecting    ...  1684
+  analysis time 1602117
+  sending feat size 1953440
+  hold time 1619824
+ok img-332
+GET img-333_1024:data
+  image size (enc)  123958
+  decode time 6031
+  image size (dec)  2088960
+  detecting    ...  1667
+  analysis time 1380050
+  sending feat size 1933720
+  hold time 1398549
+ok img-333
+GET img-334_1024:data
+GET img-335_1024:data
+  image size (enc)  148458
+  decode time 6665
+  image size (dec)  2098176
+  detecting    ...  3888
+  analysis time 2802275
+  sending feat size 4510080
+  hold time 2824461
+ok img-335
+GET img-336_1024:data
+  image size (enc)  82806
+  decode time 5884
+  image size (dec)  2098176
+  detecting    ...  1267
+  analysis time 1322649
+  sending feat size 1469720
+  hold time 1339275
+ok img-336
+GET img-337_1024:data
+GET img-338_1024:data
+  image size (enc)  279813
+  decode time 8501
+  image size (dec)  2085888
+  detecting    ...  8064
+  analysis time 5260758
+  sending feat size 9354240
+  hold time 5292526
+ok img-338
+GET img-339_1024:data
+  image size (enc)  178566
+  decode time 9973
+  image size (dec)  3145728
+  detecting    ...  5066
+  analysis time 3737249
+  sending feat size 5876560
+  hold time 3771101
+ok img-339
+GET img-340_1024:data
+  image size (enc)  144142
+  decode time 6355
+  image size (dec)  2101248
+  detecting    ...  2697
+  analysis time 2148770
+  sending feat size 3128520
+  hold time 2170776
+ok img-340
+GET img-341_1024:data
+  image size (enc)  98284
+  decode time 6990
+  image size (dec)  2098176
+  detecting    ...  2876
+  analysis time 2229841
+  sending feat size 3336160
+  hold time 2254093
+ok img-341
+GET img-342_1024:data
+  image size (enc)  72926
+  decode time 6022
+  image size (dec)  2168832
+  detecting    ...  1322
+  analysis time 1370388
+  sending feat size 1533520
+  hold time 1387463
+ok img-342
+GET img-343_1024:data
+  image size (enc)  77896
+  decode time 6055
+  image size (dec)  2098176
+  detecting    ...  1779
+  analysis time 1544511
+  sending feat size 2063640
+  hold time 1562268
+ok img-343
+GET img-344_1024:data
+  image size (enc)  78175
+  decode time 6107
+  image size (dec)  2098176
+  detecting    ...  1784
+  analysis time 1550209
+  sending feat size 2069440
+  hold time 1567914
+ok img-344
+GET img-345_1024:data
+  image size (enc)  82436
+  decode time 4227
+  image size (dec)  1247232
+  detecting    ...  2725
+  analysis time 1911865
+  sending feat size 3161000
+  hold time 1928336
+ok img-345
+GET img-346_1024:data
+  image size (enc)  129699
+  decode time 6502
+  image size (dec)  2098176
+  detecting    ...  1948
+  analysis time 1794452
+  sending feat size 2259680
+  hold time 1812905
+ok img-346
+GET img-347_1024:data
+GET img-348_1024:data
+  image size (enc)  116065
+  decode time 5840
+  image size (dec)  2098176
+  detecting    ...  1166
+  analysis time 1191226
+  sending feat size 1352560
+  hold time 1207626
+ok img-348
+GET img-349_1024:data
+  image size (enc)  108445
+  decode time 6027
+  image size (dec)  2098176
+  detecting    ...  2123
+  analysis time 1783178
+  sending feat size 2462680
+  hold time 1803051
+ok img-349
+GET img-350_1024:data
+  image size (enc)  167519
+  decode time 6839
+  image size (dec)  2098176
+  detecting    ...  3016
+  analysis time 2354444
+  sending feat size 3498560
+  hold time 2377889
+ok img-350
+GET img-351_1024:data
+GET img-352_1024:data
+  image size (enc)  76176
+  decode time 9250
+  image size (dec)  3145728
+  detecting    ...  1617
+  analysis time 1862077
+  sending feat size 1875720
+  hold time 1887014
+ok img-352
+GET img-353_1024:data
+  image size (enc)  159978
+  decode time 7632
+  image size (dec)  1938432
+  detecting    ...  7265
+  analysis time 4703562
+  sending feat size 8427400
+  hold time 4731731
+ok img-353
+GET img-354_1024:data
+  image size (enc)  139428
+  decode time 7156
+  image size (dec)  2098176
+  detecting    ...  3577
+  analysis time 2732521
+  sending feat size 4149320
+  hold time 2757775
+ok img-354
+GET img-355_1024:data
+  image size (enc)  37708
+  decode time 5272
+  image size (dec)  2098176
+  detecting    ...  933
+  analysis time 1041075
+  sending feat size 1082280
+  hold time 1056529
+ok img-355
+GET img-356_1024:data
+  image size (enc)  129533
+  decode time 7041
+  image size (dec)  2098176
+  detecting    ...  5637
+  analysis time 3934073
+  sending feat size 6538920
+  hold time 3961041
+ok img-356
+GET img-357_1024:data
+  image size (enc)  170164
+  decode time 7389
+  image size (dec)  2359296
+  detecting    ...  3723
+  analysis time 2858315
+  sending feat size 4318680
+  hold time 2890333
+ok img-357
+GET img-358_1024:data
+  image size (enc)  144818
+  decode time 7553
+  image size (dec)  2098176
+  detecting    ...  3116
+  analysis time 2494962
+  sending feat size 3614560
+  hold time 2519429
+ok img-358
+GET img-359_1024:data
+  image size (enc)  141091
+  decode time 6959
+  image size (dec)  2088960
+  detecting    ...  2838
+  analysis time 2311482
+  sending feat size 3292080
+  hold time 2337316
+ok img-359
+GET img-360_1024:data
+  image size (enc)  94429
+  decode time 6834
+  image size (dec)  2098176
+  detecting    ...  2227
+  analysis time 1948699
+  sending feat size 2583320
+  hold time 1968020
+ok img-360
+GET img-361_1024:data
+  image size (enc)  98754
+  decode time 6254
+  image size (dec)  2082816
+  detecting    ...  2213
+  analysis time 1818388
+  sending feat size 2567080
+  hold time 1837068
+ok img-361
+GET img-362_1024:data
+  image size (enc)  155427
+  decode time 7183
+  image size (dec)  2088960
+  detecting    ...  4691
+  analysis time 3305290
+  sending feat size 5441560
+  hold time 3330987
+ok img-362
+GET img-363_1024:data
+  image size (enc)  301940
+  decode time 9294
+  image size (dec)  2098176
+  detecting    ...  9486
+  analysis time 5973650
+  sending feat size 11003760
+  hold time 6008394
+ok img-363
+GET img-364_1024:data
+  image size (enc)  230261
+  decode time 7847
+  image size (dec)  2092032
+  detecting    ...  6798
+  analysis time 4891236
+  sending feat size 7885680
+  hold time 4926362
+ok img-364
+GET img-365_1024:data
+  image size (enc)  101040
+  decode time 6620
+  image size (dec)  2095104
+  detecting    ...  1108
+  analysis time 1144928
+  sending feat size 1285280
+  hold time 1161921
+ok img-365
+GET img-366_1024:data
+  image size (enc)  149883
+  decode time 6942
+  image size (dec)  2098176
+  detecting    ...  3462
+  analysis time 2453489
+  sending feat size 4015920
+  hold time 2478795
+ok img-366
+GET img-367_1024:data
+  image size (enc)  97516
+  decode time 6558
+  image size (dec)  2098176
+  detecting    ...  2517
+  analysis time 1963232
+  sending feat size 2919720
+  hold time 1982795
+ok img-367
+GET img-368_1024:data
+GET img-369_1024:data
+  image size (enc)  354039
+  decode time 10386
+  image size (dec)  2359296
+  detecting    ...  9247
+  analysis time 5911137
+  sending feat size 10726520
+  hold time 5957376
+ok img-369
+GET img-370_1024:data
+  image size (enc)  108078
+  decode time 6798
+  image size (dec)  2088960
+  detecting    ...  2320
+  analysis time 1947997
+  sending feat size 2691200
+  hold time 1967456
+ok img-370
+GET img-371_1024:data
+  image size (enc)  72754
+  decode time 7394
+  image size (dec)  2697216
+  detecting    ...  839
+  analysis time 1175675
+  sending feat size 973240
+  hold time 1195335
+ok img-371
+GET img-372_1024:data
+  image size (enc)  244533
+  decode time 8167
+  image size (dec)  2101248
+  detecting    ...  6984
+  analysis time 4450853
+  sending feat size 8101440
+  hold time 4487442
+ok img-372
+GET img-373_1024:data
+  image size (enc)  92577
+  decode time 9285
+  image size (dec)  3145728
+  detecting    ...  2363
+  analysis time 2193451
+  sending feat size 2741080
+  hold time 2219790
+ok img-373
+GET img-374_1024:data
+  image size (enc)  210808
+  decode time 8379
+  image size (dec)  2092032
+  detecting    ...  11064
+  analysis time 6684106
+  sending feat size 12834240
+  hold time 6713092
+ok img-374
+GET img-375_1024:data
+  image size (enc)  222104
+  decode time 9786
+  image size (dec)  2411520
+  detecting    ...  6604
+  analysis time 4387799
+  sending feat size 7660640
+  hold time 4426209
+ok img-375
+GET img-376_1024:data
+  image size (enc)  173756
+  decode time 7083
+  image size (dec)  2098176
+  detecting    ...  3640
+  analysis time 2686814
+  sending feat size 4222400
+  hold time 2712735
+ok img-376
+GET img-377_1024:data
+  image size (enc)  136132
+  decode time 6050
+  image size (dec)  2088960
+  detecting    ...  1515
+  analysis time 1455230
+  sending feat size 1757400
+  hold time 1473678
+ok img-377
+GET img-378_1024:data
+  image size (enc)  29268
+  decode time 5444
+  image size (dec)  2113536
+  detecting    ...  354
+  analysis time 692376
+  sending feat size 410640
+  hold time 707383
+ok img-378
+GET img-379_1024:data
+  image size (enc)  117460
+  decode time 6976
+  image size (dec)  2098176
+  detecting    ...  3297
+  analysis time 2354713
+  sending feat size 3824520
+  hold time 2378947
+ok img-379
+GET img-380_1024:data
+  image size (enc)  113759
+  decode time 6584
+  image size (dec)  2082816
+  detecting    ...  2387
+  analysis time 1956875
+  sending feat size 2768920
+  hold time 1977030
+ok img-380
+GET img-381_1024:data
+  image size (enc)  83910
+  decode time 5766
+  image size (dec)  2098176
+  detecting    ...  246
+  analysis time 638585
+  sending feat size 285360
+  hold time 648178
+ok img-381
+GET img-382_1024:data
+  image size (enc)  154654
+  decode time 7816
+  image size (dec)  2098176
+  detecting    ...  7118
+  analysis time 4673750
+  sending feat size 8256880
+  hold time 4709968
+ok img-382
+GET img-383_1024:data
+GET img-384_1024:data
+  image size (enc)  162508
+  decode time 7961
+  image size (dec)  2092032
+  detecting    ...  5031
+  analysis time 3614454
+  sending feat size 5835960
+  hold time 3641501
+ok img-384
+GET img-385_1024:data
+  image size (enc)  106711
+  decode time 6697
+  image size (dec)  2110464
+  detecting    ...  5149
+  analysis time 3668119
+  sending feat size 5972840
+  hold time 3694311
+ok img-385
+GET img-386_1024:data
+  image size (enc)  129118
+  decode time 6898
+  image size (dec)  2082816
+  detecting    ...  4555
+  analysis time 3224003
+  sending feat size 5283800
+  hold time 3248329
+ok img-386
+GET img-387_1024:data
+  image size (enc)  105304
+  decode time 5794
+  image size (dec)  2101248
+  detecting    ...  1626
+  analysis time 1534571
+  sending feat size 1886160
+  hold time 1551796
+ok img-387
+GET img-388_1024:data
+GET img-389_1024:data
+  image size (enc)  148505
+  decode time 7124
+  image size (dec)  2098176
+  detecting    ...  5398
+  analysis time 3652066
+  sending feat size 6261680
+  hold time 3677790
+ok img-389
+GET img-390_1024:data
+  image size (enc)  43884
+  decode time 4856
+  image size (dec)  1815552
+  detecting    ...  1579
+  analysis time 1283791
+  sending feat size 1831640
+  hold time 1300458
+ok img-390
+GET img-391_1024:data
+GET img-392_1024:data
+  image size (enc)  154803
+  decode time 7422
+  image size (dec)  2095104
+  detecting    ...  5665
+  analysis time 3899372
+  sending feat size 6571400
+  hold time 3927399
+ok img-392
+GET img-393_1024:data
+GET img-394_1024:data
+  image size (enc)  254747
+  decode time 8156
+  image size (dec)  2107392
+  detecting    ...  6218
+  analysis time 4368533
+  sending feat size 7212880
+  hold time 4398219
+ok img-394
+GET img-395_1024:data
+  image size (enc)  62407
+  decode time 6491
+  image size (dec)  2515968
+  detecting    ...  355
+  analysis time 827741
+  sending feat size 411800
+  hold time 844983
+ok img-395
+GET img-396_1024:data
+  image size (enc)  159227
+  decode time 7500
+  image size (dec)  2092032
+  detecting    ...  6244
+  analysis time 4248803
+  sending feat size 7243040
+  hold time 4277854
+ok img-396
+GET img-397_1024:data
+GET img-398_1024:data
+  image size (enc)  115887
+  decode time 6335
+  image size (dec)  2098176
+  detecting    ...  2823
+  analysis time 2306122
+  sending feat size 3274680
+  hold time 2327406
+ok img-398
+GET img-399_1024:data
+  image size (enc)  78140
+  decode time 6261
+  image size (dec)  2101248
+  detecting    ...  2329
+  analysis time 1824644
+  sending feat size 2701640
+  hold time 1843839
+ok img-399
+GET img-400_1024:data
+  image size (enc)  137988
+  decode time 7174
+  image size (dec)  2095104
+  detecting    ...  3986
+  analysis time 2796144
+  sending feat size 4623760
+  hold time 2813630
+ok img-400
+GET img-401_1024:data
+  image size (enc)  120573
+  decode time 8244
+  image size (dec)  2362368
+  detecting    ...  3897
+  analysis time 2831921
+  sending feat size 4520520
+  hold time 2857968
+ok img-401
+GET img-402_1024:data
+  image size (enc)  237824
+  decode time 8112
+  image size (dec)  2082816
+  detecting    ...  8809
+  analysis time 5356931
+  sending feat size 10218440
+  hold time 5388309
+ok img-402
+GET img-403_1024:data
+  image size (enc)  85837
+  decode time 5813
+  image size (dec)  2098176
+  detecting    ...  1463
+  analysis time 1404337
+  sending feat size 1697080
+  hold time 1421333
+ok img-403
+GET img-404_1024:data
+  image size (enc)  216408
+  decode time 9223
+  image size (dec)  2350080
+  detecting    ...  8120
+  analysis time 5099865
+  sending feat size 9419200
+  hold time 5133230
+ok img-404
+GET img-405_1024:data
+  image size (enc)  143375
+  decode time 6654
+  image size (dec)  2107392
+  detecting    ...  3758
+  analysis time 2804541
+  sending feat size 4359280
+  hold time 2834931
+ok img-405
+GET img-406_1024:data
+  image size (enc)  122604
+  decode time 7449
+  image size (dec)  2101248
+  detecting    ...  2475
+  analysis time 2022593
+  sending feat size 2871000
+  hold time 2043605
+ok img-406
+GET img-407_1024:data
+  image size (enc)  79340
+  decode time 6699
+  image size (dec)  2350080
+  detecting    ...  372
+  analysis time 947575
+  sending feat size 431520
+  hold time 964459
+ok img-407
+GET img-408_1024:data
+  image size (enc)  80729
+  decode time 5792
+  image size (dec)  2098176
+  detecting    ...  624
+  analysis time 832419
+  sending feat size 723840
+  hold time 842711
+ok img-408
+GET img-409_1024:data
+  image size (enc)  113257
+  decode time 7490
+  image size (dec)  2095104
+  detecting    ...  3310
+  analysis time 2467186
+  sending feat size 3839600
+  hold time 2492584
+ok img-409
+GET img-410_1024:data
+  image size (enc)  161006
+  decode time 7175
+  image size (dec)  2104320
+  detecting    ...  3529
+  analysis time 2746467
+  sending feat size 4093640
+  hold time 2771239
+ok img-410
+GET img-411_1024:data
+  image size (enc)  160512
+  decode time 8215
+  image size (dec)  2359296
+  detecting    ...  5214
+  analysis time 3607563
+  sending feat size 6048240
+  hold time 3635608
+ok img-411
+GET img-412_1024:data
+  image size (enc)  138225
+  decode time 7818
+  image size (dec)  2307072
+  detecting    ...  3271
+  analysis time 2542100
+  sending feat size 3794360
+  hold time 2567971
+ok img-412
+GET img-413_1024:data
+  image size (enc)  118669
+  decode time 6908
+  image size (dec)  2092032
+  detecting    ...  2297
+  analysis time 1949461
+  sending feat size 2664520
+  hold time 1969943
+ok img-413
+GET img-414_1024:data
+  image size (enc)  142022
+  decode time 7439
+  image size (dec)  2098176
+  detecting    ...  1875
+  analysis time 1660292
+  sending feat size 2175000
+  hold time 1680043
+ok img-414
+GET img-415_1024:data
+  image size (enc)  92203
+  decode time 7665
+  image size (dec)  2359296
+  detecting    ...  1562
+  analysis time 1535460
+  sending feat size 1811920
+  hold time 1555343
+ok img-415
+GET img-416_1024:data
+  image size (enc)  144632
+  decode time 6615
+  image size (dec)  2098176
+  detecting    ...  6121
+  analysis time 3916594
+  sending feat size 7100360
+  hold time 3943992
+ok img-416
+GET img-417_1024:data
+  image size (enc)  59394
+  decode time 3987
+  image size (dec)  1311744
+  detecting    ...  1509
+  analysis time 1171984
+  sending feat size 1750440
+  hold time 1184396
+ok img-417
+GET img-418_1024:data
+GET img-419_1024:data
+  image size (enc)  127619
+  decode time 6862
+  image size (dec)  2098176
+  detecting    ...  3480
+  analysis time 2643926
+  sending feat size 4036800
+  hold time 2663957
+ok img-419
+GET img-420_1024:data
+  image size (enc)  259644
+  decode time 7456
+  image size (dec)  2095104
+  detecting    ...  3555
+  analysis time 2893160
+  sending feat size 4123800
+  hold time 2918554
+ok img-420
+GET img-421_1024:data
+  image size (enc)  117117
+  decode time 7297
+  image size (dec)  2359296
+  detecting    ...  3568
+  analysis time 3530896
+  sending feat size 4138880
+  hold time 3561203
+ok img-421
+GET img-422_1024:data
+  image size (enc)  216746
+  decode time 11826
+  image size (dec)  2098176
+  detecting    ...  7124
+  analysis time 4988296
+  sending feat size 8263840
+  hold time 5027353
+ok img-422
+GET img-423_1024:data
+  image size (enc)  81089
+  decode time 6396
+  image size (dec)  2138112
+  detecting    ...  1317
+  analysis time 1331500
+  sending feat size 1527720
+  hold time 1348814
+ok img-423
+GET img-424_1024:data
+  image size (enc)  99045
+  decode time 6854
+  image size (dec)  2359296
+  detecting    ...  1600
+  analysis time 1511315
+  sending feat size 1856000
+  hold time 1530546
+ok img-424
+GET img-425_1024:data
+GET img-426_1024:data
+  image size (enc)  222544
+  decode time 8528
+  image size (dec)  2098176
+  detecting    ...  5813
+  analysis time 4221929
+  sending feat size 6743080
+  hold time 4243139
+ok img-426
+GET img-427_1024:data
+  image size (enc)  145037
+  decode time 8523
+  image size (dec)  2359296
+  detecting    ...  3836
+  analysis time 2893936
+  sending feat size 4449760
+  hold time 2918989
+ok img-427
+GET img-428_1024:data
+  image size (enc)  47831
+  decode time 4938
+  image size (dec)  2098176
+  detecting    ...  158
+  analysis time 579217
+  sending feat size 183280
+  hold time 587830
+ok img-428
+GET img-429_1024:data
+  image size (enc)  184078
+  decode time 9178
+  image size (dec)  2359296
+  detecting    ...  4626
+  analysis time 3359910
+  sending feat size 5366160
+  hold time 3388925
+ok img-429
+GET img-430_1024:data
+  image size (enc)  185395
+  decode time 7955
+  image size (dec)  2098176
+  detecting    ...  5469
+  analysis time 3742408
+  sending feat size 6344040
+  hold time 3770133
+ok img-430
+GET img-431_1024:data
+  image size (enc)  139865
+  decode time 6064
+  image size (dec)  1913856
+  detecting    ...  2472
+  analysis time 1822907
+  sending feat size 2867520
+  hold time 1841288
+ok img-431
+GET img-432_1024:data
+  image size (enc)  137037
+  decode time 7273
+  image size (dec)  2082816
+  detecting    ...  6273
+  analysis time 4092154
+  sending feat size 7276680
+  hold time 4120202
+ok img-432
+GET img-433_1024:data
+  image size (enc)  131201
+  decode time 7062
+  image size (dec)  2107392
+  detecting    ...  5880
+  analysis time 3828194
+  sending feat size 6820800
+  hold time 3855837
+ok img-433
+GET img-434_1024:data
+  image size (enc)  83045
+  decode time 7183
+  image size (dec)  2515968
+  detecting    ...  1033
+  analysis time 1219474
+  sending feat size 1198280
+  hold time 1238551
+ok img-434
+GET img-435_1024:data
+  image size (enc)  145004
+  decode time 7565
+  image size (dec)  2519040
+  detecting    ...  2183
+  analysis time 1989704
+  sending feat size 2532280
+  hold time 2011335
+ok img-435
+GET img-436_1024:data
+  image size (enc)  74930
+  decode time 6109
+  image size (dec)  2101248
+  detecting    ...  1771
+  analysis time 1518024
+  sending feat size 2054360
+  hold time 1535896
+ok img-436
+GET img-437_1024:data
+  image size (enc)  21867
+  decode time 5050
+  image size (dec)  2101248
+  detecting    ...  26
+  analysis time 488802
+  sending feat size 30160
+  hold time 502923
+ok img-437
+GET img-438_1024:data
+  image size (enc)  130566
+  decode time 7518
+  image size (dec)  2098176
+  detecting    ...  2767
+  analysis time 2271687
+  sending feat size 3209720
+  hold time 2296409
+ok img-438
+GET img-439_1024:data
+  image size (enc)  117437
+  decode time 7199
+  image size (dec)  2098176
+  detecting    ...  6699
+  analysis time 4467975
+  sending feat size 7770840
+  hold time 4502911
+ok img-439
+GET img-440_1024:data
+  image size (enc)  104690
+  decode time 5888
+  image size (dec)  1984512
+  detecting    ...  2916
+  analysis time 2066669
+  sending feat size 3382560
+  hold time 2088504
+ok img-440
+GET img-441_1024:data
+  image size (enc)  97261
+  decode time 8066
+  image size (dec)  2322432
+  detecting    ...  2801
+  analysis time 2333261
+  sending feat size 3249160
+  hold time 2359236
+ok img-441
+GET img-442_1024:data
+  image size (enc)  112718
+  decode time 6048
+  image size (dec)  2098176
+  detecting    ...  1818
+  analysis time 1631140
+  sending feat size 2108880
+  hold time 1649039
+ok img-442
+GET img-443_1024:data
+  image size (enc)  267293
+  decode time 8491
+  image size (dec)  2098176
+  detecting    ...  9323
+  analysis time 5803016
+  sending feat size 10814680
+  hold time 5837234
+ok img-443
+GET img-444_1024:data
+  image size (enc)  143174
+  decode time 7345
+  image size (dec)  2098176
+  detecting    ...  2831
+  analysis time 2249042
+  sending feat size 3283960
+  hold time 2272547
+ok img-444
+GET img-445_1024:data
+  image size (enc)  97782
+  decode time 7526
+  image size (dec)  2359296
+  detecting    ...  2905
+  analysis time 2367935
+  sending feat size 3369800
+  hold time 2393973
+ok img-445
+GET img-446_1024:data
+  image size (enc)  92042
+  decode time 6415
+  image size (dec)  2098176
+  detecting    ...  1868
+  analysis time 1609217
+  sending feat size 2166880
+  hold time 1622347
+ok img-446
+GET img-447_1024:data
+  image size (enc)  86462
+  decode time 7231
+  image size (dec)  2359296
+  detecting    ...  229
+  analysis time 711110
+  sending feat size 265640
+  hold time 728304
+ok img-447
+GET img-448_1024:data
+  image size (enc)  176459
+  decode time 7105
+  image size (dec)  2098176
+  detecting    ...  3731
+  analysis time 2740872
+  sending feat size 4327960
+  hold time 2764522
+ok img-448
+GET img-449_1024:data
+  image size (enc)  104362
+  decode time 6668
+  image size (dec)  2098176
+  detecting    ...  3646
+  analysis time 2646309
+  sending feat size 4229360
+  hold time 2668206
+ok img-449
+GET img-450_1024:data
+  image size (enc)  155121
+  decode time 7531
+  image size (dec)  2098176
+  detecting    ...  3686
+  analysis time 2826443
+  sending feat size 4275760
+  hold time 2849883
+ok img-450
+GET img-451_1024:data
+  image size (enc)  130885
+  decode time 7085
+  image size (dec)  2098176
+  detecting    ...  2692
+  analysis time 2066493
+  sending feat size 3122720
+  hold time 2088946
+ok img-451
+GET img-452_1024:data
+  image size (enc)  122366
+  decode time 9509
+  image size (dec)  3145728
+  detecting    ...  2950
+  analysis time 2596430
+  sending feat size 3422000
+  hold time 2626378
+ok img-452
+GET img-453_1024:data
+  image size (enc)  84008
+  decode time 5947
+  image size (dec)  1966080
+  detecting    ...  1017
+  analysis time 1194196
+  sending feat size 1179720
+  hold time 1210051
+ok img-453
+GET img-454_1024:data
+  image size (enc)  159305
+  decode time 7450
+  image size (dec)  2098176
+  detecting    ...  4888
+  analysis time 3433323
+  sending feat size 5670080
+  hold time 3459153
+ok img-454
+GET img-455_1024:data
+GET img-456_1024:data
+  image size (enc)  120945
+  decode time 6204
+  image size (dec)  2098176
+  detecting    ...  2501
+  analysis time 2085248
+  sending feat size 2901160
+  hold time 2109921
+ok img-456
+GET img-457_1024:data
+  image size (enc)  171368
+  decode time 9952
+  image size (dec)  3145728
+  detecting    ...  4497
+  analysis time 3507971
+  sending feat size 5216520
+  hold time 3542971
+ok img-457
+GET img-458_1024:data
+  image size (enc)  59000
+  decode time 5568
+  image size (dec)  2119680
+  detecting    ...  1063
+  analysis time 1208655
+  sending feat size 1233080
+  hold time 1224806
+ok img-458
+GET img-459_1024:data
+  image size (enc)  224399
+  decode time 7895
+  image size (dec)  2088960
+  detecting    ...  7488
+  analysis time 4740209
+  sending feat size 8686080
+  hold time 4770060
+ok img-459
+GET img-460_1024:data
+  image size (enc)  74472
+  decode time 5319
+  image size (dec)  1738752
+  detecting    ...  1540
+  analysis time 1337607
+  sending feat size 1786400
+  hold time 1352986
+ok img-460
+GET img-461_1024:data
+  image size (enc)  128953
+  decode time 6780
+  image size (dec)  2098176
+  detecting    ...  1915
+  analysis time 1582315
+  sending feat size 2221400
+  hold time 1600167
+ok img-461
+GET img-462_1024:data
+  image size (enc)  199480
+  decode time 8418
+  image size (dec)  2396160
+  detecting    ...  5686
+  analysis time 3865226
+  sending feat size 6595760
+  hold time 3894905
+ok img-462
+GET img-463_1024:data
+GET img-464_1024:data
+  image size (enc)  124574
+  decode time 7527
+  image size (dec)  2359296
+  detecting    ...  3488
+  analysis time 2535613
+  sending feat size 4046080
+  hold time 2561612
+ok img-464
+GET img-465_1024:data
+  image size (enc)  133448
+  decode time 6307
+  image size (dec)  2042880
+  detecting    ...  2850
+  analysis time 2125055
+  sending feat size 3306000
+  hold time 2147981
+ok img-465
+GET img-466_1024:data
+  image size (enc)  55337
+  decode time 5585
+  image size (dec)  2082816
+  detecting    ...  1023
+  analysis time 1066068
+  sending feat size 1186680
+  hold time 1082028
+ok img-466
+GET img-467_1024:data
+  image size (enc)  249128
+  decode time 8172
+  image size (dec)  2098176
+  detecting    ...  5830
+  analysis time 4044830
+  sending feat size 6762800
+  hold time 4073371
+ok img-467
+GET img-468_1024:data
+  image size (enc)  135742
+  decode time 7136
+  image size (dec)  2088960
+  detecting    ...  10595
+  analysis time 6461573
+  sending feat size 12290200
+  hold time 6496382
+ok img-468
+GET img-469_1024:data
+  image size (enc)  176069
+  decode time 7922
+  image size (dec)  2245632
+  detecting    ...  5113
+  analysis time 3587870
+  sending feat size 5931080
+  hold time 3616229
+ok img-469
+GET img-470_1024:data
+  image size (enc)  181719
+  decode time 7604
+  image size (dec)  2098176
+  detecting    ...  3977
+  analysis time 2851492
+  sending feat size 4613320
+  hold time 2874960
+ok img-470
+GET img-471_1024:data
+  image size (enc)  122697
+  decode time 6148
+  image size (dec)  1769472
+  detecting    ...  5232
+  analysis time 3585075
+  sending feat size 6069120
+  hold time 3609050
+ok img-471
+GET img-472_1024:data
+GET img-473_1024:data
+  image size (enc)  96892
+  decode time 6553
+  image size (dec)  2101248
+  detecting    ...  2615
+  analysis time 2083001
+  sending feat size 3033400
+  hold time 2102878
+ok img-473
+GET img-474_1024:data
+  image size (enc)  47601
+  decode time 5584
+  image size (dec)  2098176
+  detecting    ...  294
+  analysis time 699707
+  sending feat size 341040
+  hold time 714492
+ok img-474
+GET img-475_1024:data
+  image size (enc)  175435
+  decode time 7912
+  image size (dec)  2472960
+  detecting    ...  3640
+  analysis time 2797023
+  sending feat size 4222400
+  hold time 2822996
+ok img-475
+GET img-476_1024:data
+  image size (enc)  224908
+  decode time 8930
+  image size (dec)  2098176
+  detecting    ...  6852
+  analysis time 4554705
+  sending feat size 7948320
+  hold time 4590732
+ok img-476
+GET img-477_1024:data
+  image size (enc)  63922
+  decode time 6223
+  image size (dec)  2085888
+  detecting    ...  1453
+  analysis time 1400997
+  sending feat size 1685480
+  hold time 1418370
+ok img-477
+GET img-478_1024:data
+  image size (enc)  155070
+  decode time 6791
+  image size (dec)  2092032
+  detecting    ...  3526
+  analysis time 2432432
+  sending feat size 4090160
+  hold time 2457720
+ok img-478
+GET img-479_1024:data
+  image size (enc)  161225
+  decode time 6841
+  image size (dec)  2098176
+  detecting    ...  3269
+  analysis time 2313791
+  sending feat size 3792040
+  hold time 2337957
+ok img-479
+GET img-480_1024:data
+  image size (enc)  80870
+  decode time 6537
+  image size (dec)  2098176
+  detecting    ...  1312
+  analysis time 1368793
+  sending feat size 1521920
+  hold time 1386712
+ok img-480
+GET img-481_1024:data
+  image size (enc)  111451
+  decode time 7007
+  image size (dec)  2098176
+  detecting    ...  1457
+  analysis time 1407742
+  sending feat size 1690120
+  hold time 1425951
+ok img-481
+GET img-482_1024:data
+  image size (enc)  180903
+  decode time 7179
+  image size (dec)  2101248
+  detecting    ...  6887
+  analysis time 4472165
+  sending feat size 7988920
+  hold time 4507086
+ok img-482
+GET img-483_1024:data
+  image size (enc)  76425
+  decode time 3867
+  image size (dec)  1330176
+  detecting    ...  1186
+  analysis time 1042978
+  sending feat size 1375760
+  hold time 1054803
+ok img-483
+GET img-484_1024:data
+  image size (enc)  74961
+  decode time 4877
+  image size (dec)  1769472
+  detecting    ...  1357
+  analysis time 1326571
+  sending feat size 1574120
+  hold time 1341324
+ok img-484
+GET img-485_1024:data
+  image size (enc)  95343
+  decode time 6116
+  image size (dec)  2098176
+  detecting    ...  2579
+  analysis time 2008462
+  sending feat size 2991640
+  hold time 2027851
+ok img-485
+GET img-486_1024:data
+  image size (enc)  156320
+  decode time 7416
+  image size (dec)  2088960
+  detecting    ...  4120
+  analysis time 2919157
+  sending feat size 4779200
+  hold time 2943826
+ok img-486
+GET img-487_1024:data
+  image size (enc)  233672
+  decode time 11030
+  image size (dec)  2727936
+  detecting    ...  1790
+  analysis time 1906835
+  sending feat size 2076400
+  hold time 1931990
+ok img-487
+GET img-488_1024:data
+  image size (enc)  123170
+  decode time 6270
+  image size (dec)  2098176
+  detecting    ...  2213
+  analysis time 1754937
+  sending feat size 2567080
+  hold time 1768486
+ok img-488
+GET img-489_1024:data
+  image size (enc)  43139
+  decode time 6109
+  image size (dec)  2098176
+  detecting    ...  659
+  analysis time 923273
+  sending feat size 764440
+  hold time 939211
+ok img-489
+GET img-490_1024:data
+  image size (enc)  135723
+  decode time 7392
+  image size (dec)  2095104
+  detecting    ...  3700
+  analysis time 2617404
+  sending feat size 4292000
+  hold time 2642893
+ok img-490
+GET img-491_1024:data
+  image size (enc)  209591
+  decode time 8554
+  image size (dec)  2098176
+  detecting    ...  6804
+  analysis time 4481699
+  sending feat size 7892640
+  hold time 4518302
+ok img-491
+GET img-492_1024:data
+GET img-493_1024:data
+  image size (enc)  195416
+  decode time 7374
+  image size (dec)  2104320
+  detecting    ...  5319
+  analysis time 3663801
+  sending feat size 6170040
+  hold time 3691452
+ok img-493
+GET img-494_1024:data
+  image size (enc)  157681
+  decode time 8144
+  image size (dec)  2359296
+  detecting    ...  10419
+  analysis time 6311550
+  sending feat size 12086040
+  hold time 6348209
+ok img-494
+GET img-495_1024:data
+  image size (enc)  94104
+  decode time 6349
+  image size (dec)  2098176
+  detecting    ...  2313
+  analysis time 1940581
+  sending feat size 2683080
+  hold time 1959709
+ok img-495
+GET img-496_1024:data
+  image size (enc)  74127
+  decode time 5983
+  image size (dec)  2098176
+  detecting    ...  1915
+  analysis time 1733319
+  sending feat size 2221400
+  hold time 1751383
+ok img-496
+GET img-497_1024:data
+  image size (enc)  200568
+  decode time 7640
+  image size (dec)  2104320
+  detecting    ...  6876
+  analysis time 4349347
+  sending feat size 7976160
+  hold time 4384315
+ok img-497
+GET img-498_1024:data
+  image size (enc)  129261
+  decode time 6512
+  image size (dec)  2098176
+  detecting    ...  3305
+  analysis time 2437021
+  sending feat size 3833800
+  hold time 2461092
+ok img-498
+GET img-499_1024:data
+  image size (enc)  147620
+  decode time 7648
+  image size (dec)  2515968
+  detecting    ...  1551
+  analysis time 1588120
+  sending feat size 1799160
+  hold time 1609701
+ok img-499
+GET img-500_1024:data
+  image size (enc)  140153
+  decode time 7886
+  image size (dec)  2095104
+  detecting    ...  3488
+  analysis time 2636062
+  sending feat size 4046080
+  hold time 2661482
+ok img-500
+GET img-501_1024:data
+  image size (enc)  72557
+  decode time 6187
+  image size (dec)  2098176
+  detecting    ...  1263
+  analysis time 1294123
+  sending feat size 1465080
+  hold time 1311726
+ok img-501
+GET img-502_1024:data
+  image size (enc)  95158
+  decode time 6441
+  image size (dec)  2095104
+  detecting    ...  2125
+  analysis time 1848494
+  sending feat size 2465000
+  hold time 1867380
+ok img-502
+GET img-503_1024:data
+  image size (enc)  112064
+  decode time 6269
+  image size (dec)  2098176
+  detecting    ...  2016
+  analysis time 1865771
+  sending feat size 2338560
+  hold time 1884805
+ok img-503
+GET img-504_1024:data
+  image size (enc)  182853
+  decode time 6981
+  image size (dec)  2098176
+  detecting    ...  3669
+  analysis time 2824616
+  sending feat size 4256040
+  hold time 2846950
+ok img-504
+GET img-505_1024:data
+  image size (enc)  102409
+  decode time 6057
+  image size (dec)  2098176
+  detecting    ...  2040
+  analysis time 1722791
+  sending feat size 2366400
+  hold time 1745287
+ok img-505
+GET img-506_1024:data
+  image size (enc)  91144
+  decode time 7877
+  image size (dec)  2515968
+  detecting    ...  1379
+  analysis time 1522099
+  sending feat size 1599640
+  hold time 1542565
+ok img-506
+GET img-507_1024:data
+  image size (enc)  125880
+  decode time 7016
+  image size (dec)  2095104
+  detecting    ...  3896
+  analysis time 2633551
+  sending feat size 4519360
+  hold time 2656754
+ok img-507
+GET img-508_1024:data
+  image size (enc)  32297
+  decode time 5698
+  image size (dec)  2248704
+  detecting    ...  672
+  analysis time 862006
+  sending feat size 779520
+  hold time 878052
+ok img-508
+GET img-509_1024:data
+  image size (enc)  143787
+  decode time 7284
+  image size (dec)  2098176
+  detecting    ...  6323
+  analysis time 4058521
+  sending feat size 7334680
+  hold time 4086624
+ok img-509
+GET img-510_1024:data
+  image size (enc)  110706
+  decode time 6641
+  image size (dec)  2098176
+  detecting    ...  2456
+  analysis time 2013050
+  sending feat size 2848960
+  hold time 2032732
+ok img-510
+GET img-511_1024:data
+  image size (enc)  129934
+  decode time 6399
+  image size (dec)  2098176
+  detecting    ...  1667
+  analysis time 1633436
+  sending feat size 1933720
+  hold time 1651444
+ok img-511
+GET img-512_1024:data
+  image size (enc)  195866
+  decode time 8196
+  image size (dec)  2098176
+  detecting    ...  7422
+  analysis time 4847367
+  sending feat size 8609520
+  hold time 4878014
+ok img-512
+GET img-513_1024:data
+  image size (enc)  153737
+  decode time 7586
+  image size (dec)  2095104
+  detecting    ...  4127
+  analysis time 2926702
+  sending feat size 4787320
+  hold time 2950450
+ok img-513
+GET img-514_1024:data
+  image size (enc)  129650
+  decode time 6317
+  image size (dec)  2101248
+  detecting    ...  2158
+  analysis time 1878370
+  sending feat size 2503280
+  hold time 1897236
+ok img-514
+GET img-515_1024:data
+  image size (enc)  74823
+  decode time 6163
+  image size (dec)  2088960
+  detecting    ...  1013
+  analysis time 1150639
+  sending feat size 1175080
+  hold time 1167241
+ok img-515
+GET img-516_1024:data
+  image size (enc)  97543
+  decode time 7959
+  image size (dec)  2614272
+  detecting    ...  1557
+  analysis time 1612585
+  sending feat size 1806120
+  hold time 1633761
+ok img-516
+GET img-517_1024:data
+GET img-518_1024:data
+  image size (enc)  39348
+  decode time 5110
+  image size (dec)  2098176
+  detecting    ...  54
+  analysis time 522513
+  sending feat size 62640
+  hold time 536421
+ok img-518
+GET img-519_1024:data
+  image size (enc)  186212
+  decode time 7734
+  image size (dec)  2098176
+  detecting    ...  3689
+  analysis time 2788234
+  sending feat size 4279240
+  hold time 2811301
+ok img-519
+GET img-520_1024:data
+GET img-521_1024:data
+  image size (enc)  133979
+  decode time 6634
+  image size (dec)  2098176
+  detecting    ...  4295
+  analysis time 3124556
+  sending feat size 4982200
+  hold time 3148826
+ok img-521
+GET img-522_1024:data
+  image size (enc)  150302
+  decode time 7456
+  image size (dec)  2098176
+  detecting    ...  5505
+  analysis time 3613415
+  sending feat size 6385800
+  hold time 3640989
+ok img-522
+GET img-523_1024:data
+  image size (enc)  142099
+  decode time 6254
+  image size (dec)  2082816
+  detecting    ...  2366
+  analysis time 1848578
+  sending feat size 2744560
+  hold time 1867649
+ok img-523
+GET img-524_1024:data
+GET img-525_1024:data
+  image size (enc)  254375
+  decode time 9393
+  image size (dec)  2239488
+  detecting    ...  3870
+  analysis time 3000057
+  sending feat size 4489200
+  hold time 3025836
+ok img-525
+GET img-526_1024:data
+  image size (enc)  99626
+  decode time 6650
+  image size (dec)  2107392
+  detecting    ...  4304
+  analysis time 3000499
+  sending feat size 4992640
+  hold time 3023678
+ok img-526
+GET img-527_1024:data
+  image size (enc)  178580
+  decode time 7220
+  image size (dec)  2098176
+  detecting    ...  7288
+  analysis time 4678165
+  sending feat size 8454080
+  hold time 4707634
+ok img-527
+GET img-528_1024:data
+  image size (enc)  184875
+  decode time 8000
+  image size (dec)  2070528
+  detecting    ...  6565
+  analysis time 4275170
+  sending feat size 7615400
+  hold time 4309859
+ok img-528
+GET img-529_1024:data
+  image size (enc)  93899
+  decode time 6083
+  image size (dec)  2098176
+  detecting    ...  1213
+  analysis time 1288445
+  sending feat size 1407080
+  hold time 1305348
+ok img-529
+GET img-530_1024:data
+  image size (enc)  62772
+  decode time 5945
+  image size (dec)  2098176
+  detecting    ...  1770
+  analysis time 1528774
+  sending feat size 2053200
+  hold time 1546553
+ok img-530
+GET img-531_1024:data
+  image size (enc)  193395
+  decode time 8275
+  image size (dec)  2098176
+  detecting    ...  10566
+  analysis time 6909753
+  sending feat size 12256560
+  hold time 6945245
+ok img-531
+GET img-532_1024:data
+  image size (enc)  171006
+  decode time 7866
+  image size (dec)  2095104
+  detecting    ...  5138
+  analysis time 3502150
+  sending feat size 5960080
+  hold time 3529462
+ok img-532
+GET img-533_1024:data
+  image size (enc)  156773
+  decode time 8349
+  image size (dec)  2482176
+  detecting    ...  5554
+  analysis time 3730567
+  sending feat size 6442640
+  hold time 3760919
+ok img-533
+GET img-534_1024:data
+  image size (enc)  228356
+  decode time 9327
+  image size (dec)  2362368
+  detecting    ...  5165
+  analysis time 3798123
+  sending feat size 5991400
+  hold time 3827186
+ok img-534
+GET img-535_1024:data
+  image size (enc)  82892
+  decode time 5826
+  image size (dec)  2098176
+  detecting    ...  1212
+  analysis time 1206066
+  sending feat size 1405920
+  hold time 1222670
+ok img-535
+GET img-536_1024:data
+  image size (enc)  151550
+  decode time 6667
+  image size (dec)  1769472
+  detecting    ...  3696
+  analysis time 2709842
+  sending feat size 4287360
+  hold time 2732109
+ok img-536
+GET img-537_1024:data
+GET img-538_1024:data
+  image size (enc)  88172
+  decode time 6761
+  image size (dec)  2448384
+  detecting    ...  1576
+  analysis time 1498857
+  sending feat size 1828160
+  hold time 1518409
+ok img-538
+GET img-539_1024:data
+GET img-540_1024:data
+GET img-541_1024:data
+  image size (enc)  114739
+  decode time 6002
+  image size (dec)  2088960
+  detecting    ...  1464
+  analysis time 1386794
+  sending feat size 1698240
+  hold time 1404000
+ok img-541
+GET img-542_1024:data
+  image size (enc)  128308
+  decode time 6886
+  image size (dec)  2088960
+  detecting    ...  3310
+  analysis time 2541139
+  sending feat size 3839600
+  hold time 2565529
+ok img-542
+GET img-543_1024:data
+  image size (enc)  209143
+  decode time 9065
+  image size (dec)  2359296
+  detecting    ...  2998
+  analysis time 2554661
+  sending feat size 3477680
+  hold time 2580901
+ok img-543
+GET img-544_1024:data
+  image size (enc)  132758
+  decode time 7650
+  image size (dec)  2359296
+  detecting    ...  2808
+  analysis time 2245723
+  sending feat size 3257280
+  hold time 2270078
+ok img-544
+GET img-545_1024:data
+  image size (enc)  108406
+  decode time 9418
+  image size (dec)  3145728
+  detecting    ...  3347
+  analysis time 2767983
+  sending feat size 3882520
+  hold time 2798436
+ok img-545
+GET img-546_1024:data
+  image size (enc)  141209
+  decode time 9097
+  image size (dec)  2909184
+  detecting    ...  4850
+  analysis time 3347715
+  sending feat size 5626000
+  hold time 3379995
+ok img-546
+GET img-547_1024:data
+  image size (enc)  138701
+  decode time 10356
+  image size (dec)  3145728
+  detecting    ...  3708
+  analysis time 3146395
+  sending feat size 4301280
+  hold time 3176501
+ok img-547
+GET img-548_1024:data
+  image size (enc)  224521
+  decode time 7796
+  image size (dec)  2098176
+  detecting    ...  6903
+  analysis time 4432000
+  sending feat size 8007480
+  hold time 4459152
+ok img-548
+GET img-549_1024:data
+  image size (enc)  31752
+  decode time 5579
+  image size (dec)  2055168
+  detecting    ...  686
+  analysis time 932191
+  sending feat size 795760
+  hold time 947967
+ok img-549
+GET img-550_1024:data
+  image size (enc)  152078
+  decode time 7128
+  image size (dec)  2101248
+  detecting    ...  4198
+  analysis time 3054750
+  sending feat size 4869680
+  hold time 3078791
+ok img-550
+GET img-551_1024:data
+  image size (enc)  125375
+  decode time 6167
+  image size (dec)  2098176
+  detecting    ...  2310
+  analysis time 1957194
+  sending feat size 2679600
+  hold time 1970809
+ok img-551
+GET img-552_1024:data
+  image size (enc)  374795
+  decode time 14233
+  image size (dec)  3145728
+  detecting    ...  11284
+  analysis time 7545692
+  sending feat size 13089440
+  hold time 7592609
+ok img-552
+GET img-553_1024:data
+GET img-554_1024:data
+  image size (enc)  99168
+  decode time 5929
+  image size (dec)  2098176
+  detecting    ...  2478
+  analysis time 1901360
+  sending feat size 2874480
+  hold time 1920690
+ok img-554
+GET img-555_1024:data
+  image size (enc)  246440
+  decode time 8129
+  image size (dec)  2085888
+  detecting    ...  5072
+  analysis time 3478754
+  sending feat size 5883520
+  hold time 3505768
+ok img-555
+GET img-556_1024:data
+  image size (enc)  247709
+  decode time 7942
+  image size (dec)  2098176
+  detecting    ...  9211
+  analysis time 5631261
+  sending feat size 10684760
+  hold time 5673960
+ok img-556
+GET img-557_1024:data
+  image size (enc)  182316
+  decode time 7506
+  image size (dec)  2088960
+  detecting    ...  3957
+  analysis time 2783013
+  sending feat size 4590120
+  hold time 2806956
+ok img-557
+GET img-558_1024:data
+  image size (enc)  81465
+  decode time 5838
+  image size (dec)  2098176
+  detecting    ...  542
+  analysis time 840184
+  sending feat size 628720
+  hold time 855614
+ok img-558
+GET img-559_1024:data
+  image size (enc)  109089
+  decode time 6666
+  image size (dec)  2098176
+  detecting    ...  1932
+  analysis time 1648952
+  sending feat size 2241120
+  hold time 1667728
+ok img-559
+GET img-560_1024:data
+  image size (enc)  116412
+  decode time 6241
+  image size (dec)  2082816
+  detecting    ...  2550
+  analysis time 2042693
+  sending feat size 2958000
+  hold time 2062723
+ok img-560
+GET img-561_1024:data
+  image size (enc)  158345
+  decode time 6795
+  image size (dec)  2098176
+  detecting    ...  3415
+  analysis time 2595175
+  sending feat size 3961400
+  hold time 2619699
+ok img-561
+GET img-562_1024:data
+  image size (enc)  171478
+  decode time 8804
+  image size (dec)  2359296
+  detecting    ...  5876
+  analysis time 4186467
+  sending feat size 6816160
+  hold time 4216604
+ok img-562
+GET img-563_1024:data
+  image size (enc)  18561
+  decode time 2582
+  image size (dec)  1327104
+  detecting    ...  391
+  analysis time 533490
+  sending feat size 453560
+  hold time 542661
+ok img-563
+GET img-564_1024:data
+  image size (enc)  183867
+  decode time 8189
+  image size (dec)  2211840
+  detecting    ...  5877
+  analysis time 3880324
+  sending feat size 6817320
+  hold time 3909697
+ok img-564
+GET img-565_1024:data
+GET img-566_1024:data
+  image size (enc)  37674
+  decode time 4861
+  image size (dec)  1769472
+  detecting    ...  280
+  analysis time 544663
+  sending feat size 324800
+  hold time 557578
+ok img-566
+GET img-567_1024:data
+GET img-568_1024:data
+  image size (enc)  68569
+  decode time 5551
+  image size (dec)  2082816
+  detecting    ...  751
+  analysis time 927658
+  sending feat size 871160
+  hold time 943209
+ok img-568
+GET img-569_1024:data
+GET img-570_1024:data
+  image size (enc)  127224
+  decode time 6235
+  image size (dec)  2098176
+  detecting    ...  2248
+  analysis time 1920452
+  sending feat size 2607680
+  hold time 1940650
+ok img-570
+GET img-571_1024:data
+  image size (enc)  156338
+  decode time 7845
+  image size (dec)  2270208
+  detecting    ...  3369
+  analysis time 2606128
+  sending feat size 3908040
+  hold time 2631825
+ok img-571
+GET img-572_1024:data
+  image size (enc)  175260
+  decode time 7265
+  image size (dec)  2181120
+  detecting    ...  8619
+  analysis time 4946673
+  sending feat size 9998040
+  hold time 4978797
+ok img-572
+GET img-573_1024:data
+  image size (enc)  78722
+  decode time 6144
+  image size (dec)  2101248
+  detecting    ...  1923
+  analysis time 1576548
+  sending feat size 2230680
+  hold time 1594883
+ok img-573
+GET img-574_1024:data
+  image size (enc)  82990
+  decode time 6271
+  image size (dec)  2245632
+  detecting    ...  820
+  analysis time 1067103
+  sending feat size 951200
+  hold time 1084011
+ok img-574
+GET img-575_1024:data
+  image size (enc)  115890
+  decode time 6519
+  image size (dec)  2098176
+  detecting    ...  3440
+  analysis time 2548394
+  sending feat size 3990400
+  hold time 2573403
+ok img-575
+GET img-576_1024:data
+  image size (enc)  154834
+  decode time 6868
+  image size (dec)  2098176
+  detecting    ...  5848
+  analysis time 3891040
+  sending feat size 6783680
+  hold time 3918317
+ok img-576
+GET img-577_1024:data
+  image size (enc)  89171
+  decode time 5705
+  image size (dec)  2082816
+  detecting    ...  1250
+  analysis time 1241208
+  sending feat size 1450000
+  hold time 1257838
+ok img-577
+GET img-578_1024:data
+  image size (enc)  58343
+  decode time 4971
+  image size (dec)  1769472
+  detecting    ...  1000
+  analysis time 1027748
+  sending feat size 1160000
+  hold time 1042022
+ok img-578
+GET img-579_1024:data
+  image size (enc)  7719
+  decode time 4169
+  image size (dec)  2359296
+  detecting    ...  94
+  analysis time 562701
+  sending feat size 109040
+  hold time 576737
+ok img-579
+GET img-580_1024:data
+  image size (enc)  125829
+  decode time 6728
+  image size (dec)  2098176
+  detecting    ...  3622
+  analysis time 2670481
+  sending feat size 4201520
+  hold time 2693356
+ok img-580
+GET img-581_1024:data
+  image size (enc)  118204
+  decode time 6861
+  image size (dec)  2101248
+  detecting    ...  4293
+  analysis time 3039587
+  sending feat size 4979880
+  hold time 3064450
+ok img-581
+GET img-582_1024:data
+  image size (enc)  169855
+  decode time 8601
+  image size (dec)  2429952
+  detecting    ...  5931
+  analysis time 4120111
+  sending feat size 6879960
+  hold time 4151032
+ok img-582
+GET img-583_1024:data
+GET img-584_1024:data
+  image size (enc)  155122
+  decode time 6481
+  image size (dec)  2098176
+  detecting    ...  3413
+  analysis time 2740140
+  sending feat size 3959080
+  hold time 2763939
+ok img-584
+GET img-585_1024:data
+  image size (enc)  97805
+  decode time 5853
+  image size (dec)  2098176
+  detecting    ...  681
+  analysis time 934315
+  sending feat size 789960
+  hold time 950101
+ok img-585
+GET img-586_1024:data
+  image size (enc)  59522
+  decode time 5534
+  image size (dec)  2098176
+  detecting    ...  2407
+  analysis time 1855176
+  sending feat size 2792120
+  hold time 1873761
+ok img-586
+GET img-587_1024:data
+GET img-588_1024:data
+  image size (enc)  219307
+  decode time 8312
+  image size (dec)  2088960
+  detecting    ...  10816
+  analysis time 6421478
+  sending feat size 12546560
+  hold time 6457472
+ok img-588
+GET img-589_1024:data
+GET img-590_1024:data
+  image size (enc)  112550
+  decode time 6207
+  image size (dec)  2098176
+  detecting    ...  2961
+  analysis time 2447958
+  sending feat size 3434760
+  hold time 2470341
+ok img-590
+GET img-591_1024:data
+  image size (enc)  209387
+  decode time 8664
+  image size (dec)  2098176
+  detecting    ...  6698
+  analysis time 4336913
+  sending feat size 7769680
+  hold time 4373836
+ok img-591
+GET img-592_1024:data
+GET img-593_1024:data
+  image size (enc)  163449
+  decode time 7475
+  image size (dec)  2098176
+  detecting    ...  3885
+  analysis time 2676634
+  sending feat size 4506600
+  hold time 2699960
+ok img-593
+GET img-594_1024:data
+  image size (enc)  132169
+  decode time 6626
+  image size (dec)  1947648
+  detecting    ...  3561
+  analysis time 2656441
+  sending feat size 4130760
+  hold time 2682377
+ok img-594
+GET img-595_1024:data
+  image size (enc)  118551
+  decode time 6870
+  image size (dec)  2098176
+  detecting    ...  2375
+  analysis time 1935104
+  sending feat size 2755000
+  hold time 1955473
+ok img-595
+GET img-596_1024:data
+  image size (enc)  100909
+  decode time 5778
+  image size (dec)  1769472
+  detecting    ...  1397
+  analysis time 1294440
+  sending feat size 1620520
+  hold time 1311717
+ok img-596
+GET img-597_1024:data
+  image size (enc)  114315
+  decode time 6315
+  image size (dec)  2098176
+  detecting    ...  1278
+  analysis time 1222789
+  sending feat size 1482480
+  hold time 1240119
+ok img-597
+GET img-598_1024:data
+  image size (enc)  124937
+  decode time 7007
+  image size (dec)  2098176
+  detecting    ...  3393
+  analysis time 2449961
+  sending feat size 3935880
+  hold time 2475918
+ok img-598
+GET img-599_1024:data
+GET img-600_1024:data
+GET img-601_1024:data
+  image size (enc)  99828
+  decode time 5467
+  image size (dec)  1769472
+  detecting    ...  2549
+  analysis time 2033097
+  sending feat size 2956840
+  hold time 2050672
+ok img-601
+GET img-602_1024:data
+  image size (enc)  103304
+  decode time 6664
+  image size (dec)  2098176
+  detecting    ...  2326
+  analysis time 1960345
+  sending feat size 2698160
+  hold time 1981285
+ok img-602
+GET img-603_1024:data
+  image size (enc)  172718
+  decode time 8085
+  image size (dec)  2224128
+  detecting    ...  7236
+  analysis time 4733217
+  sending feat size 8393760
+  hold time 4764496
+ok img-603
+GET img-604_1024:data
+  image size (enc)  110149
+  decode time 6126
+  image size (dec)  2095104
+  detecting    ...  1770
+  analysis time 1514388
+  sending feat size 2053200
+  hold time 1532428
+ok img-604
+GET img-605_1024:data
+  image size (enc)  65354
+  decode time 5822
+  image size (dec)  2101248
+  detecting    ...  1338
+  analysis time 1407815
+  sending feat size 1552080
+  hold time 1425383
+ok img-605
+GET img-606_1024:data
+  image size (enc)  111452
+  decode time 6361
+  image size (dec)  2098176
+  detecting    ...  2247
+  analysis time 1902877
+  sending feat size 2606520
+  hold time 1921993
+ok img-606
+GET img-607_1024:data
+  image size (enc)  165162
+  decode time 6941
+  image size (dec)  2098176
+  detecting    ...  6808
+  analysis time 4373385
+  sending feat size 7897280
+  hold time 4408037
+ok img-607
+GET img-608_1024:data
+  image size (enc)  144608
+  decode time 6768
+  image size (dec)  2098176
+  detecting    ...  1779
+  analysis time 1694737
+  sending feat size 2063640
+  hold time 1713414
+ok img-608
+GET img-609_1024:data
+  image size (enc)  73184
+  decode time 8014
+  image size (dec)  3145728
+  detecting    ...  1048
+  analysis time 1339348
+  sending feat size 1215680
+  hold time 1361780
+ok img-609
+GET img-610_1024:data
+  image size (enc)  139177
+  decode time 7431
+  image size (dec)  2233344
+  detecting    ...  2968
+  analysis time 2463385
+  sending feat size 3442880
+  hold time 2488644
+ok img-610
+GET img-611_1024:data
+GET img-612_1024:data
+GET img-613_1024:data
+  image size (enc)  64529
+  decode time 5917
+  image size (dec)  2101248
+  detecting    ...  759
+  analysis time 1024717
+  sending feat size 880440
+  hold time 1040748
+ok img-613
+GET img-614_1024:data
+  image size (enc)  38610
+  decode time 4455
+  image size (dec)  1769472
+  detecting    ...  589
+  analysis time 781249
+  sending feat size 683240
+  hold time 794307
+ok img-614
+GET img-615_1024:data
+  image size (enc)  106401
+  decode time 6000
+  image size (dec)  2098176
+  detecting    ...  2083
+  analysis time 1792926
+  sending feat size 2416280
+  hold time 1811362
+ok img-615
+GET img-616_1024:data
+GET img-617_1024:data
+  image size (enc)  163696
+  decode time 8409
+  image size (dec)  2359296
+  detecting    ...  2664
+  analysis time 2197023
+  sending feat size 3090240
+  hold time 2220500
+ok img-617
+GET img-618_1024:data
+  image size (enc)  220422
+  decode time 8768
+  image size (dec)  2088960
+  detecting    ...  4114
+  analysis time 3031685
+  sending feat size 4772240
+  hold time 3063331
+ok img-618
+GET img-619_1024:data
+  image size (enc)  85196
+  decode time 7059
+  image size (dec)  2359296
+  detecting    ...  3261
+  analysis time 2431590
+  sending feat size 3782760
+  hold time 2463185
+ok img-619
+GET img-620_1024:data
+  image size (enc)  155285
+  decode time 7202
+  image size (dec)  2098176
+  detecting    ...  3400
+  analysis time 2537065
+  sending feat size 3944000
+  hold time 2562135
+ok img-620
+GET img-621_1024:data
+  image size (enc)  121168
+  decode time 6594
+  image size (dec)  2098176
+  detecting    ...  3101
+  analysis time 2367193
+  sending feat size 3597160
+  hold time 2390396
+ok img-621
+GET img-622_1024:data
+  image size (enc)  42988
+  decode time 6199
+  image size (dec)  2396160
+  detecting    ...  351
+  analysis time 792670
+  sending feat size 407160
+  hold time 809376
+ok img-622
+GET img-623_1024:data
+  image size (enc)  169084
+  decode time 7017
+  image size (dec)  2098176
+  detecting    ...  4581
+  analysis time 3192135
+  sending feat size 5313960
+  hold time 3217365
+ok img-623
+GET img-624_1024:data
+  image size (enc)  115909
+  decode time 5502
+  image size (dec)  2098176
+  detecting    ...  1169
+  analysis time 1243939
+  sending feat size 1356040
+  hold time 1260235
+ok img-624
+GET img-625_1024:data
+  image size (enc)  116078
+  decode time 5914
+  image size (dec)  1738752
+  detecting    ...  5134
+  analysis time 3291419
+  sending feat size 5955440
+  hold time 3314692
+ok img-625
+GET img-626_1024:data
+  image size (enc)  92284
+  decode time 7944
+  image size (dec)  2942976
+  detecting    ...  2974
+  analysis time 2441336
+  sending feat size 3449840
+  hold time 2469161
+ok img-626
+GET img-627_1024:data
+  image size (enc)  85159
+  decode time 6040
+  image size (dec)  1907712
+  detecting    ...  2182
+  analysis time 1789581
+  sending feat size 2531120
+  hold time 1808193
+ok img-627
+GET img-628_1024:data
+  image size (enc)  131842
+  decode time 5829
+  image size (dec)  2098176
+  detecting    ...  1610
+  analysis time 1548908
+  sending feat size 1867600
+  hold time 1565546
+ok img-628
+GET img-629_1024:data
+  image size (enc)  58361
+  decode time 5320
+  image size (dec)  2098176
+  detecting    ...  480
+  analysis time 815776
+  sending feat size 556800
+  hold time 830735
+ok img-629
+GET img-630_1024:data
+  image size (enc)  112938
+  decode time 7322
+  image size (dec)  2356224
+  detecting    ...  1711
+  analysis time 1613621
+  sending feat size 1984760
+  hold time 1633697
+ok img-630
+GET img-631_1024:data
+  image size (enc)  212313
+  decode time 9549
+  image size (dec)  2519040
+  detecting    ...  6206
+  analysis time 4433105
+  sending feat size 7198960
+  hold time 4465263
+ok img-631
+GET img-632_1024:data
+  image size (enc)  227317
+  decode time 7646
+  image size (dec)  2098176
+  detecting    ...  9274
+  analysis time 5938551
+  sending feat size 10757840
+  hold time 5970496
+ok img-632
+GET img-633_1024:data
+GET img-634_1024:data
+  image size (enc)  216342
+  decode time 8784
+  image size (dec)  2098176
+  detecting    ...  4726
+  analysis time 3422802
+  sending feat size 5482160
+  hold time 3450608
+ok img-634
+GET img-635_1024:data
+  image size (enc)  127143
+  decode time 7597
+  image size (dec)  2359296
+  detecting    ...  2891
+  analysis time 2289826
+  sending feat size 3353560
+  hold time 2314430
+ok img-635
+GET img-636_1024:data
+  image size (enc)  114862
+  decode time 6164
+  image size (dec)  2098176
+  detecting    ...  1698
+  analysis time 1529929
+  sending feat size 1969680
+  hold time 1549018
+ok img-636
+GET img-637_1024:data
+  image size (enc)  115665
+  decode time 6687
+  image size (dec)  2095104
+  detecting    ...  3381
+  analysis time 2648912
+  sending feat size 3921960
+  hold time 2672917
+ok img-637
+GET img-638_1024:data
+  image size (enc)  89124
+  decode time 6476
+  image size (dec)  2104320
+  detecting    ...  2248
+  analysis time 1780873
+  sending feat size 2607680
+  hold time 1794690
+ok img-638
+GET img-639_1024:data
+  image size (enc)  37087
+  decode time 5740
+  image size (dec)  2098176
+  detecting    ...  139
+  analysis time 559272
+  sending feat size 161240
+  hold time 573999
+ok img-639
+GET img-640_1024:data
+  image size (enc)  260155
+  decode time 11238
+  image size (dec)  3099648
+  detecting    ...  6424
+  analysis time 4426383
+  sending feat size 7451840
+  hold time 4469580
+ok img-640
+GET img-641_1024:data
+GET img-642_1024:data
+  image size (enc)  112286
+  decode time 7032
+  image size (dec)  2359296
+  detecting    ...  2054
+  analysis time 1850807
+  sending feat size 2382640
+  hold time 1871230
+ok img-642
+GET img-643_1024:data
+  image size (enc)  192878
+  decode time 7025
+  image size (dec)  2098176
+  detecting    ...  7355
+  analysis time 4591982
+  sending feat size 8531800
+  hold time 4621173
+ok img-643
+GET img-644_1024:data
+  image size (enc)  119448
+  decode time 7138
+  image size (dec)  2359296
+  detecting    ...  2771
+  analysis time 2184437
+  sending feat size 3214360
+  hold time 2210513
+ok img-644
+GET img-645_1024:data
+GET img-646_1024:data
+  image size (enc)  79781
+  decode time 6028
+  image size (dec)  2098176
+  detecting    ...  2265
+  analysis time 1969810
+  sending feat size 2627400
+  hold time 1989480
+ok img-646
+GET img-647_1024:data
+  image size (enc)  142673
+  decode time 7273
+  image size (dec)  2098176
+  detecting    ...  2653
+  analysis time 2182733
+  sending feat size 3077480
+  hold time 2203533
+ok img-647
+GET img-648_1024:data
+  image size (enc)  155171
+  decode time 6860
+  image size (dec)  2098176
+  detecting    ...  5140
+  analysis time 3444444
+  sending feat size 5962400
+  hold time 3470888
+ok img-648
+GET img-649_1024:data
+  image size (enc)  100250
+  decode time 7109
+  image size (dec)  2359296
+  detecting    ...  1819
+  analysis time 1760676
+  sending feat size 2110040
+  hold time 1780731
+ok img-649
+GET img-650_1024:data
+  image size (enc)  134718
+  decode time 5961
+  image size (dec)  1843200
+  detecting    ...  3052
+  analysis time 2196141
+  sending feat size 3540320
+  hold time 2218771
+ok img-650
+GET img-651_1024:data
+  image size (enc)  89994
+  decode time 6504
+  image size (dec)  2098176
+  detecting    ...  2121
+  analysis time 1842609
+  sending feat size 2460360
+  hold time 1861669
+ok img-651
+GET img-652_1024:data
+  image size (enc)  96439
+  decode time 5970
+  image size (dec)  2150400
+  detecting    ...  1323
+  analysis time 1315942
+  sending feat size 1534680
+  hold time 1333199
+ok img-652
+GET img-653_1024:data
+GET img-654_1024:data
+  image size (enc)  128801
+  decode time 7193
+  image size (dec)  2098176
+  detecting    ...  4555
+  analysis time 3191576
+  sending feat size 5283800
+  hold time 3217781
+ok img-654
+GET img-655_1024:data
+  image size (enc)  132103
+  decode time 7129
+  image size (dec)  2110464
+  detecting    ...  5394
+  analysis time 3566252
+  sending feat size 6257040
+  hold time 3593644
+ok img-655
+GET img-656_1024:data
+  image size (enc)  113171
+  decode time 6536
+  image size (dec)  2082816
+  detecting    ...  1901
+  analysis time 1683399
+  sending feat size 2205160
+  hold time 1702033
+ok img-656
+GET img-657_1024:data
+GET img-658_1024:data
+  image size (enc)  82580
+  decode time 5297
+  image size (dec)  2098176
+  detecting    ...  1941
+  analysis time 1654997
+  sending feat size 2251560
+  hold time 1672476
+ok img-658
+GET img-659_1024:data
+  image size (enc)  120629
+  decode time 7055
+  image size (dec)  2098176
+  detecting    ...  3951
+  analysis time 2768521
+  sending feat size 4583160
+  hold time 2793068
+ok img-659
+GET img-660_1024:data
+GET img-661_1024:data
+  image size (enc)  123052
+  decode time 6408
+  image size (dec)  2098176
+  detecting    ...  3028
+  analysis time 2400719
+  sending feat size 3512480
+  hold time 2423508
+ok img-661
+GET img-662_1024:data
+  image size (enc)  104858
+  decode time 6115
+  image size (dec)  2098176
+  detecting    ...  1580
+  analysis time 1466876
+  sending feat size 1832800
+  hold time 1484561
+ok img-662
+GET img-663_1024:data
+  image size (enc)  89051
+  decode time 5629
+  image size (dec)  2098176
+  detecting    ...  1198
+  analysis time 1156149
+  sending feat size 1389680
+  hold time 1172643
+ok img-663
+GET img-664_1024:data
+  image size (enc)  171706
+  decode time 7241
+  image size (dec)  2104320
+  detecting    ...  6930
+  analysis time 4475553
+  sending feat size 8038800
+  hold time 4511290
+ok img-664
+GET img-665_1024:data
+  image size (enc)  188330
+  decode time 7854
+  image size (dec)  2098176
+  detecting    ...  2250
+  analysis time 1959556
+  sending feat size 2610000
+  hold time 1980197
+ok img-665
+GET img-666_1024:data
+  image size (enc)  92803
+  decode time 6108
+  image size (dec)  2098176
+  detecting    ...  1221
+  analysis time 1312568
+  sending feat size 1416360
+  hold time 1329598
+ok img-666
+GET img-667_1024:data
+  image size (enc)  101966
+  decode time 6257
+  image size (dec)  2098176
+  detecting    ...  1252
+  analysis time 1220091
+  sending feat size 1452320
+  hold time 1237326
+ok img-667
+GET img-668_1024:data
+  image size (enc)  56939
+  decode time 6088
+  image size (dec)  2359296
+  detecting    ...  89
+  analysis time 624032
+  sending feat size 103240
+  hold time 640021
+ok img-668
+GET img-669_1024:data
+  image size (enc)  146972
+  decode time 7564
+  image size (dec)  2359296
+  detecting    ...  3751
+  analysis time 2674336
+  sending feat size 4351160
+  hold time 2699572
+ok img-669
+GET img-670_1024:data
+  image size (enc)  134511
+  decode time 6419
+  image size (dec)  2098176
+  detecting    ...  3271
+  analysis time 2408295
+  sending feat size 3794360
+  hold time 2432246
+ok img-670
+GET img-671_1024:data
+  image size (enc)  133036
+  decode time 7867
+  image size (dec)  2359296
+  detecting    ...  2894
+  analysis time 2375469
+  sending feat size 3357040
+  hold time 2401596
+ok img-671
+GET img-672_1024:data
+  image size (enc)  171319
+  decode time 7971
+  image size (dec)  2098176
+  detecting    ...  3985
+  analysis time 3023404
+  sending feat size 4622600
+  hold time 3042242
+ok img-672
+GET img-673_1024:data
+  image size (enc)  123785
+  decode time 7574
+  image size (dec)  2088960
+  detecting    ...  3536
+  analysis time 2520538
+  sending feat size 4101760
+  hold time 2546304
+ok img-673
+GET img-674_1024:data
+  image size (enc)  87362
+  decode time 4595
+  image size (dec)  1210368
+  detecting    ...  3820
+  analysis time 2449926
+  sending feat size 4431200
+  hold time 2467825
+ok img-674
+GET img-675_1024:data
+GET img-676_1024:data
+  image size (enc)  168335
+  decode time 8654
+  image size (dec)  2359296
+  detecting    ...  6182
+  analysis time 4162411
+  sending feat size 7171120
+  hold time 4203278
+ok img-676
+GET img-677_1024:data
+GET img-678_1024:data
+GET img-679_1024:data
+  image size (enc)  93220
+  decode time 6514
+  image size (dec)  2174976
+  detecting    ...  972
+  analysis time 1186133
+  sending feat size 1127520
+  hold time 1203299
+ok img-679
+GET img-680_1024:data
+  image size (enc)  110966
+  decode time 6362
+  image size (dec)  2098176
+  detecting    ...  3215
+  analysis time 2350363
+  sending feat size 3729400
+  hold time 2374771
+ok img-680
+GET img-681_1024:data
+  image size (enc)  66042
+  decode time 5379
+  image size (dec)  1769472
+  detecting    ...  2119
+  analysis time 1697244
+  sending feat size 2458040
+  hold time 1714001
+ok img-681
+GET img-682_1024:data
+  image size (enc)  83700
+  decode time 6341
+  image size (dec)  2098176
+  detecting    ...  2497
+  analysis time 2074367
+  sending feat size 2896520
+  hold time 2093967
+ok img-682
+GET img-683_1024:data
+  image size (enc)  115860
+  decode time 5847
+  image size (dec)  1658880
+  detecting    ...  2468
+  analysis time 1825772
+  sending feat size 2862880
+  hold time 1843739
+ok img-683
+GET img-684_1024:data
+  image size (enc)  91653
+  decode time 6684
+  image size (dec)  2359296
+  detecting    ...  813
+  analysis time 1136087
+  sending feat size 943080
+  hold time 1153986
+ok img-684
+GET img-685_1024:data
+  image size (enc)  174491
+  decode time 6890
+  image size (dec)  2098176
+  detecting    ...  5219
+  analysis time 3734530
+  sending feat size 6054040
+  hold time 3760516
+ok img-685
+GET img-686_1024:data
+  image size (enc)  94627
+  decode time 5139
+  image size (dec)  1615872
+  detecting    ...  2834
+  analysis time 2070511
+  sending feat size 3287440
+  hold time 2089777
+ok img-686
+GET img-687_1024:data
+  image size (enc)  239457
+  decode time 8090
+  image size (dec)  2359296
+  detecting    ...  4329
+  analysis time 3060373
+  sending feat size 5021640
+  hold time 3086799
+ok img-687
+GET img-688_1024:data
+GET img-689_1024:data
+  image size (enc)  100653
+  decode time 7049
+  image size (dec)  2359296
+  detecting    ...  2642
+  analysis time 2165080
+  sending feat size 3064720
+  hold time 2186586
+ok img-689
+GET img-690_1024:data
+  image size (enc)  177549
+  decode time 6749
+  image size (dec)  2085888
+  detecting    ...  3293
+  analysis time 2455891
+  sending feat size 3819880
+  hold time 2480306
+ok img-690
+GET img-691_1024:data
+  image size (enc)  101620
+  decode time 6533
+  image size (dec)  2098176
+  detecting    ...  3535
+  analysis time 2725261
+  sending feat size 4100600
+  hold time 2750098
+ok img-691
+GET img-692_1024:data
+  image size (enc)  176201
+  decode time 7503
+  image size (dec)  2098176
+  detecting    ...  6609
+  analysis time 4128619
+  sending feat size 7666440
+  hold time 4162841
+ok img-692
+GET img-693_1024:data
+GET img-694_1024:data
+  image size (enc)  113800
+  decode time 6431
+  image size (dec)  2362368
+  detecting    ...  1495
+  analysis time 1488398
+  sending feat size 1734200
+  hold time 1507241
+ok img-694
+GET img-695_1024:data
+  image size (enc)  105135
+  decode time 6665
+  image size (dec)  2098176
+  detecting    ...  3881
+  analysis time 2789011
+  sending feat size 4501960
+  hold time 2812103
+ok img-695
+GET img-696_1024:data
+  image size (enc)  175227
+  decode time 8230
+  image size (dec)  2359296
+  detecting    ...  6686
+  analysis time 4285629
+  sending feat size 7755760
+  hold time 4323581
+ok img-696
+GET img-697_1024:data
+GET img-698_1024:data
+  image size (enc)  206760
+  decode time 7935
+  image size (dec)  2359296
+  detecting    ...  3530
+  analysis time 2721833
+  sending feat size 4094800
+  hold time 2749003
+ok img-698
+GET img-699_1024:data
+  image size (enc)  90905
+  decode time 5522
+  image size (dec)  1769472
+  detecting    ...  1808
+  analysis time 1564914
+  sending feat size 2097280
+  hold time 1581699
+ok img-699
+GET img-700_1024:data
+  image size (enc)  64255
+  decode time 6233
+  image size (dec)  2101248
+  detecting    ...  712
+  analysis time 939646
+  sending feat size 825920
+  hold time 956001
+ok img-700
+GET img-701_1024:data
+  image size (enc)  135826
+  decode time 7576
+  image size (dec)  2359296
+  detecting    ...  5185
+  analysis time 3488633
+  sending feat size 6014600
+  hold time 3516050
+ok img-701
+GET img-702_1024:data
+  image size (enc)  130624
+  decode time 6269
+  image size (dec)  2098176
+  detecting    ...  1413
+  analysis time 1415930
+  sending feat size 1639080
+  hold time 1433472
+ok img-702
+GET img-703_1024:data
+  image size (enc)  166790
+  decode time 6583
+  image size (dec)  2098176
+  detecting    ...  3404
+  analysis time 2589377
+  sending feat size 3948640
+  hold time 2614553
+ok img-703
+GET img-704_1024:data
+  image size (enc)  140848
+  decode time 6704
+  image size (dec)  2098176
+  detecting    ...  3518
+  analysis time 2601712
+  sending feat size 4080880
+  hold time 2626134
+ok img-704
+GET img-705_1024:data
+  image size (enc)  88703
+  decode time 6236
+  image size (dec)  2098176
+  detecting    ...  2321
+  analysis time 1984551
+  sending feat size 2692360
+  hold time 2003729
+ok img-705
+GET img-706_1024:data
+  image size (enc)  277174
+  decode time 9533
+  image size (dec)  2359296
+  detecting    ...  10710
+  analysis time 6730973
+  sending feat size 12423600
+  hold time 6790688
+ok img-706
+GET img-707_1024:data
+  image size (enc)  85426
+  decode time 6285
+  image size (dec)  2098176
+  detecting    ...  1535
+  analysis time 1356974
+  sending feat size 1780600
+  hold time 1374029
+ok img-707
+GET img-708_1024:data
+  image size (enc)  157108
+  decode time 7093
+  image size (dec)  2098176
+  detecting    ...  4685
+  analysis time 3115054
+  sending feat size 5434600
+  hold time 3140778
+ok img-708
+GET img-709_1024:data
+  image size (enc)  203575
+  decode time 8363
+  image size (dec)  2104320
+  detecting    ...  4206
+  analysis time 3121861
+  sending feat size 4878960
+  hold time 3147780
+ok img-709
+GET img-710_1024:data
+GET img-711_1024:data
+  image size (enc)  59534
+  decode time 5787
+  image size (dec)  2095104
+  detecting    ...  1303
+  analysis time 1282633
+  sending feat size 1511480
+  hold time 1299516
+ok img-711
+GET img-712_1024:data
+  image size (enc)  134297
+  decode time 6589
+  image size (dec)  2095104
+  detecting    ...  2750
+  analysis time 2103197
+  sending feat size 3190000
+  hold time 2124785
+ok img-712
+GET img-713_1024:data
+GET img-714_1024:data
+  image size (enc)  165174
+  decode time 6861
+  image size (dec)  2098176
+  detecting    ...  3166
+  analysis time 2387012
+  sending feat size 3672560
+  hold time 2411211
+ok img-714
+GET img-715_1024:data
+  image size (enc)  95547
+  decode time 6115
+  image size (dec)  2098176
+  detecting    ...  2156
+  analysis time 1796782
+  sending feat size 2500960
+  hold time 1816010
+ok img-715
+GET img-716_1024:data
+  image size (enc)  99556
+  decode time 6225
+  image size (dec)  2098176
+  detecting    ...  1554
+  analysis time 1361817
+  sending feat size 1802640
+  hold time 1379594
+ok img-716
+GET img-717_1024:data
+  image size (enc)  144846
+  decode time 6152
+  image size (dec)  2098176
+  detecting    ...  2211
+  analysis time 1889445
+  sending feat size 2564760
+  hold time 1909563
+ok img-717
+GET img-718_1024:data
+  image size (enc)  113161
+  decode time 6418
+  image size (dec)  2082816
+  detecting    ...  2504
+  analysis time 1948001
+  sending feat size 2904640
+  hold time 1967654
+ok img-718
+GET img-719_1024:data
+  image size (enc)  65492
+  decode time 5583
+  image size (dec)  2098176
+  detecting    ...  793
+  analysis time 1034216
+  sending feat size 919880
+  hold time 1050012
+ok img-719
+GET img-720_1024:data
+  image size (enc)  85031
+  decode time 5558
+  image size (dec)  2082816
+  detecting    ...  1286
+  analysis time 1288496
+  sending feat size 1491760
+  hold time 1305081
+ok img-720
+GET img-721_1024:data
+  image size (enc)  71366
+  decode time 5055
+  image size (dec)  1769472
+  detecting    ...  1249
+  analysis time 1238028
+  sending feat size 1448840
+  hold time 1254402
+ok img-721
+GET img-722_1024:data
+  image size (enc)  371375
+  decode time 11821
+  image size (dec)  2356224
+  detecting    ...  14461
+  analysis time 9056577
+  sending feat size 16774760
+  hold time 9103059
+ok img-722
+GET img-723_1024:data
+  image size (enc)  110114
+  decode time 6991
+  image size (dec)  2242560
+  detecting    ...  2894
+  analysis time 2309179
+  sending feat size 3357040
+  hold time 2333318
+ok img-723
+GET img-724_1024:data
+  image size (enc)  345839
+  decode time 10329
+  image size (dec)  2359296
+  detecting    ...  8656
+  analysis time 5575134
+  sending feat size 10040960
+  hold time 5611999
+ok img-724
+GET img-725_1024:data
+  image size (enc)  137448
+  decode time 6482
+  image size (dec)  2095104
+  detecting    ...  3270
+  analysis time 2381536
+  sending feat size 3793200
+  hold time 2405691
+ok img-725
+GET img-726_1024:data
+  image size (enc)  76772
+  decode time 5164
+  image size (dec)  1701888
+  detecting    ...  2663
+  analysis time 1973860
+  sending feat size 3089080
+  hold time 1992659
+ok img-726
+GET img-727_1024:data
+  image size (enc)  88461
+  decode time 4934
+  image size (dec)  1769472
+  detecting    ...  1782
+  analysis time 1452112
+  sending feat size 2067120
+  hold time 1463122
+ok img-727
+GET img-728_1024:data
+  image size (enc)  127875
+  decode time 8495
+  image size (dec)  2359296
+  detecting    ...  6096
+  analysis time 4214840
+  sending feat size 7071360
+  hold time 4246032
+ok img-728
+GET img-729_1024:data
+  image size (enc)  100214
+  decode time 6323
+  image size (dec)  2098176
+  detecting    ...  2200
+  analysis time 1842238
+  sending feat size 2552000
+  hold time 1861284
+ok img-729
+GET img-730_1024:data
+  image size (enc)  117562
+  decode time 6340
+  image size (dec)  2098176
+  detecting    ...  2004
+  analysis time 1673197
+  sending feat size 2324640
+  hold time 1693022
+ok img-730
+GET img-731_1024:data
+  image size (enc)  66936
+  decode time 6324
+  image size (dec)  2162688
+  detecting    ...  1264
+  analysis time 1251578
+  sending feat size 1466240
+  hold time 1269748
+ok img-731
+GET img-732_1024:data
+  image size (enc)  99032
+  decode time 6594
+  image size (dec)  2359296
+  detecting    ...  700
+  analysis time 1008674
+  sending feat size 812000
+  hold time 1026260
+ok img-732
+GET img-733_1024:data
+  image size (enc)  138825
+  decode time 6620
+  image size (dec)  2098176
+  detecting    ...  4632
+  analysis time 3271244
+  sending feat size 5373120
+  hold time 3291077
+ok img-733
+GET img-734_1024:data
+  image size (enc)  55992
+  decode time 6015
+  image size (dec)  2088960
+  detecting    ...  65
+  analysis time 534655
+  sending feat size 75400
+  hold time 549582
+ok img-734
+GET img-735_1024:data
+  image size (enc)  91129
+  decode time 7055
+  image size (dec)  2359296
+  detecting    ...  991
+  analysis time 1153723
+  sending feat size 1149560
+  hold time 1172839
+ok img-735
+GET img-736_1024:data
+  image size (enc)  97224
+  decode time 6222
+  image size (dec)  2098176
+  detecting    ...  2885
+  analysis time 2250704
+  sending feat size 3346600
+  hold time 2267501
+ok img-736
+GET img-737_1024:data
+  image size (enc)  168685
+  decode time 8851
+  image size (dec)  2024448
+  detecting    ...  8104
+  analysis time 4953771
+  sending feat size 9400640
+  hold time 4985429
+ok img-737
+GET img-738_1024:data
+  image size (enc)  29013
+  decode time 4840
+  image size (dec)  2095104
+  detecting    ...  291
+  analysis time 697515
+  sending feat size 337560
+  hold time 711713
+ok img-738
+GET img-739_1024:data
+  image size (enc)  109737
+  decode time 6661
+  image size (dec)  2098176
+  detecting    ...  3390
+  analysis time 2481543
+  sending feat size 3932400
+  hold time 2512099
+ok img-739
+GET img-740_1024:data
+  image size (enc)  165826
+  decode time 7394
+  image size (dec)  2098176
+  detecting    ...  3478
+  analysis time 2670333
+  sending feat size 4034480
+  hold time 2695394
+ok img-740
+GET img-741_1024:data
+  image size (enc)  193429
+  decode time 8067
+  image size (dec)  2285568
+  detecting    ...  4494
+  analysis time 3405454
+  sending feat size 5213040
+  hold time 3432491
+ok img-741
+GET img-742_1024:data
+  image size (enc)  155340
+  decode time 6742
+  image size (dec)  1769472
+  detecting    ...  3616
+  analysis time 2703670
+  sending feat size 4194560
+  hold time 2724553
+ok img-742
+GET img-743_1024:data
+  image size (enc)  165314
+  decode time 7756
+  image size (dec)  2088960
+  detecting    ...  6489
+  analysis time 4114202
+  sending feat size 7527240
+  hold time 4149333
+ok img-743
+GET img-744_1024:data
+  image size (enc)  113326
+  decode time 7507
+  image size (dec)  2359296
+  detecting    ...  2603
+  analysis time 2068982
+  sending feat size 3019480
+  hold time 2091580
+ok img-744
+GET img-745_1024:data
+  image size (enc)  121258
+  decode time 5683
+  image size (dec)  2088960
+  detecting    ...  1499
+  analysis time 1492208
+  sending feat size 1738840
+  hold time 1509359
+ok img-745
+GET img-746_1024:data
+GET img-747_1024:data
+  image size (enc)  153820
+  decode time 6861
+  image size (dec)  2098176
+  detecting    ...  3463
+  analysis time 2538370
+  sending feat size 4017080
+  hold time 2563999
+ok img-747
+GET img-748_1024:data
+  image size (enc)  98662
+  decode time 8963
+  image size (dec)  3145728
+  detecting    ...  1408
+  analysis time 1630952
+  sending feat size 1633280
+  hold time 1655040
+ok img-748
+GET img-749_1024:data
+  image size (enc)  139722
+  decode time 7157
+  image size (dec)  2101248
+  detecting    ...  6165
+  analysis time 4276771
+  sending feat size 7151400
+  hold time 4303992
+ok img-749
+GET img-750_1024:data
+  image size (enc)  75216
+  decode time 6099
+  image size (dec)  2101248
+  detecting    ...  963
+  analysis time 1118722
+  sending feat size 1117080
+  hold time 1130447
+ok img-750
+GET img-751_1024:data
+  image size (enc)  122091
+  decode time 7434
+  image size (dec)  2098176
+  detecting    ...  4235
+  analysis time 3254580
+  sending feat size 4912600
+  hold time 3278606
+ok img-751
+GET img-752_1024:data
+  image size (enc)  225030
+  decode time 8566
+  image size (dec)  2098176
+  detecting    ...  7566
+  analysis time 5053834
+  sending feat size 8776560
+  hold time 5084623
+ok img-752
+GET img-753_1024:data
+  image size (enc)  74938
+  decode time 5970
+  image size (dec)  2055168
+  detecting    ...  2175
+  analysis time 1763065
+  sending feat size 2523000
+  hold time 1780570
+ok img-753
+GET img-754_1024:data
+  image size (enc)  124128
+  decode time 6016
+  image size (dec)  2092032
+  detecting    ...  1491
+  analysis time 1479863
+  sending feat size 1729560
+  hold time 1497318
+ok img-754
+GET img-755_1024:data
+  image size (enc)  198828
+  decode time 7154
+  image size (dec)  2027520
+  detecting    ...  5308
+  analysis time 3593217
+  sending feat size 6157280
+  hold time 3619525
+ok img-755
+GET img-756_1024:data
+  image size (enc)  165366
+  decode time 7607
+  image size (dec)  2085888
+  detecting    ...  6175
+  analysis time 4006398
+  sending feat size 7163000
+  hold time 4035190
+ok img-756
+GET img-757_1024:data
+  image size (enc)  147338
+  decode time 6362
+  image size (dec)  2098176
+  detecting    ...  4214
+  analysis time 3130813
+  sending feat size 4888240
+  hold time 3154946
+ok img-757
+GET img-758_1024:data
+  image size (enc)  81222
+  decode time 5966
+  image size (dec)  2082816
+  detecting    ...  1660
+  analysis time 1613387
+  sending feat size 1925600
+  hold time 1631134
+ok img-758
+GET img-759_1024:data
+  image size (enc)  77633
+  decode time 5912
+  image size (dec)  2098176
+  detecting    ...  1216
+  analysis time 1338988
+  sending feat size 1410560
+  hold time 1355873
+ok img-759
+GET img-760_1024:data
+  image size (enc)  70667
+  decode time 7850
+  image size (dec)  3145728
+  detecting    ...  3335
+  analysis time 2534381
+  sending feat size 3868600
+  hold time 2565201
+ok img-760
+GET img-761_1024:data
+  image size (enc)  118713
+  decode time 6209
+  image size (dec)  2098176
+  detecting    ...  1643
+  analysis time 1437273
+  sending feat size 1905880
+  hold time 1455823
+ok img-761
+GET img-762_1024:data
+  image size (enc)  71465
+  decode time 6156
+  image size (dec)  2098176
+  detecting    ...  936
+  analysis time 1080656
+  sending feat size 1085760
+  hold time 1097322
+ok img-762
+GET img-763_1024:data
+  image size (enc)  219886
+  decode time 7496
+  image size (dec)  2101248
+  detecting    ...  4514
+  analysis time 3197259
+  sending feat size 5236240
+  hold time 3222888
+ok img-763
+GET img-764_1024:data
+  image size (enc)  176431
+  decode time 7252
+  image size (dec)  2098176
+  detecting    ...  4945
+  analysis time 3245884
+  sending feat size 5736200
+  hold time 3272655
+ok img-764
+GET img-765_1024:data
+  image size (enc)  93038
+  decode time 5551
+  image size (dec)  1769472
+  detecting    ...  1529
+  analysis time 1351425
+  sending feat size 1773640
+  hold time 1362601
+ok img-765
+GET img-766_1024:data
+  image size (enc)  87046
+  decode time 6630
+  image size (dec)  2082816
+  detecting    ...  1106
+  analysis time 1106271
+  sending feat size 1282960
+  hold time 1123641
+ok img-766
+GET img-767_1024:data
+  image size (enc)  126832
+  decode time 7265
+  image size (dec)  2359296
+  detecting    ...  3940
+  analysis time 2848874
+  sending feat size 4570400
+  hold time 2873125
+ok img-767
+GET img-768_1024:data
+  image size (enc)  166945
+  decode time 8631
+  image size (dec)  2528256
+  detecting    ...  6425
+  analysis time 4360864
+  sending feat size 7453000
+  hold time 4398961
+ok img-768
+GET img-769_1024:data
+  image size (enc)  66112
+  decode time 5296
+  image size (dec)  1781760
+  detecting    ...  1004
+  analysis time 1017740
+  sending feat size 1164640
+  hold time 1033033
+ok img-769
+GET img-770_1024:data
+  image size (enc)  137495
+  decode time 6757
+  image size (dec)  2098176
+  detecting    ...  5188
+  analysis time 3569399
+  sending feat size 6018080
+  hold time 3596213
+ok img-770
+GET img-771_1024:data
+  image size (enc)  119164
+  decode time 7391
+  image size (dec)  2248704
+  detecting    ...  3054
+  analysis time 2395412
+  sending feat size 3542640
+  hold time 2419926
+ok img-771
+GET img-772_1024:data
+  image size (enc)  181460
+  decode time 7963
+  image size (dec)  2098176
+  detecting    ...  4771
+  analysis time 3264080
+  sending feat size 5534360
+  hold time 3291087
+ok img-772
+GET img-773_1024:data
+  image size (enc)  100980
+  decode time 6403
+  image size (dec)  2095104
+  detecting    ...  2499
+  analysis time 1997578
+  sending feat size 2898840
+  hold time 2017148
+ok img-773
+GET img-774_1024:data
+  image size (enc)  98080
+  decode time 6694
+  image size (dec)  2359296
+  detecting    ...  1918
+  analysis time 1756917
+  sending feat size 2224880
+  hold time 1776850
+ok img-774
+GET img-775_1024:data
+  image size (enc)  199952
+  decode time 9401
+  image size (dec)  2601984
+  detecting    ...  5443
+  analysis time 3944753
+  sending feat size 6313880
+  hold time 3976671
+ok img-775
+GET img-776_1024:data
+  image size (enc)  186526
+  decode time 7160
+  image size (dec)  2098176
+  detecting    ...  4914
+  analysis time 3374711
+  sending feat size 5700240
+  hold time 3401556
+ok img-776
+GET img-777_1024:data
+  image size (enc)  112053
+  decode time 6740
+  image size (dec)  2098176
+  detecting    ...  3197
+  analysis time 2405633
+  sending feat size 3708520
+  hold time 2429922
+ok img-777
+GET img-778_1024:data
+  image size (enc)  25011
+  decode time 2448
+  image size (dec)  921600
+  detecting    ...  460
+  analysis time 504387
+  sending feat size 533600
+  hold time 512584
+ok img-778
+GET img-779_1024:data
+  image size (enc)  139741
+  decode time 8173
+  image size (dec)  2282496
+  detecting    ...  6331
+  analysis time 4134223
+  sending feat size 7343960
+  hold time 4170656
+ok img-779
+GET img-780_1024:data
+  image size (enc)  93466
+  decode time 7759
+  image size (dec)  2758656
+  detecting    ...  2082
+  analysis time 1856522
+  sending feat size 2415120
+  hold time 1879264
+ok img-780
+GET img-781_1024:data
+  image size (enc)  84768
+  decode time 5123
+  image size (dec)  1769472
+  detecting    ...  1063
+  analysis time 1052445
+  sending feat size 1233080
+  hold time 1069096
+ok img-781
+GET img-782_1024:data
+  image size (enc)  134628
+  decode time 7302
+  image size (dec)  2098176
+  detecting    ...  3948
+  analysis time 2774007
+  sending feat size 4579680
+  hold time 2799030
+ok img-782
+GET img-783_1024:data
+  image size (enc)  206112
+  decode time 8194
+  image size (dec)  2098176
+  detecting    ...  13089
+  analysis time 7759377
+  sending feat size 15183240
+  hold time 7809654
+ok img-783
+GET img-784_1024:data
+GET img-785_1024:data
+  image size (enc)  133266
+  decode time 6665
+  image size (dec)  2098176
+  detecting    ...  1981
+  analysis time 1724148
+  sending feat size 2297960
+  hold time 1743187
+ok img-785
+GET img-786_1024:data
+  image size (enc)  34031
+  decode time 5283
+  image size (dec)  2098176
+  detecting    ...  188
+  analysis time 604782
+  sending feat size 218080
+  hold time 619273
+ok img-786
+GET img-787_1024:data
+  image size (enc)  164573
+  decode time 8049
+  image size (dec)  2359296
+  detecting    ...  5637
+  analysis time 3822563
+  sending feat size 6538920
+  hold time 3851789
+ok img-787
+GET img-788_1024:data
+  image size (enc)  134844
+  decode time 6961
+  image size (dec)  2095104
+  detecting    ...  5824
+  analysis time 3758766
+  sending feat size 6755840
+  hold time 3785953
+ok img-788
+GET img-789_1024:data
+  image size (enc)  154603
+  decode time 6370
+  image size (dec)  2098176
+  detecting    ...  4868
+  analysis time 3382899
+  sending feat size 5646880
+  hold time 3407975
+ok img-789
+GET img-790_1024:data
+  image size (enc)  112812
+  decode time 5940
+  image size (dec)  2012160
+  detecting    ...  3034
+  analysis time 2461724
+  sending feat size 3519440
+  hold time 2484496
+ok img-790
+GET img-791_1024:data
+  image size (enc)  132992
+  decode time 5725
+  image size (dec)  1708032
+  detecting    ...  4356
+  analysis time 2992072
+  sending feat size 5052960
+  hold time 3014136
+ok img-791
+GET img-792_1024:data
+  image size (enc)  136805
+  decode time 8067
+  image size (dec)  2359296
+  detecting    ...  4055
+  analysis time 3089535
+  sending feat size 4703800
+  hold time 3115426
+ok img-792
+GET img-793_1024:data
+  image size (enc)  138114
+  decode time 6467
+  image size (dec)  2098176
+  detecting    ...  2604
+  analysis time 2067402
+  sending feat size 3020640
+  hold time 2087407
+ok img-793
+GET img-794_1024:data
+  image size (enc)  128671
+  decode time 6562
+  image size (dec)  1944576
+  detecting    ...  4221
+  analysis time 2932655
+  sending feat size 4896360
+  hold time 2955731
+ok img-794
+GET img-795_1024:data
+  image size (enc)  191988
+  decode time 6939
+  image size (dec)  2092032
+  detecting    ...  3711
+  analysis time 2738775
+  sending feat size 4304760
+  hold time 2761854
+ok img-795
+GET img-796_1024:data
+  image size (enc)  104420
+  decode time 6896
+  image size (dec)  2359296
+  detecting    ...  1451
+  analysis time 1469479
+  sending feat size 1683160
+  hold time 1488753
+ok img-796
+GET img-797_1024:data
+  image size (enc)  88729
+  decode time 6162
+  image size (dec)  2098176
+  detecting    ...  2416
+  analysis time 2079571
+  sending feat size 2802560
+  hold time 2099454
+ok img-797
+GET img-798_1024:data
+  image size (enc)  111696
+  decode time 6920
+  image size (dec)  2098176
+  detecting    ...  783
+  analysis time 1102719
+  sending feat size 908280
+  hold time 1119887
+ok img-798
+GET img-799_1024:data
+  image size (enc)  142777
+  decode time 8896
+  image size (dec)  2767872
+  detecting    ...  3889
+  analysis time 3265675
+  sending feat size 4511240
+  hold time 3293492
+ok img-799
+GET img-800_1024:data
+  image size (enc)  129071
+  decode time 6340
+  image size (dec)  2156544
+  detecting    ...  3613
+  analysis time 2646418
+  sending feat size 4191080
+  hold time 2672170
+ok img-800
+GET img-801_1024:data
+  image size (enc)  43043
+  decode time 5339
+  image size (dec)  2098176
+  detecting    ...  400
+  analysis time 768499
+  sending feat size 464000
+  hold time 783468
+ok img-801
+GET img-802_1024:data
+GET img-803_1024:data
+GET img-804_1024:data
+  image size (enc)  104646
+  decode time 5931
+  image size (dec)  2098176
+  detecting    ...  1637
+  analysis time 1583245
+  sending feat size 1898920
+  hold time 1600990
+ok img-804
+GET img-805_1024:data
+GET img-806_1024:data
+  image size (enc)  75008
+  decode time 5709
+  image size (dec)  2098176
+  detecting    ...  761
+  analysis time 978147
+  sending feat size 882760
+  hold time 994079
+ok img-806
+GET img-807_1024:data
+  image size (enc)  89124
+  decode time 6490
+  image size (dec)  2098176
+  detecting    ...  2000
+  analysis time 1643264
+  sending feat size 2320000
+  hold time 1662703
+ok img-807
+GET img-808_1024:data
+  image size (enc)  122730
+  decode time 6766
+  image size (dec)  2095104
+  detecting    ...  3600
+  analysis time 2610770
+  sending feat size 4176000
+  hold time 2636125
+ok img-808
+GET img-809_1024:data
+  image size (enc)  141686
+  decode time 6159
+  image size (dec)  1889280
+  detecting    ...  3471
+  analysis time 2584658
+  sending feat size 4026360
+  hold time 2609045
+ok img-809
+GET img-810_1024:data
+GET img-811_1024:data
+  image size (enc)  184497
+  decode time 7489
+  image size (dec)  2098176
+  detecting    ...  3956
+  analysis time 2973991
+  sending feat size 4588960
+  hold time 2998777
+ok img-811
+GET img-812_1024:data
+  image size (enc)  113867
+  decode time 6526
+  image size (dec)  2098176
+  detecting    ...  3269
+  analysis time 2574804
+  sending feat size 3792040
+  hold time 2598448
+ok img-812
+GET img-813_1024:data
+  image size (enc)  40945
+  decode time 4412
+  image size (dec)  1769472
+  detecting    ...  380
+  analysis time 644137
+  sending feat size 440800
+  hold time 656937
+ok img-813
+GET img-814_1024:data
+  image size (enc)  156402
+  decode time 6759
+  image size (dec)  2095104
+  detecting    ...  3447
+  analysis time 2529580
+  sending feat size 3998520
+  hold time 2555791
+ok img-814
+GET img-815_1024:data
+  image size (enc)  183514
+  decode time 10745
+  image size (dec)  3145728
+  detecting    ...  2089
+  analysis time 2214092
+  sending feat size 2423240
+  hold time 2241308
+ok img-815
+GET img-816_1024:data
+  image size (enc)  84724
+  decode time 6463
+  image size (dec)  2098176
+  detecting    ...  1438
+  analysis time 1373407
+  sending feat size 1668080
+  hold time 1391290
+ok img-816
+GET img-817_1024:data
+  image size (enc)  163748
+  decode time 7400
+  image size (dec)  2098176
+  detecting    ...  8349
+  analysis time 5261911
+  sending feat size 9684840
+  hold time 5293913
+ok img-817
+GET img-818_1024:data
+  image size (enc)  94433
+  decode time 6458
+  image size (dec)  2098176
+  detecting    ...  1617
+  analysis time 1533253
+  sending feat size 1875720
+  hold time 1551469
+ok img-818
+GET img-819_1024:data
+  image size (enc)  71937
+  decode time 5713
+  image size (dec)  2098176
+  detecting    ...  897
+  analysis time 1073556
+  sending feat size 1040520
+  hold time 1089738
+ok img-819
+GET img-820_1024:data
+  image size (enc)  130617
+  decode time 6709
+  image size (dec)  2362368
+  detecting    ...  1692
+  analysis time 1671178
+  sending feat size 1962720
+  hold time 1691714
+ok img-820
+GET img-821_1024:data
+  image size (enc)  112032
+  decode time 6464
+  image size (dec)  2092032
+  detecting    ...  2669
+  analysis time 2227028
+  sending feat size 3096040
+  hold time 2247179
+ok img-821
+GET img-822_1024:data
+  image size (enc)  143139
+  decode time 7411
+  image size (dec)  2095104
+  detecting    ...  4504
+  analysis time 3248186
+  sending feat size 5224640
+  hold time 3274307
+ok img-822
+GET img-823_1024:data
+  image size (enc)  157757
+  decode time 6630
+  image size (dec)  2098176
+  detecting    ...  4154
+  analysis time 2915590
+  sending feat size 4818640
+  hold time 2940838
+ok img-823
+GET img-824_1024:data
+  image size (enc)  158988
+  decode time 7540
+  image size (dec)  2230272
+  detecting    ...  4984
+  analysis time 3466646
+  sending feat size 5781440
+  hold time 3494352
+ok img-824
+GET img-825_1024:data
+GET img-826_1024:data
+  image size (enc)  99335
+  decode time 7615
+  image size (dec)  2666496
+  detecting    ...  1256
+  analysis time 1363966
+  sending feat size 1456960
+  hold time 1384742
+ok img-826
+GET img-827_1024:data
+  image size (enc)  60179
+  decode time 6982
+  image size (dec)  2571264
+  detecting    ...  798
+  analysis time 1097783
+  sending feat size 925680
+  hold time 1116855
+ok img-827
+GET img-828_1024:data
+  image size (enc)  77568
+  decode time 5180
+  image size (dec)  1686528
+  detecting    ...  2089
+  analysis time 1672029
+  sending feat size 2423240
+  hold time 1689536
+ok img-828
+GET img-829_1024:data
+  image size (enc)  110242
+  decode time 7351
+  image size (dec)  2359296
+  detecting    ...  4146
+  analysis time 3018033
+  sending feat size 4809360
+  hold time 3044326
+ok img-829
+GET img-830_1024:data
+  image size (enc)  70873
+  decode time 7424
+  image size (dec)  2706432
+  detecting    ...  553
+  analysis time 1017025
+  sending feat size 641480
+  hold time 1036536
+ok img-830
+GET img-831_1024:data
+  image size (enc)  83563
+  decode time 5871
+  image size (dec)  2092032
+  detecting    ...  876
+  analysis time 1000874
+  sending feat size 1016160
+  hold time 1017179
+ok img-831
+GET img-832_1024:data
+  image size (enc)  118417
+  decode time 6293
+  image size (dec)  1873920
+  detecting    ...  4362
+  analysis time 3088248
+  sending feat size 5059920
+  hold time 3112015
+ok img-832
+GET img-833_1024:data
+  image size (enc)  164754
+  decode time 7772
+  image size (dec)  2359296
+  detecting    ...  4038
+  analysis time 3182181
+  sending feat size 4684080
+  hold time 3208794
+ok img-833
+GET img-834_1024:data
+  image size (enc)  91362
+  decode time 5709
+  image size (dec)  2098176
+  detecting    ...  573
+  analysis time 890187
+  sending feat size 664680
+  hold time 905819
+ok img-834
+GET img-835_1024:data
+  image size (enc)  125515
+  decode time 6254
+  image size (dec)  2098176
+  detecting    ...  2798
+  analysis time 2282335
+  sending feat size 3245680
+  hold time 2306559
+ok img-835
+GET img-836_1024:data
+  image size (enc)  41627
+  decode time 4530
+  image size (dec)  1769472
+  detecting    ...  3
+  analysis time 425993
+  sending feat size 3480
+  hold time 438727
+ok img-836
+GET img-837_1024:data
+GET img-838_1024:data
+  image size (enc)  101833
+  decode time 6289
+  image size (dec)  2098176
+  detecting    ...  3027
+  analysis time 2162856
+  sending feat size 3511320
+  hold time 2187181
+ok img-838
+GET img-839_1024:data
+  image size (enc)  38467
+  decode time 2655
+  image size (dec)  921600
+  detecting    ...  1435
+  analysis time 1036872
+  sending feat size 1664600
+  hold time 1046610
+ok img-839
+GET img-840_1024:data
+  image size (enc)  179547
+  decode time 7379
+  image size (dec)  2098176
+  detecting    ...  9272
+  analysis time 5986207
+  sending feat size 10755520
+  hold time 6018571
+ok img-840
+GET img-841_1024:data
+  image size (enc)  139096
+  decode time 7088
+  image size (dec)  2095104
+  detecting    ...  3427
+  analysis time 2572718
+  sending feat size 3975320
+  hold time 2605994
+ok img-841
+GET img-842_1024:data
+  image size (enc)  133151
+  decode time 7619
+  image size (dec)  2095104
+  detecting    ...  3340
+  analysis time 2268671
+  sending feat size 3874400
+  hold time 2293647
+ok img-842
+GET img-843_1024:data
+  image size (enc)  102664
+  decode time 6012
+  image size (dec)  2098176
+  detecting    ...  3187
+  analysis time 2447058
+  sending feat size 3696920
+  hold time 2470054
+ok img-843
+GET img-844_1024:data
+  image size (enc)  187639
+  decode time 7879
+  image size (dec)  2095104
+  detecting    ...  6828
+  analysis time 4579504
+  sending feat size 7920480
+  hold time 4614907
+ok img-844
+GET img-845_1024:data
+  image size (enc)  156251
+  decode time 7758
+  image size (dec)  2359296
+  detecting    ...  5457
+  analysis time 3777117
+  sending feat size 6330120
+  hold time 3805274
+ok img-845
+GET img-846_1024:data
+  image size (enc)  97175
+  decode time 6252
+  image size (dec)  2098176
+  detecting    ...  3363
+  analysis time 2443658
+  sending feat size 3901080
+  hold time 2468452
+ok img-846
+GET img-847_1024:data
+  image size (enc)  102398
+  decode time 7434
+  image size (dec)  2359296
+  detecting    ...  2699
+  analysis time 2219060
+  sending feat size 3130840
+  hold time 2243830
+ok img-847
+GET img-848_1024:data
+  image size (enc)  218684
+  decode time 8619
+  image size (dec)  2085888
+  detecting    ...  8502
+  analysis time 5463187
+  sending feat size 9862320
+  hold time 5495783
+ok img-848
+GET img-849_1024:data
+  image size (enc)  72298
+  decode time 5887
+  image size (dec)  2064384
+  detecting    ...  1699
+  analysis time 1591559
+  sending feat size 1970840
+  hold time 1609301
+ok img-849
+GET img-850_1024:data
+  image size (enc)  167063
+  decode time 6802
+  image size (dec)  2098176
+  detecting    ...  6900
+  analysis time 4378023
+  sending feat size 8004000
+  hold time 4412522
+ok img-850
+GET img-851_1024:data
+  image size (enc)  185561
+  decode time 8364
+  image size (dec)  2359296
+  detecting    ...  6055
+  analysis time 4004249
+  sending feat size 7023800
+  hold time 4034485
+ok img-851
+GET img-852_1024:data
+  image size (enc)  103578
+  decode time 7188
+  image size (dec)  2359296
+  detecting    ...  3151
+  analysis time 2527356
+  sending feat size 3655160
+  hold time 2553572
+ok img-852
+GET img-853_1024:data
+  image size (enc)  96779
+  decode time 5894
+  image size (dec)  2088960
+  detecting    ...  690
+  analysis time 922058
+  sending feat size 800400
+  hold time 938073
+ok img-853
+GET img-854_1024:data
+  image size (enc)  88882
+  decode time 6236
+  image size (dec)  2070528
+  detecting    ...  3258
+  analysis time 2442847
+  sending feat size 3779280
+  hold time 2466687
+ok img-854
+GET img-855_1024:data
+  image size (enc)  121323
+  decode time 6833
+  image size (dec)  2088960
+  detecting    ...  1492
+  analysis time 1451495
+  sending feat size 1730720
+  hold time 1469880
+ok img-855
+GET img-856_1024:data
+GET img-857_1024:data
+  image size (enc)  111674
+  decode time 6189
+  image size (dec)  2098176
+  detecting    ...  2948
+  analysis time 2181970
+  sending feat size 3419680
+  hold time 2205088
+ok img-857
+GET img-858_1024:data
+  image size (enc)  74341
+  decode time 6038
+  image size (dec)  2359296
+  detecting    ...  1658
+  analysis time 1566278
+  sending feat size 1923280
+  hold time 1585133
+ok img-858
+GET img-859_1024:data
+  image size (enc)  171132
+  decode time 6265
+  image size (dec)  1769472
+  detecting    ...  3890
+  analysis time 2718275
+  sending feat size 4512400
+  hold time 2739949
+ok img-859
+GET img-860_1024:data
+  image size (enc)  71183
+  decode time 5897
+  image size (dec)  2095104
+  detecting    ...  1487
+  analysis time 1432558
+  sending feat size 1724920
+  hold time 1450009
+ok img-860
+GET img-861_1024:data
+  image size (enc)  102644
+  decode time 6318
+  image size (dec)  2018304
+  detecting    ...  1881
+  analysis time 1562268
+  sending feat size 2181960
+  hold time 1581759
+ok img-861
+GET img-862_1024:data
+  image size (enc)  175805
+  decode time 7760
+  image size (dec)  2356224
+  detecting    ...  4027
+  analysis time 2887360
+  sending feat size 4671320
+  hold time 2917789
+ok img-862
+GET img-863_1024:data
+  image size (enc)  74254
+  decode time 5221
+  image size (dec)  2098176
+  detecting    ...  1131
+  analysis time 1198174
+  sending feat size 1311960
+  hold time 1214307
+ok img-863
+GET img-864_1024:data
+  image size (enc)  48948
+  decode time 6319
+  image size (dec)  2359296
+  detecting    ...  407
+  analysis time 852029
+  sending feat size 472120
+  hold time 868963
+ok img-864
+GET img-865_1024:data
+GET img-866_1024:data
+  image size (enc)  192917
+  decode time 7558
+  image size (dec)  1966080
+  detecting    ...  6190
+  analysis time 4080447
+  sending feat size 7180400
+  hold time 4108473
+ok img-866
+GET img-867_1024:data
+  image size (enc)  144862
+  decode time 6889
+  image size (dec)  2098176
+  detecting    ...  5614
+  analysis time 3688610
+  sending feat size 6512240
+  hold time 3715719
+ok img-867
+GET img-868_1024:data
+  image size (enc)  172455
+  decode time 6764
+  image size (dec)  2101248
+  detecting    ...  4129
+  analysis time 2964231
+  sending feat size 4789640
+  hold time 2989192
+ok img-868
+GET img-869_1024:data
+  image size (enc)  176444
+  decode time 7508
+  image size (dec)  2098176
+  detecting    ...  2892
+  analysis time 2240270
+  sending feat size 3354720
+  hold time 2263992
+ok img-869
+GET img-870_1024:data
+  image size (enc)  161986
+  decode time 7779
+  image size (dec)  2098176
+  detecting    ...  3169
+  analysis time 2320790
+  sending feat size 3676040
+  hold time 2347210
+ok img-870
+GET img-871_1024:data
+  image size (enc)  159812
+  decode time 7660
+  image size (dec)  2088960
+  detecting    ...  4624
+  analysis time 3266511
+  sending feat size 5363840
+  hold time 3293268
+ok img-871
+GET img-872_1024:data
+GET img-873_1024:data
+  image size (enc)  167939
+  decode time 6883
+  image size (dec)  2098176
+  detecting    ...  7241
+  analysis time 4880080
+  sending feat size 8399560
+  hold time 4909523
+ok img-873
+GET img-874_1024:data
+GET img-875_1024:data
+  image size (enc)  80125
+  decode time 6052
+  image size (dec)  2098176
+  detecting    ...  1127
+  analysis time 1199462
+  sending feat size 1307320
+  hold time 1216402
+ok img-875
+GET img-876_1024:data
+GET img-877_1024:data
+  image size (enc)  157261
+  decode time 7585
+  image size (dec)  2082816
+  detecting    ...  3676
+  analysis time 2689067
+  sending feat size 4264160
+  hold time 2713557
+ok img-877
+GET img-878_1024:data
+  image size (enc)  172823
+  decode time 6704
+  image size (dec)  2088960
+  detecting    ...  4404
+  analysis time 3005696
+  sending feat size 5108640
+  hold time 3030856
+ok img-878
+GET img-879_1024:data
+  image size (enc)  92912
+  decode time 6118
+  image size (dec)  2098176
+  detecting    ...  820
+  analysis time 982346
+  sending feat size 951200
+  hold time 998840
+ok img-879
+GET img-880_1024:data
+GET img-881_1024:data
+  image size (enc)  101078
+  decode time 7192
+  image size (dec)  2359296
+  detecting    ...  3437
+  analysis time 2469337
+  sending feat size 3986920
+  hold time 2497511
+ok img-881
+GET img-882_1024:data
+  image size (enc)  115025
+  decode time 6106
+  image size (dec)  1744896
+  detecting    ...  2625
+  analysis time 1983509
+  sending feat size 3045000
+  hold time 2002548
+ok img-882
+GET img-883_1024:data
+  image size (enc)  74918
+  decode time 6953
+  image size (dec)  2515968
+  detecting    ...  609
+  analysis time 956972
+  sending feat size 706440
+  hold time 976067
+ok img-883
+GET img-884_1024:data
+  image size (enc)  116775
+  decode time 6904
+  image size (dec)  2359296
+  detecting    ...  580
+  analysis time 1025063
+  sending feat size 672800
+  hold time 1044480
+ok img-884
+GET img-885_1024:data
+  image size (enc)  150288
+  decode time 7313
+  image size (dec)  2009088
+  detecting    ...  3292
+  analysis time 2420500
+  sending feat size 3818720
+  hold time 2445360
+ok img-885
+GET img-886_1024:data
+  image size (enc)  176712
+  decode time 8014
+  image size (dec)  2193408
+  detecting    ...  5299
+  analysis time 3665432
+  sending feat size 6146840
+  hold time 3693936
+ok img-886
+GET img-887_1024:data
+  image size (enc)  72935
+  decode time 5640
+  image size (dec)  2101248
+  detecting    ...  1054
+  analysis time 1131265
+  sending feat size 1222640
+  hold time 1147721
+ok img-887
+GET img-888_1024:data
+  image size (enc)  82153
+  decode time 6214
+  image size (dec)  2098176
+  detecting    ...  2804
+  analysis time 2276869
+  sending feat size 3252640
+  hold time 2300832
+ok img-888
+GET img-889_1024:data
+GET img-890_1024:data
+  image size (enc)  129030
+  decode time 6720
+  image size (dec)  2088960
+  detecting    ...  4000
+  analysis time 2890548
+  sending feat size 4640000
+  hold time 2913461
+ok img-890
+GET img-891_1024:data
+  image size (enc)  146877
+  decode time 6448
+  image size (dec)  2098176
+  detecting    ...  2243
+  analysis time 1957930
+  sending feat size 2601880
+  hold time 1977323
+ok img-891
+GET img-892_1024:data
+  image size (enc)  218415
+  decode time 7715
+  image size (dec)  2098176
+  detecting    ...  7197
+  analysis time 4721440
+  sending feat size 8348520
+  hold time 4757314
+ok img-892
+GET img-893_1024:data
+GET img-894_1024:data
+  image size (enc)  46941
+  decode time 3953
+  image size (dec)  1416192
+  detecting    ...  1014
+  analysis time 991925
+  sending feat size 1176240
+  hold time 1004102
+ok img-894
+GET img-895_1024:data
+  image size (enc)  161234
+  decode time 9694
+  image size (dec)  3145728
+  detecting    ...  8443
+  analysis time 5313465
+  sending feat size 9793880
+  hold time 5351714
+ok img-895
+GET img-896_1024:data
+  image size (enc)  180283
+  decode time 8045
+  image size (dec)  2098176
+  detecting    ...  7590
+  analysis time 4952392
+  sending feat size 8804400
+  hold time 4994136
+ok img-896
+GET img-897_1024:data
+  image size (enc)  220951
+  decode time 8645
+  image size (dec)  2359296
+  detecting    ...  4603
+  analysis time 3330891
+  sending feat size 5339480
+  hold time 3359172
+ok img-897
+GET img-898_1024:data
+GET img-899_1024:data
+  image size (enc)  137614
+  decode time 6424
+  image size (dec)  2098176
+  detecting    ...  2606
+  analysis time 2080330
+  sending feat size 3022960
+  hold time 2100372
+ok img-899
+GET img-900_1024:data
+  image size (enc)  61446
+  decode time 5686
+  image size (dec)  2098176
+  detecting    ...  1550
+  analysis time 1403933
+  sending feat size 1798000
+  hold time 1422434
+ok img-900
+GET img-901_1024:data
+  image size (enc)  47596
+  decode time 5831
+  image size (dec)  2092032
+  detecting    ...  448
+  analysis time 802588
+  sending feat size 519680
+  hold time 818724
+ok img-901
+GET img-902_1024:data
+GET img-903_1024:data
+  image size (enc)  67630
+  decode time 5803
+  image size (dec)  2098176
+  detecting    ...  406
+  analysis time 785965
+  sending feat size 470960
+  hold time 801430
+ok img-903
+GET img-904_1024:data
+  image size (enc)  87177
+  decode time 5794
+  image size (dec)  2098176
+  detecting    ...  766
+  analysis time 999939
+  sending feat size 888560
+  hold time 1016030
+ok img-904
+GET img-905_1024:data
+GET img-906_1024:data
+  image size (enc)  112518
+  decode time 6660
+  image size (dec)  2079744
+  detecting    ...  3708
+  analysis time 2803933
+  sending feat size 4301280
+  hold time 2826754
+ok img-906
+GET img-907_1024:data
+  image size (enc)  156988
+  decode time 6616
+  image size (dec)  2073600
+  detecting    ...  4090
+  analysis time 2951297
+  sending feat size 4744400
+  hold time 2974767
+ok img-907
+GET img-908_1024:data
+  image size (enc)  130866
+  decode time 6926
+  image size (dec)  2098176
+  detecting    ...  5441
+  analysis time 3820666
+  sending feat size 6311560
+  hold time 3847398
+ok img-908
+GET img-909_1024:data
+  image size (enc)  83327
+  decode time 6117
+  image size (dec)  2095104
+  detecting    ...  1815
+  analysis time 1605858
+  sending feat size 2105400
+  hold time 1623942
+ok img-909
+GET img-910_1024:data
+  image size (enc)  153550
+  decode time 5838
+  image size (dec)  1769472
+  detecting    ...  5260
+  analysis time 3431094
+  sending feat size 6101600
+  hold time 3454752
+ok img-910
+GET img-911_1024:data
+  image size (enc)  181563
+  decode time 7435
+  image size (dec)  2098176
+  detecting    ...  3185
+  analysis time 2371564
+  sending feat size 3694600
+  hold time 2396022
+ok img-911
+GET img-912_1024:data
+  image size (enc)  115788
+  decode time 5963
+  image size (dec)  2098176
+  detecting    ...  1931
+  analysis time 1725177
+  sending feat size 2239960
+  hold time 1743472
+ok img-912
+GET img-913_1024:data
+  image size (enc)  173733
+  decode time 6804
+  image size (dec)  2101248
+  detecting    ...  3490
+  analysis time 2708551
+  sending feat size 4048400
+  hold time 2733726
+ok img-913
+GET img-914_1024:data
+  image size (enc)  126725
+  decode time 7442
+  image size (dec)  2310144
+  detecting    ...  4813
+  analysis time 3289577
+  sending feat size 5583080
+  hold time 3316782
+ok img-914
+GET img-915_1024:data
+  image size (enc)  43471
+  decode time 4878
+  image size (dec)  2098176
+  detecting    ...  143
+  analysis time 579609
+  sending feat size 165880
+  hold time 593745
+ok img-915
+GET img-916_1024:data
+  image size (enc)  68559
+  decode time 5781
+  image size (dec)  2098176
+  detecting    ...  976
+  analysis time 1255254
+  sending feat size 1132160
+  hold time 1271670
+ok img-916
+GET img-917_1024:data
+  image size (enc)  219743
+  decode time 7877
+  image size (dec)  2098176
+  detecting    ...  11745
+  analysis time 7086430
+  sending feat size 13624200
+  hold time 7122403
+ok img-917
+GET img-918_1024:data
+  image size (enc)  91113
+  decode time 6293
+  image size (dec)  2202624
+  detecting    ...  2895
+  analysis time 2228985
+  sending feat size 3358200
+  hold time 2253536
+ok img-918
+GET img-919_1024:data
+  image size (enc)  102687
+  decode time 6449
+  image size (dec)  2073600
+  detecting    ...  2237
+  analysis time 1894129
+  sending feat size 2594920
+  hold time 1914073
+ok img-919
+GET img-920_1024:data
+  image size (enc)  64329
+  decode time 5322
+  image size (dec)  1766400
+  detecting    ...  3073
+  analysis time 2190837
+  sending feat size 3564680
+  hold time 2213487
+ok img-920
+GET img-921_1024:data
+  image size (enc)  135768
+  decode time 7077
+  image size (dec)  2359296
+  detecting    ...  1943
+  analysis time 1871074
+  sending feat size 2253880
+  hold time 1892124
+ok img-921
+GET img-922_1024:data
+  image size (enc)  101573
+  decode time 5600
+  image size (dec)  2088960
+  detecting    ...  784
+  analysis time 930800
+  sending feat size 909440
+  hold time 947782
+ok img-922
+GET img-923_1024:data
+  image size (enc)  118685
+  decode time 6650
+  image size (dec)  2098176
+  detecting    ...  5911
+  analysis time 4121165
+  sending feat size 6856760
+  hold time 4148835
+ok img-923
+GET img-924_1024:data
+  image size (enc)  118428
+  decode time 5740
+  image size (dec)  2092032
+  detecting    ...  430
+  analysis time 805958
+  sending feat size 498800
+  hold time 821370
+ok img-924
+GET img-925_1024:data
+  image size (enc)  189801
+  decode time 8079
+  image size (dec)  2098176
+  detecting    ...  9439
+  analysis time 5834477
+  sending feat size 10949240
+  hold time 5868119
+ok img-925
+GET img-926_1024:data
+  image size (enc)  107358
+  decode time 6487
+  image size (dec)  2101248
+  detecting    ...  1744
+  analysis time 1381769
+  sending feat size 2023040
+  hold time 1400367
+ok img-926
+GET img-927_1024:data
+  image size (enc)  114334
+  decode time 6154
+  image size (dec)  2098176
+  detecting    ...  3656
+  analysis time 2611580
+  sending feat size 4240960
+  hold time 2628495
+ok img-927
+GET img-928_1024:data
+  image size (enc)  77841
+  decode time 6796
+  image size (dec)  2098176
+  detecting    ...  1847
+  analysis time 1720062
+  sending feat size 2142520
+  hold time 1739083
+ok img-928
+GET img-929_1024:data
+  image size (enc)  74761
+  decode time 5651
+  image size (dec)  2098176
+  detecting    ...  904
+  analysis time 1028942
+  sending feat size 1048640
+  hold time 1045183
+ok img-929
+GET img-930_1024:data
+  image size (enc)  113136
+  decode time 6866
+  image size (dec)  2098176
+  detecting    ...  3913
+  analysis time 2721703
+  sending feat size 4539080
+  hold time 2745426
+ok img-930
+GET img-931_1024:data
+  image size (enc)  39833
+  decode time 5419
+  image size (dec)  2098176
+  detecting    ...  419
+  analysis time 759664
+  sending feat size 486040
+  hold time 774810
+ok img-931
+GET img-932_1024:data
+  image size (enc)  167786
+  decode time 7463
+  image size (dec)  2359296
+  detecting    ...  4277
+  analysis time 3181742
+  sending feat size 4961320
+  hold time 3207877
+ok img-932
+GET img-933_1024:data
+  image size (enc)  296046
+  decode time 10402
+  image size (dec)  2359296
+  detecting    ...  6161
+  analysis time 4499127
+  sending feat size 7146760
+  hold time 4530745
+ok img-933
+GET img-934_1024:data
+  image size (enc)  185685
+  decode time 7271
+  image size (dec)  2092032
+  detecting    ...  3913
+  analysis time 2893727
+  sending feat size 4539080
+  hold time 2917092
+ok img-934
+GET img-935_1024:data
+  image size (enc)  42717
+  decode time 5426
+  image size (dec)  2098176
+  detecting    ...  846
+  analysis time 1033959
+  sending feat size 981360
+  hold time 1049818
+ok img-935
+GET img-936_1024:data
+  image size (enc)  7719
+  decode time 4140
+  image size (dec)  2359296
+  detecting    ...  94
+  analysis time 564631
+  sending feat size 109040
+  hold time 578835
+ok img-936
+GET img-937_1024:data
+  image size (enc)  166077
+  decode time 6448
+  image size (dec)  2095104
+  detecting    ...  5122
+  analysis time 3407416
+  sending feat size 5941520
+  hold time 3424703
+ok img-937
+GET img-938_1024:data
+  image size (enc)  83188
+  decode time 6323
+  image size (dec)  1926144
+  detecting    ...  1699
+  analysis time 1506645
+  sending feat size 1970840
+  hold time 1524311
+ok img-938
+GET img-939_1024:data
+  image size (enc)  153900
+  decode time 6857
+  image size (dec)  2101248
+  detecting    ...  2565
+  analysis time 2076487
+  sending feat size 2975400
+  hold time 2098242
+ok img-939
+GET img-940_1024:data
+  image size (enc)  180211
+  decode time 6732
+  image size (dec)  2098176
+  detecting    ...  3639
+  analysis time 2753599
+  sending feat size 4221240
+  hold time 2777441
+ok img-940
+GET img-941_1024:data
+  image size (enc)  77847
+  decode time 5345
+  image size (dec)  1769472
+  detecting    ...  1920
+  analysis time 1632842
+  sending feat size 2227200
+  hold time 1649351
+ok img-941
+GET img-942_1024:data
+  image size (enc)  132591
+  decode time 7155
+  image size (dec)  2098176
+  detecting    ...  3972
+  analysis time 2823261
+  sending feat size 4607520
+  hold time 2848034
+ok img-942
+GET img-943_1024:data
+  image size (enc)  124163
+  decode time 6061
+  image size (dec)  2098176
+  detecting    ...  2058
+  analysis time 1878248
+  sending feat size 2387280
+  hold time 1896930
+ok img-943
+GET img-944_1024:data
+  image size (enc)  113279
+  decode time 6426
+  image size (dec)  2098176
+  detecting    ...  1755
+  analysis time 1486579
+  sending feat size 2035800
+  hold time 1507357
+ok img-944
+GET img-945_1024:data
+  image size (enc)  51594
+  decode time 5572
+  image size (dec)  2098176
+  detecting    ...  811
+  analysis time 1021170
+  sending feat size 940760
+  hold time 1037175
+ok img-945
+GET img-946_1024:data
+  image size (enc)  169225
+  decode time 7670
+  image size (dec)  2098176
+  detecting    ...  10974
+  analysis time 6960592
+  sending feat size 12729840
+  hold time 6995948
+ok img-946
+GET img-947_1024:data
+  image size (enc)  219986
+  decode time 7791
+  image size (dec)  2150400
+  detecting    ...  5216
+  analysis time 3685033
+  sending feat size 6050560
+  hold time 3713091
+ok img-947
+GET img-948_1024:data
+  image size (enc)  110051
+  decode time 7089
+  image size (dec)  2359296
+  detecting    ...  4769
+  analysis time 3542613
+  sending feat size 5532040
+  hold time 3578971
+ok img-948
+GET img-949_1024:data
+  image size (enc)  78243
+  decode time 6299
+  image size (dec)  2359296
+  detecting    ...  1174
+  analysis time 1186022
+  sending feat size 1361840
+  hold time 1204314
+ok img-949
+GET img-950_1024:data
+  image size (enc)  128568
+  decode time 6456
+  image size (dec)  2098176
+  detecting    ...  2994
+  analysis time 2198050
+  sending feat size 3473040
+  hold time 2215942
+ok img-950
+GET img-951_1024:data
+  image size (enc)  45175
+  decode time 4989
+  image size (dec)  1769472
+  detecting    ...  398
+  analysis time 660044
+  sending feat size 461680
+  hold time 673488
+ok img-951
+GET img-952_1024:data
+  image size (enc)  100449
+  decode time 9213
+  image size (dec)  3096576
+  detecting    ...  1814
+  analysis time 1923852
+  sending feat size 2104240
+  hold time 1948874
+ok img-952
+GET img-953_1024:data
+  image size (enc)  100269
+  decode time 7768
+  image size (dec)  3145728
+  detecting    ...  1694
+  analysis time 1841976
+  sending feat size 1965040
+  hold time 1866027
+ok img-953
+GET img-954_1024:data
+  image size (enc)  84750
+  decode time 6296
+  image size (dec)  2359296
+  detecting    ...  662
+  analysis time 992239
+  sending feat size 767920
+  hold time 1009587
+ok img-954
+GET img-955_1024:data
+  image size (enc)  129756
+  decode time 5895
+  image size (dec)  2098176
+  detecting    ...  1226
+  analysis time 1284241
+  sending feat size 1422160
+  hold time 1295782
+ok img-955
+GET img-956_1024:data
+  image size (enc)  48268
+  decode time 6572
+  image size (dec)  2248704
+  detecting    ...  970
+  analysis time 1096969
+  sending feat size 1125200
+  hold time 1114769
+ok img-956
+GET img-957_1024:data
+  image size (enc)  68498
+  decode time 5297
+  image size (dec)  2098176
+  detecting    ...  1096
+  analysis time 1267731
+  sending feat size 1271360
+  hold time 1283944
+ok img-957
+GET img-958_1024:data
+  image size (enc)  110897
+  decode time 6620
+  image size (dec)  2101248
+  detecting    ...  3970
+  analysis time 2958116
+  sending feat size 4605200
+  hold time 2980924
+ok img-958
+GET img-959_1024:data
+GET img-960_1024:data
+GET img-961_1024:data
+  image size (enc)  210995
+  decode time 7350
+  image size (dec)  2088960
+  detecting    ...  6375
+  analysis time 4233877
+  sending feat size 7395000
+  hold time 4267582
+ok img-961
+GET img-962_1024:data
+  image size (enc)  69962
+  decode time 5797
+  image size (dec)  2098176
+  detecting    ...  2363
+  analysis time 1888876
+  sending feat size 2741080
+  hold time 1902298
+ok img-962
+GET img-963_1024:data
+GET img-964_1024:data
+  image size (enc)  114436
+  decode time 6706
+  image size (dec)  2098176
+  detecting    ...  1636
+  analysis time 1550196
+  sending feat size 1897760
+  hold time 1569902
+ok img-964
+GET img-965_1024:data
+  image size (enc)  164442
+  decode time 6401
+  image size (dec)  1944576
+  detecting    ...  5740
+  analysis time 3443386
+  sending feat size 6658400
+  hold time 3469235
+ok img-965
+GET img-966_1024:data
+  image size (enc)  69880
+  decode time 5616
+  image size (dec)  2085888
+  detecting    ...  2725
+  analysis time 2056764
+  sending feat size 3161000
+  hold time 2072545
+ok img-966
+GET img-967_1024:data
+  image size (enc)  137642
+  decode time 8466
+  image size (dec)  2359296
+  detecting    ...  4554
+  analysis time 3210461
+  sending feat size 5282640
+  hold time 3238787
+ok img-967
+GET img-968_1024:data
+  image size (enc)  234281
+  decode time 9155
+  image size (dec)  2279424
+  detecting    ...  6366
+  analysis time 4374958
+  sending feat size 7384560
+  hold time 4412056
+ok img-968
+GET img-969_1024:data
+  image size (enc)  112214
+  decode time 6201
+  image size (dec)  2092032
+  detecting    ...  2342
+  analysis time 1993871
+  sending feat size 2716720
+  hold time 2013183
+ok img-969
+GET img-970_1024:data
+  image size (enc)  141255
+  decode time 7120
+  image size (dec)  2362368
+  detecting    ...  6191
+  analysis time 4021693
+  sending feat size 7181560
+  hold time 4051109
+ok img-970
+GET img-971_1024:data
+  image size (enc)  142273
+  decode time 7267
+  image size (dec)  2098176
+  detecting    ...  2362
+  analysis time 2012753
+  sending feat size 2739920
+  hold time 2033213
+ok img-971
+GET img-972_1024:data
+  image size (enc)  140328
+  decode time 6709
+  image size (dec)  2098176
+  detecting    ...  5163
+  analysis time 3526050
+  sending feat size 5989080
+  hold time 3551807
+ok img-972
+GET img-973_1024:data
+  image size (enc)  82232
+  decode time 6002
+  image size (dec)  2098176
+  detecting    ...  2808
+  analysis time 2166034
+  sending feat size 3257280
+  hold time 2189266
+ok img-973
+GET img-974_1024:data
+  image size (enc)  184120
+  decode time 8032
+  image size (dec)  2098176
+  detecting    ...  8675
+  analysis time 5594397
+  sending feat size 10063000
+  hold time 5626631
+ok img-974
+GET img-975_1024:data
+  image size (enc)  130070
+  decode time 6571
+  image size (dec)  2098176
+  detecting    ...  1840
+  analysis time 1626132
+  sending feat size 2134400
+  hold time 1644979
+ok img-975
+GET img-976_1024:data
+  image size (enc)  179872
+  decode time 7022
+  image size (dec)  2104320
+  detecting    ...  4884
+  analysis time 3369169
+  sending feat size 5665440
+  hold time 3401329
+ok img-976
+GET img-977_1024:data
+  image size (enc)  134049
+  decode time 6795
+  image size (dec)  2359296
+  detecting    ...  3641
+  analysis time 2712650
+  sending feat size 4223560
+  hold time 2737138
+ok img-977
+GET img-978_1024:data
+  image size (enc)  180904
+  decode time 7677
+  image size (dec)  2098176
+  detecting    ...  5105
+  analysis time 3513294
+  sending feat size 5921800
+  hold time 3541505
+ok img-978
+GET img-979_1024:data
+GET img-980_1024:data
+  image size (enc)  258046
+  decode time 8617
+  image size (dec)  1978368
+  detecting    ...  5961
+  analysis time 4108697
+  sending feat size 6914760
+  hold time 4137883
+ok img-980
+GET img-981_1024:data
+  image size (enc)  109994
+  decode time 6090
+  image size (dec)  2098176
+  detecting    ...  2705
+  analysis time 2082054
+  sending feat size 3137800
+  hold time 2102948
+ok img-981
+GET img-982_1024:data
+  image size (enc)  134498
+  decode time 7257
+  image size (dec)  2098176
+  detecting    ...  3792
+  analysis time 2757210
+  sending feat size 4398720
+  hold time 2780358
+ok img-982
+GET img-983_1024:data
+  image size (enc)  35775
+  decode time 5268
+  image size (dec)  2098176
+  detecting    ...  175
+  analysis time 611848
+  sending feat size 203000
+  hold time 626448
+ok img-983
+GET img-984_1024:data
+  image size (enc)  24669
+  decode time 4872
+  image size (dec)  2098176
+  detecting    ...  50
+  analysis time 518749
+  sending feat size 58000
+  hold time 532764
+ok img-984
+GET img-985_1024:data
+  image size (enc)  119980
+  decode time 7027
+  image size (dec)  2187264
+  detecting    ...  2181
+  analysis time 1825162
+  sending feat size 2529960
+  hold time 1844316
+ok img-985
+GET img-986_1024:data
+  image size (enc)  108712
+  decode time 6728
+  image size (dec)  2098176
+  detecting    ...  509
+  analysis time 822346
+  sending feat size 590440
+  hold time 838975
+ok img-986
+GET img-987_1024:data
+  image size (enc)  81289
+  decode time 5992
+  image size (dec)  2098176
+  detecting    ...  1929
+  analysis time 1676196
+  sending feat size 2237640
+  hold time 1694642
+ok img-987
+GET img-988_1024:data
+  image size (enc)  226987
+  decode time 7899
+  image size (dec)  2064384
+  detecting    ...  13079
+  analysis time 7544146
+  sending feat size 15171640
+  hold time 7583230
+ok img-988
+GET img-989_1024:data
+  image size (enc)  184934
+  decode time 7248
+  image size (dec)  2098176
+  detecting    ...  3632
+  analysis time 2581312
+  sending feat size 4213120
+  hold time 2604910
+ok img-989
+GET img-990_1024:data
+  image size (enc)  191210
+  decode time 7405
+  image size (dec)  2325504
+  detecting    ...  6190
+  analysis time 4151898
+  sending feat size 7180400
+  hold time 4181251
+ok img-990
+GET img-991_1024:data
+  image size (enc)  96868
+  decode time 6367
+  image size (dec)  2098176
+  detecting    ...  2782
+  analysis time 2316272
+  sending feat size 3227120
+  hold time 2339316
+ok img-991
+GET img-992_1024:data
+  image size (enc)  84107
+  decode time 6216
+  image size (dec)  2098176
+  detecting    ...  2875
+  analysis time 2459268
+  sending feat size 3335000
+  hold time 2482983
+ok img-992
+GET img-993_1024:data
+  image size (enc)  119003
+  decode time 7292
+  image size (dec)  2359296
+  detecting    ...  3815
+  analysis time 2831169
+  sending feat size 4425400
+  hold time 2856468
+ok img-993
+GET img-994_1024:data
+  image size (enc)  141606
+  decode time 6913
+  image size (dec)  2098176
+  detecting    ...  4207
+  analysis time 3093640
+  sending feat size 4880120
+  hold time 3118316
+ok img-994
+GET img-995_1024:data
+  image size (enc)  186443
+  decode time 8655
+  image size (dec)  2359296
+  detecting    ...  8339
+  analysis time 5484965
+  sending feat size 9673240
+  hold time 5519646
+ok img-995
+GET img-996_1024:data
+  image size (enc)  171553
+  decode time 7703
+  image size (dec)  2156544
+  detecting    ...  5718
+  analysis time 3930854
+  sending feat size 6632880
+  hold time 3965537
+ok img-996
+GET img-997_1024:data
+  image size (enc)  61645
+  decode time 6217
+  image size (dec)  2359296
+  detecting    ...  2204
+  analysis time 1990396
+  sending feat size 2556640
+  hold time 2013856
+ok img-997
+GET img-998_1024:data
+GET img-999_1024:data
+  image size (enc)  124611
+  decode time 7127
+  image size (dec)  2359296
+  detecting    ...  1531
+  analysis time 1517738
+  sending feat size 1775960
+  hold time 1537533
+ok img-999
+GET img-1000_1024:data
+  image size (enc)  262352
+  decode time 11871
+  image size (dec)  3145728
+  detecting    ...  11355
+  analysis time 7265993
+  sending feat size 13171800
+  hold time 7312225
+ok img-1000

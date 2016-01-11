@@ -98,6 +98,8 @@ static const char *haar_xml[] = {
 
 using namespace std;
 
+typedef chrono::system_clock::time_point timept;
+
 typedef enum {
     STAT_VMSIZE = 23,
     STAT_RSS = 24,
@@ -274,6 +276,7 @@ void doScale(void) // FIXME change to key? or blob?
             continue;
         }
 
+        timept c2, c1, c0 = chrono::high_resolution_clock::now();
         blob.update(reply->str, reply->len);
         //blob.updateNoCopy(reply->str, reply->len,
                 //Magick::Blob::MallocAllocator);
@@ -301,6 +304,7 @@ void doScale(void) // FIXME change to key? or blob?
                 << " " << c << " x " << r
                 << endl;
 
+#if 0
             // check if exists
             cmd.str(string());
             cmd << "EXISTS " << scaleKey;
@@ -316,16 +320,30 @@ void doScale(void) // FIXME change to key? or blob?
             if (rr->integer == 1)
                 continue;
             freeReplyObject(rr);
+#endif
 
+            c1 = chrono::high_resolution_clock::now();
             // create thumbnail
             img.read(blob); // prob. makes a copy
             if (r < scale && c < scale) {
                 cout << "  skipping" << endl;
                 continue;
             }
+            c2 = chrono::high_resolution_clock::now();
+
+            cout << "  decode time "
+                << chrono::duration_cast<std::chrono::microseconds>(c2-c1).count()
+                << endl;
+
+            c1 = chrono::high_resolution_clock::now();
             img.thumbnail(Magick::Geometry(scale,scale));
             img.magick("JPG");
             img.write(&blob);
+            c2 = chrono::high_resolution_clock::now();
+
+            cout << "  scale time " << scaleKey << " "
+                << chrono::duration_cast<std::chrono::microseconds>(c2-c1).count()
+                << endl;
 
             // push to redis
             ret = redisAppendCommand(redis, "SET %s %b",
@@ -343,6 +361,11 @@ void doScale(void) // FIXME change to key? or blob?
             freeReplyObject(rr);
         }
         freeReplyObject(reply);
+
+        c2 = chrono::high_resolution_clock::now();
+        cout << "  hold time "
+            << chrono::duration_cast<std::chrono::microseconds>(c2-c0).count()
+            << endl;
     }
 }
 
@@ -399,11 +422,18 @@ void doSIFT(int scale = -1)
         }
         cout << "  image size (enc)  " << reply->len << endl;
 
+        timept c2, c1, c0 = chrono::high_resolution_clock::now();
         // Construct image object in opencv by decoding buffer.
         // Find the features.
+        c1 = chrono::high_resolution_clock::now();
         cv::Mat mat = jpeg::JPEGasMat(reply->str, reply->len);
+        c2 = chrono::high_resolution_clock::now();
         IplImage img(mat);
         freeReplyObject(reply); // release encoded image
+
+        cout << "  decode time "
+            << chrono::duration_cast<std::chrono::microseconds>(c2-c1).count()
+            << endl;
 
         cout << "  image size (dec)  "
             << mat.total() * mat.elemSize()
@@ -411,8 +441,14 @@ void doSIFT(int scale = -1)
 
         cout << "  detecting    ...  "; cout.flush();
         struct feature *feat;
+        c1 = chrono::high_resolution_clock::now();
         int n = sift_features(&img, &feat);
+        c2 = chrono::high_resolution_clock::now();
         cout << n << endl;
+
+        cout << "  analysis time "
+            << chrono::duration_cast<std::chrono::microseconds>(c2-c1).count()
+            << endl;
 
         // Send features to redis.  The features array is flat,
         // so shove a single object into redis
@@ -437,6 +473,11 @@ void doSIFT(int scale = -1)
         // one free seems sufficient -- feat.fwd_match etc. exist but are
         // expected to be NULL, so single free is ok
         free(feat);
+
+        c2 = chrono::high_resolution_clock::now();
+        cout << "  hold time "
+            << chrono::duration_cast<std::chrono::microseconds>(c2-c0).count()
+            << endl;
 
         cout << "ok " << key << endl;
     }
